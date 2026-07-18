@@ -375,6 +375,10 @@ function normalizedFacilityName(value: string) {
   return value.normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
 }
 
+function normalizedPhone(value: string | undefined) {
+  return (value || "").replace(/\D/g, "");
+}
+
 function deduplicateHospitals(hospitals: HospitalPayload[]) {
   const seen = new Set<string>();
   return hospitals.filter((hospital) => {
@@ -497,6 +501,8 @@ async function googleHospitalSearch(env: Env, lat: number, lng: number, category
       "content-type": "application/json",
       "x-goog-api-key": apiKey,
       "x-goog-fieldmask": "places.id,places.displayName,places.formattedAddress,places.location,places.primaryTypeDisplayName,places.types,places.nationalPhoneNumber,places.googleMapsUri,places.websiteUri,places.businessStatus,places.currentOpeningHours,places.regularOpeningHours,places.reservable",
+      origin: "https://yuri925830.github.io",
+      referer: "https://yuri925830.github.io/NaruCare/",
     },
     body: JSON.stringify({
       textQuery: hospitalSearchQueries(category)[0],
@@ -508,7 +514,14 @@ async function googleHospitalSearch(env: Env, lat: number, lng: number, category
     }),
     signal: AbortSignal.timeout(4_500),
   });
-  if (!response.ok) throw new Error(`Google Places ${response.status}`);
+  if (!response.ok) {
+    let diagnostic = "";
+    try {
+      const failure = await response.json() as { error?: { status?: string; message?: string } };
+      diagnostic = [failure.error?.status, failure.error?.message].filter(Boolean).join(": ").slice(0, 400);
+    } catch { /* Status code is still sufficient if the provider returns no JSON. */ }
+    throw new Error(`Google Places ${response.status}${diagnostic ? `: ${diagnostic}` : ""}`);
+  }
   const payload: unknown = await response.json();
   if (!payload || typeof payload !== "object" || !("places" in payload) || !Array.isArray(payload.places)) return [];
   return (payload.places as GooglePlace[]).flatMap<HospitalPayload>((place) => {
@@ -546,23 +559,27 @@ function mergeHospitalProviders(kakao: HospitalPayload[], google: HospitalPayloa
   const usedGoogle = new Set<string>();
   const merged = kakao.map((hospital) => {
     const kakaoName = normalizedFacilityName(hospital.name);
+    const kakaoPhone = normalizedPhone(hospital.phone);
     const match = google.find((candidate) => {
       if (usedGoogle.has(candidate.id)) return false;
       const googleName = normalizedFacilityName(candidate.name);
-      return kakaoName === googleName || (Math.min(kakaoName.length, googleName.length) >= 4 && (kakaoName.includes(googleName) || googleName.includes(kakaoName)));
+      const googlePhone = normalizedPhone(candidate.phone);
+      return Boolean(kakaoPhone && googlePhone && kakaoPhone === googlePhone)
+        || kakaoName === googleName
+        || (Math.min(kakaoName.length, googleName.length) >= 4 && (kakaoName.includes(googleName) || googleName.includes(kakaoName)));
     });
     if (!match) return hospital;
     usedGoogle.add(match.id);
     return {
       ...hospital,
-      openingHours: match.openingHours,
-      openNow: match.openNow,
+      openingHours: match.openingHours || hospital.openingHours,
+      openNow: match.openNow ?? hospital.openNow,
       emergency: match.emergency ?? hospital.emergency,
-      reservation: match.reservation,
+      reservation: match.reservation !== "unknown" ? match.reservation : hospital.reservation,
       phone: match.phone || hospital.phone,
       website: match.website,
       dataSource: "Kakao Local + Google Places",
-      lastVerified: match.lastVerified,
+      lastVerified: match.lastVerified || hospital.lastVerified,
     };
   });
   return deduplicateHospitals([...merged, ...google.filter((hospital) => !usedGoogle.has(hospital.id))])
@@ -648,7 +665,7 @@ async function nearbyHospitals(url: URL, env: Env, ctx: ExecutionContext) {
   const category = hospitalCategory((url.searchParams.get("symptom") || "").slice(0, 1_000));
   const cache = caches.default;
   const hasScheduleProvider = Boolean(envSecret(env, "GOOGLE_PLACES_API_KEY"));
-  const cacheKey = new Request(`https://narucare.internal/hospitals?v=6&lat=${lat.toFixed(3)}&lng=${lng.toFixed(3)}&locale=${localeCode}&category=${category}&schedule=${hasScheduleProvider ? "google" : "none"}`);
+  const cacheKey = new Request(`https://narucare.internal/hospitals?v=7&lat=${lat.toFixed(3)}&lng=${lng.toFixed(3)}&locale=${localeCode}&category=${category}&schedule=${hasScheduleProvider ? "google" : "none"}`);
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
   let hospitals: HospitalPayload[] = [];
@@ -658,7 +675,11 @@ async function nearbyHospitals(url: URL, env: Env, ctx: ExecutionContext) {
   ]);
   const kakaoHospitals = kakaoResult.status === "fulfilled" ? kakaoResult.value : [];
   const googleHospitals = googleResult.status === "fulfilled" ? googleResult.value : [];
+  if (kakaoResult.status === "rejected") console.warn("Kakao hospital search unavailable", kakaoResult.reason instanceof Error ? kakaoResult.reason.message : "unknown error");
+  if (googleResult.status === "rejected") console.warn("Google Places hospital search unavailable", googleResult.reason instanceof Error ? googleResult.reason.message : "unknown error");
   hospitals = mergeHospitalProviders(kakaoHospitals, googleHospitals);
+  const scheduleVerifiedPrimary = hospitals.filter((hospital) => Boolean(hospital.openingHours));
+  if (scheduleVerifiedPrimary.length >= 3) hospitals = scheduleVerifiedPrimary.slice(0, 8);
   if (!hospitals.length) {
     const query = `[out:json][timeout:6];(nwr(around:3500,${lat},${lng})["amenity"~"^(hospital|clinic|doctors)$"];);out center tags 50;`;
     const providers = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter"];
