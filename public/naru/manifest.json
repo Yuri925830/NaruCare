@@ -1,0 +1,527 @@
+[
+  {
+    "pose": 1,
+    "file": "pose-01.png",
+    "sourceCrop": [
+      35,
+      32,
+      315,
+      370
+    ],
+    "contentBox": [
+      37,
+      30,
+      258,
+      338
+    ],
+    "outputAlphaBox": [
+      13,
+      52,
+      425,
+      635
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.4487
+  },
+  {
+    "pose": 2,
+    "file": "pose-02.png",
+    "sourceCrop": [
+      315,
+      35,
+      515,
+      370
+    ],
+    "contentBox": [
+      11,
+      29,
+      183,
+      335
+    ],
+    "outputAlphaBox": [
+      38,
+      14,
+      400,
+      674
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.5269
+  },
+  {
+    "pose": 3,
+    "file": "pose-03.png",
+    "sourceCrop": [
+      515,
+      34,
+      720,
+      370
+    ],
+    "contentBox": [
+      11,
+      32,
+      180,
+      336
+    ],
+    "outputAlphaBox": [
+      40,
+      14,
+      398,
+      673
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.496
+  },
+  {
+    "pose": 4,
+    "file": "pose-04.png",
+    "sourceCrop": [
+      720,
+      30,
+      910,
+      370
+    ],
+    "contentBox": [
+      13,
+      22,
+      169,
+      340
+    ],
+    "outputAlphaBox": [
+      61,
+      14,
+      376,
+      668
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.4439
+  },
+  {
+    "pose": 5,
+    "file": "pose-05.png",
+    "sourceCrop": [
+      910,
+      35,
+      1110,
+      370
+    ],
+    "contentBox": [
+      18,
+      36,
+      175,
+      335
+    ],
+    "outputAlphaBox": [
+      50,
+      14,
+      388,
+      670
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.4811
+  },
+  {
+    "pose": 6,
+    "file": "pose-06.png",
+    "sourceCrop": [
+      1110,
+      34,
+      1300,
+      370
+    ],
+    "contentBox": [
+      6,
+      25,
+      157,
+      336
+    ],
+    "outputAlphaBox": [
+      63,
+      14,
+      374,
+      674
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.4603
+  },
+  {
+    "pose": 7,
+    "file": "pose-07.png",
+    "sourceCrop": [
+      1300,
+      45,
+      1520,
+      370
+    ],
+    "contentBox": [
+      2,
+      51,
+      167,
+      325
+    ],
+    "outputAlphaBox": [
+      24,
+      14,
+      413,
+      668
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.5343
+  },
+  {
+    "pose": 8,
+    "file": "pose-08.png",
+    "sourceCrop": [
+      25,
+      380,
+      255,
+      675
+    ],
+    "contentBox": [
+      14,
+      0,
+      224,
+      289
+    ],
+    "outputAlphaBox": [
+      13,
+      55,
+      425,
+      626
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.3743
+  },
+  {
+    "pose": 9,
+    "file": "pose-09.png",
+    "sourceCrop": [
+      255,
+      380,
+      465,
+      675
+    ],
+    "contentBox": [
+      40,
+      24,
+      177,
+      287
+    ],
+    "outputAlphaBox": [
+      52,
+      15,
+      385,
+      667
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.4657
+  },
+  {
+    "pose": 10,
+    "file": "pose-10.png",
+    "sourceCrop": [
+      465,
+      380,
+      665,
+      675
+    ],
+    "contentBox": [
+      27,
+      14,
+      169,
+      288
+    ],
+    "outputAlphaBox": [
+      52,
+      14,
+      385,
+      668
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.4729
+  },
+  {
+    "pose": 11,
+    "file": "pose-11.png",
+    "sourceCrop": [
+      665,
+      380,
+      865,
+      675
+    ],
+    "contentBox": [
+      31,
+      3,
+      172,
+      294
+    ],
+    "outputAlphaBox": [
+      63,
+      14,
+      374,
+      668
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.4525
+  },
+  {
+    "pose": 12,
+    "file": "pose-12.png",
+    "sourceCrop": [
+      865,
+      380,
+      1060,
+      675
+    ],
+    "contentBox": [
+      25,
+      14,
+      168,
+      293
+    ],
+    "outputAlphaBox": [
+      54,
+      14,
+      383,
+      668
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.4524
+  },
+  {
+    "pose": 13,
+    "file": "pose-13.png",
+    "sourceCrop": [
+      1060,
+      380,
+      1280,
+      675
+    ],
+    "contentBox": [
+      28,
+      18,
+      203,
+      293
+    ],
+    "outputAlphaBox": [
+      14,
+      15,
+      424,
+      666
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.4984
+  },
+  {
+    "pose": 14,
+    "file": "pose-14.png",
+    "sourceCrop": [
+      1280,
+      380,
+      1520,
+      675
+    ],
+    "contentBox": [
+      9,
+      16,
+      202,
+      287
+    ],
+    "outputAlphaBox": [
+      14,
+      50,
+      424,
+      631
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.3645
+  },
+  {
+    "pose": 15,
+    "file": "pose-15.png",
+    "sourceCrop": [
+      25,
+      675,
+      255,
+      1000
+    ],
+    "contentBox": [
+      8,
+      1,
+      204,
+      261
+    ],
+    "outputAlphaBox": [
+      14,
+      67,
+      424,
+      615
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.4152
+  },
+  {
+    "pose": 16,
+    "file": "pose-16.png",
+    "sourceCrop": [
+      255,
+      675,
+      465,
+      1000
+    ],
+    "contentBox": [
+      14,
+      5,
+      210,
+      262
+    ],
+    "outputAlphaBox": [
+      14,
+      70,
+      426,
+      611
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.3852
+  },
+  {
+    "pose": 17,
+    "file": "pose-17.png",
+    "sourceCrop": [
+      465,
+      675,
+      665,
+      1000
+    ],
+    "contentBox": [
+      0,
+      4,
+      171,
+      266
+    ],
+    "outputAlphaBox": [
+      12,
+      23,
+      424,
+      658
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.5692
+  },
+  {
+    "pose": 18,
+    "file": "pose-18.png",
+    "sourceCrop": [
+      665,
+      675,
+      845,
+      1000
+    ],
+    "contentBox": [
+      10,
+      21,
+      154,
+      279
+    ],
+    "outputAlphaBox": [
+      40,
+      15,
+      398,
+      667
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.5148
+  },
+  {
+    "pose": 19,
+    "file": "pose-19.png",
+    "sourceCrop": [
+      845,
+      675,
+      1060,
+      1000
+    ],
+    "contentBox": [
+      0,
+      11,
+      190,
+      281
+    ],
+    "outputAlphaBox": [
+      8,
+      47,
+      424,
+      635
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.4311
+  },
+  {
+    "pose": 20,
+    "file": "pose-20.png",
+    "sourceCrop": [
+      1060,
+      675,
+      1280,
+      1000
+    ],
+    "contentBox": [
+      24,
+      13,
+      197,
+      272
+    ],
+    "outputAlphaBox": [
+      14,
+      31,
+      424,
+      651
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 66,
+    "opaqueCoverage": 0.4613
+  },
+  {
+    "pose": 21,
+    "file": "pose-21.png",
+    "sourceCrop": [
+      1280,
+      675,
+      1520,
+      1000
+    ],
+    "contentBox": [
+      0,
+      26,
+      178,
+      270
+    ],
+    "outputAlphaBox": [
+      8,
+      58,
+      424,
+      624
+    ],
+    "transparentCorners": true,
+    "removedEdgePixels": 0,
+    "opaqueCoverage": 0.4561
+  }
+]

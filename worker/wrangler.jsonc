@@ -1,0 +1,31 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "narucare-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "ALLOWED_ORIGINS": "http://localhost:5173,http://127.0.0.1:5173",
+    "ALLOW_GITHUB_PAGES": "true",
+    "AI_MODEL": "@cf/meta/llama-3.2-3b-instruct"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "narucare",
+      "database_id": "40cff495-9f24-47fb-bd8e-c1cb11b0aab7",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "RECORDINGS",
+      "bucket_name": "narucare-recordings"
+    }
+  ],
+  "ai": { "binding": "AI" },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}

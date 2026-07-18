@@ -1,0 +1,1 @@
+ALTER TABLE companion_orders ADD COLUMN balance_paid INTEGER NOT NULL DEFAULT 0;
