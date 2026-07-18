@@ -4,15 +4,17 @@ import { api } from "../api";
 import { Button, InfoBanner, InteractiveMap, NaruPose, Panel, StatusPill } from "../components";
 import { evaluateOpeningHours, formatRestDays } from "../hospitalHours";
 import { localeOptions, useI18n } from "../i18n";
+import { isLikelySymptomDescription } from "../symptoms";
 import type { Hospital, LocationState, MedicalCard } from "../types";
 
 interface Message { id: string; role: "naru" | "user" | "status"; text: string }
 
-export function AgentPage({ card, onCard, onEmergency, onHospitals, onCompanion, onFlow, onTranslation, gateSignal }: {
+export function AgentPage({ card, onCard, onEmergency, onHospitals, onSymptoms, onCompanion, onFlow, onTranslation, gateSignal }: {
   card: MedicalCard | null;
   onCard: () => void;
   onEmergency: (symptoms: string) => void;
   onHospitals: (symptoms: string) => void;
+  onSymptoms?: (symptoms: string) => void;
   onCompanion: () => void;
   onFlow?: () => void;
   onTranslation?: () => void;
@@ -29,6 +31,7 @@ export function AgentPage({ card, onCard, onEmergency, onHospitals, onCompanion,
   }, [card?.name, locale]);
 
   useEffect(() => { if (!card && gateSignal) setGate(true); }, [card, gateSignal]);
+  useEffect(() => { if (card) setGate(false); }, [card]);
 
   const send = async (text = input) => {
     const clean = text.trim();
@@ -52,6 +55,7 @@ export function AgentPage({ card, onCard, onEmergency, onHospitals, onCompanion,
       return;
     }
     if (/(陪诊|companion|동행|付き添)/i.test(clean)) { onCompanion(); return; }
+    if (isLikelySymptomDescription(clean)) onSymptoms?.(clean);
     setBusy(true);
     const response = await api.chat(clean, locale, true);
     setBusy(false);
@@ -66,12 +70,12 @@ export function AgentPage({ card, onCard, onEmergency, onHospitals, onCompanion,
       <div className="messages">
         {messages.map((message) => message.role === "status" ? <InfoBanner key={message.id} tone="mint" title={message.text}>{t("analyzingText")}</InfoBanner> : <div key={message.id} className={`message message-${message.role}`}>
           {message.role === "naru" && <div className="message-author"><NaruPose pose={2} className="chat-naru-pose" /><strong>Naru<small>{t("brandSub")}</small></strong></div>}
-          <p>{message.text}</p>
+          <p dir="auto">{message.text}</p>
         </div>)}
         {busy && <div className="typing"><i /><i /><i /></div>}
       </div>
       {!card && <div className="prompt-suggestions"><span>{t("quickServices")}</span><button onClick={() => send(t("promptUnwell"))}>{t("promptUnwell")}</button><button onClick={onCard}>{t("promptCard")}</button><button onClick={() => send(t("promptCompanion"))}>{t("promptCompanion")}</button></div>}
-      <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); void send(); }}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder={t("inputPlaceholder")} /><button aria-label={t("sendMessage")}><ArrowRight /></button></form>
+      <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); void send(); }}><input dir="auto" value={input} onChange={(event) => setInput(event.target.value)} placeholder={t("inputPlaceholder")} /><button aria-label={t("sendMessage")}><ArrowRight /></button></form>
     </Panel>
     <Panel className="agent-status">
       <h3>{t("currentStatus")}</h3>
@@ -80,7 +84,7 @@ export function AgentPage({ card, onCard, onEmergency, onHospitals, onCompanion,
       {[{ label: t("findHospital"), action: () => card ? onHospitals("") : setGate(true) }, { label: t("viewVisitFlow"), action: () => card ? onFlow?.() : setGate(true) }, { label: t("translation"), action: () => card ? onTranslation?.() : setGate(true) }, { label: t("companion"), action: () => card ? onCompanion() : setGate(true) }].map((item) => <button key={item.label} className="quick-link" onClick={item.action}>{item.label}<span>{card ? "→" : t("locked")}</span></button>)}
       <div className="agent-naru-card"><NaruPose pose={6} className="agent-side-naru" /></div>
     </Panel>
-    {gate && <div className="modal-backdrop" role="dialog" aria-modal="true"><div className="gate-modal"><NaruPose pose={6} className="gate-naru-pose" /><h2>{t("cardMissingShort")}</h2><p>{t("cardRequired")}</p><div><Button onClick={onCard}>{t("createCardNow")}</Button><Button variant="danger" onClick={() => onEmergency(t("unknown"))}>{t("urgentCall119")}</Button></div><button className="modal-close" onClick={() => setGate(false)}>×</button><small>{t("cardGateHint")}</small></div></div>}
+    {gate && <div className="modal-backdrop" role="dialog" aria-modal="true"><div className="gate-modal"><NaruPose pose={6} className="gate-naru-pose" /><h2>{t("cardMissingShort")}</h2><p>{t("cardRequired")}</p><div><Button onClick={() => { setGate(false); onCard(); }}>{t("createCardNow")}</Button><Button variant="danger" onClick={() => { setGate(false); onEmergency(t("unknown")); }}>{t("urgentCall119")}</Button></div><button className="modal-close" onClick={() => setGate(false)}>×</button><small>{t("cardGateHint")}</small></div></div>}
   </div>;
 }
 
@@ -105,7 +109,7 @@ export function HospitalsPage({ location, hospitals, loading, selected, onSelect
     <InfoBanner title={t("analysisResult")} action={<NaruPose pose={5} className="hospital-banner-naru" />}><strong>{t("hospitalNotice")}</strong></InfoBanner>
     <div className="hospital-layout">
       <div className="map-card"><div className="map-location"><MapPin size={17} />{t("currentLocation")} · {location.address}</div><InteractiveMap center={[location.lat, location.lng]} hospitals={hospitals} selected={selected} onSelect={onSelect} /></div>
-      <div className="hospital-list"><div className="section-heading"><h3>{t("nearbyAccepting")}</h3><button onClick={onRefresh}><LocateFixed size={16} />{t("refreshLocation")}</button></div>
+      <div className="hospital-list"><div className="section-heading"><h3>{t("nearbyAccepting")}</h3><button onClick={onRefresh}><LocateFixed size={16} />{t("refreshLocation")}</button></div><div className="hospital-scroll">
         {loading ? <div className="empty-hospitals"><LocateFixed /><strong>{t("locating")}</strong><p>{t("loading")}</p></div> : !hospitals.length && <div className="empty-hospitals"><AlertTriangle /><strong>{t("noHospitalsFound")}</strong><p>{t("hospitalSearchFailed")}</p></div>}
         {hospitals.map((hospital) => {
           const schedule = evaluateOpeningHours(hospital.openingHours, now);
@@ -118,14 +122,14 @@ export function HospitalsPage({ location, hospitals, loading, selected, onSelect
               <small className="hospital-source" title={hospital.sourceUrl}>{t("hospitalDataSource", { source: hospital.dataSource || "OpenStreetMap" })}{hospital.lastVerified ? ` · ${t("verifiedDate", { date: hospital.lastVerified })}` : ""}</small>
             </strong><b className="hospital-distance">{hospital.distance < 1000 ? `${Math.round(hospital.distance)}m` : `${(hospital.distance / 1000).toFixed(1)}km`}</b>
           </button>;
-        })}
+        })}</div>
       </div>
     </div>
     <div className="hospital-actions"><Button onClick={onFlow}>{t("navFlow")}</Button><Button variant="secondary" onClick={onCompanion}>{t("companion")}</Button><Button variant="mint" onClick={onRoute} disabled={!selected}><Navigation size={18} />{t("route")}</Button>{selected?.sourceUrl && <a className="button button-ghost" href={selected.sourceUrl} target="_blank" rel="noreferrer">{t("hospitalDataSource", { source: selected.dataSource || "OpenStreetMap" })}</a>}</div>
   </Panel>;
 }
 
-export function VisitFlowPage({ onStart }: { onStart: () => void }) {
+export function VisitFlowPage({ onStart, onReturn }: { onStart: () => void; onReturn: () => void }) {
   const { t } = useI18n();
   const prep = [[t("idPassport"), t("idPassportDesc")], [t("insuranceInfo"), t("insuranceInfoDesc")], [t("medicationItem"), t("medicationDesc")], [t("previousResults"), t("previousResultsDesc")]];
   const steps = [[t("stepRegister"), t("stepRegisterDesc")], [t("stepForm"), t("stepFormDesc")], [t("stepWait"), t("stepWaitDesc")], [t("stepRoom"), t("stepRoomDesc")], [t("stepPay"), t("stepPayDesc")]];
@@ -135,7 +139,7 @@ export function VisitFlowPage({ onStart }: { onStart: () => void }) {
     <h2>{t("afterArrival")}</h2>
     <div className="flow-steps">{steps.map(([title, desc], index) => <div key={title}><span>{String(index + 1).padStart(2, "0")}</span><strong>{title}<small>{desc}</small></strong>{index < steps.length - 1 && <ArrowRight />}</div>)}</div>
     <InfoBanner title={t("flowReminder")} tone="mint" />
-    <div className="align-right"><Button onClick={onStart}><Navigation size={18} />{t("startNavigation")}</Button></div>
+    <div className="flow-choice-actions"><Button variant="secondary" onClick={onReturn}>{t("returnHospitals")}</Button><Button onClick={onStart}><Navigation size={18} />{t("startNavigation")}</Button></div>
   </Panel>;
 }
 
@@ -190,7 +194,7 @@ interface SpeechRecognitionResultEventLike extends Event { results: { [index: nu
 interface SpeechRecognitionErrorEventLike extends Event { error?: string; }
 interface SpeechRecognitionLike { lang: string; continuous: boolean; interimResults: boolean; start(): void; stop(): void; abort(): void; onresult: ((event: SpeechRecognitionResultEventLike) => void) | null; onend: (() => void) | null; onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null; }
 
-export function TranslationPage({ userLanguage }: { userLanguage?: string }) {
+export function TranslationPage({ userLanguage, active = true, onComplete }: { userLanguage?: string; active?: boolean; onComplete?: () => void }) {
   const { locale, t } = useI18n();
   const language = userLanguage || locale;
   const languageOption = localeOptions.find((item) => item.code === language) || localeOptions.find((item) => item.code === locale) || localeOptions[0];
@@ -287,12 +291,23 @@ export function TranslationPage({ userLanguage }: { userLanguage?: string }) {
     voiceStreamRef.current?.getTracks().forEach((track) => track.stop());
   }, []);
 
+  useEffect(() => {
+    if (active) return;
+    recognitionRef.current?.abort();
+    recognitionRef.current = null;
+    if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+    voiceStreamRef.current?.getTracks().forEach((track) => track.stop());
+    setListening(false);
+    speechSynthesis.cancel();
+  }, [active]);
+
   return <Panel className="translation-panel">
     <div className="translation-direction"><button className={speaker === "patient" ? "active peach" : ""} onClick={() => setSpeaker("patient")}>{t("patientLanguage", { language: languageOption.nativeName })}</button><ArrowRight /><button className={speaker === "staff" ? "active mint" : ""} onClick={() => setSpeaker("staff")}>{t("hospitalLanguage")}</button></div>
     <div className="translation-cards">
-      <article className="translation-card peach"><NaruPose pose={15} className="translation-card-naru" /><span>{t("youSaid")}</span><h2>{patientText}</h2><button onClick={() => speak(patientKo, "ko-KR")}><Volume2 size={16} /></button><hr /><small>{t("naruTranslatedKorean")}</small><p>{patientKo}</p></article>
-      <article className="translation-card mint"><NaruPose pose={16} className="translation-card-naru" /><span>{t("medicalStaff")}</span><h2>{staffKo}</h2><button onClick={() => speak(staffText, languageOption.speech)}><Volume2 size={16} /></button><hr /><small>{t("naruTranslatedUser")}</small><p>{staffText}</p></article>
+      <article className="translation-card peach"><NaruPose pose={15} className="translation-card-naru" /><span>{t("youSaid")}</span><h2 dir="auto">{patientText}</h2><button onClick={() => speak(patientKo, "ko-KR")}><Volume2 size={16} /></button><hr /><small>{t("naruTranslatedKorean")}</small><p lang="ko">{patientKo}</p></article>
+      <article className="translation-card mint"><NaruPose pose={16} className="translation-card-naru" /><span>{t("medicalStaff")}</span><h2 lang="ko">{staffKo}</h2><button onClick={() => speak(staffText, languageOption.speech)}><Volume2 size={16} /></button><hr /><small>{t("naruTranslatedUser")}</small><p dir="auto">{staffText}</p></article>
     </div>
-    <form className="translation-composer" onSubmit={translate}><textarea value={input} onChange={(event) => setInput(event.target.value)} placeholder={t("translationInput")} /><button type="button" className={`mic-button ${listening ? "listening" : ""}`} onClick={toggleListening} disabled={transcribingVoice}>{listening ? <Square /> : <Mic />}</button><span>{transcribingVoice ? t("transcribingVoice") : listening ? t("listening") : t("tapToSpeak")}</span><Button type="submit" disabled={busy || transcribingVoice || !input.trim()}><Send size={17} />{busy ? t("loading") : t("translateSend")}</Button>{voiceError && <p className="form-error" role="alert">{voiceError}</p>}</form>
+    <form className="translation-composer" onSubmit={translate}><textarea dir="auto" value={input} onChange={(event) => setInput(event.target.value)} placeholder={t("translationInput")} /><button type="button" className={`mic-button ${listening ? "listening" : ""}`} onClick={toggleListening} disabled={transcribingVoice}>{listening ? <Square /> : <Mic />}</button><span>{transcribingVoice ? t("transcribingVoice") : listening ? t("listening") : t("tapToSpeak")}</span><Button type="submit" disabled={busy || transcribingVoice || !input.trim()}><Send size={17} />{busy ? t("loading") : t("translateSend")}</Button>{voiceError && <p className="form-error" role="alert">{voiceError}</p>}</form>
+    {onComplete && <div className="translation-finish"><Button variant="secondary" onClick={onComplete}>{t("finishVisitAssistance")}</Button></div>}
   </Panel>;
 }

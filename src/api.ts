@@ -215,6 +215,16 @@ export const api = {
     try { return await request<VisitRecord>("/api/records", { method: "POST", body: JSON.stringify(record) }); }
     catch { return complete; }
   },
+  async updateRecord(id: string, patch: Partial<Omit<VisitRecord, "id">>) {
+    if (demoCurrentId()) {
+      const records = JSON.parse(localStorage.getItem(DEMO_RECORDS_KEY) || "[]") as VisitRecord[];
+      const updated = records.map((record) => record.id === id ? { ...record, ...patch } : record);
+      localStorage.setItem(DEMO_RECORDS_KEY, JSON.stringify(updated));
+      return updated.find((record) => record.id === id) || null;
+    }
+    try { return await request<VisitRecord>(`/api/records/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(patch) }); }
+    catch { return null; }
+  },
   async records(): Promise<VisitRecord[]> {
     if (demoCurrentId()) return JSON.parse(localStorage.getItem(DEMO_RECORDS_KEY) || "[]");
     try { return (await request<{ records: VisitRecord[] }>("/api/records")).records; }

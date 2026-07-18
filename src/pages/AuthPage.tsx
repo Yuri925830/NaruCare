@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { ShieldCheck } from "lucide-react";
 import { api, ApiError } from "../api";
-import { Button, LanguageButton, LanguageSelector, NaruPose } from "../components";
+import { Button, LanguageButton, LanguageSelector, NaruStandard } from "../components";
 import { useI18n } from "../i18n";
 import type { SessionUser } from "../types";
 
@@ -31,7 +31,7 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (user: SessionU
   }
 
   if (languageOpen) return <div className="language-page auth-language-page">
-    <div className="language-page-art"><div className="brand auth-brand"><strong>NaruCare</strong><small>{t("chooseLanguage")}</small></div><NaruPose pose={1} className="language-page-naru" /></div>
+    <div className="language-page-art"><div className="brand auth-brand"><strong>NaruCare</strong><small>{t("chooseLanguage")}</small></div><NaruStandard className="language-page-naru" /></div>
     <div className="language-page-content"><h1>{t("chooseLanguage")}</h1><p>{t("languageSubtitle")}</p><LanguageSelector compact onDone={() => setLanguageOpen(false)} /></div>
   </div>;
 
@@ -39,8 +39,8 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (user: SessionU
     <aside className="auth-art">
       <div className="brand auth-brand"><strong>NaruCare</strong><small>{t("brandSub")}</small></div>
       <LanguageButton onClick={() => setLanguageOpen(true)} />
-      <div className="mobile-auth-intro"><div><h2>Hi, {t("navNaru")}</h2><p>{t("brandSub")}<br />{t("loginSubtitle")}</p></div><NaruPose pose={mode === "login" ? 0 : 3} className="mobile-auth-naru" /></div>
-      <NaruPose pose={mode === "login" ? 0 : 3} className="auth-naru-pose" />
+      <div className="mobile-auth-intro"><div><h2>Hi, {t("navNaru")}</h2><p>{t("brandSub")}<br />{t("loginSubtitle")}</p></div><NaruStandard className="mobile-auth-naru" /></div>
+      <NaruStandard className="auth-naru-pose" />
     </aside>
     <main className="auth-form-wrap">
       <form className="auth-form" onSubmit={submit}>

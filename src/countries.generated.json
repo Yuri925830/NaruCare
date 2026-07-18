@@ -1,0 +1,1752 @@
+[
+  {
+    "code": "JP",
+    "flag": "🇯🇵",
+    "nativeName": "日本",
+    "englishName": "Japan",
+    "koreanName": "일본"
+  },
+  {
+    "code": "TW",
+    "flag": "🇹🇼",
+    "nativeName": "台灣",
+    "englishName": "Taiwan",
+    "koreanName": "대만"
+  },
+  {
+    "code": "CN",
+    "flag": "🇨🇳",
+    "nativeName": "中国",
+    "englishName": "China",
+    "koreanName": "중국"
+  },
+  {
+    "code": "AX",
+    "flag": "🇦🇽",
+    "nativeName": "Åland",
+    "englishName": "Åland Islands",
+    "koreanName": "올란드 제도"
+  },
+  {
+    "code": "AS",
+    "flag": "🇦🇸",
+    "nativeName": "American Samoa",
+    "englishName": "American Samoa",
+    "koreanName": "아메리칸사모아"
+  },
+  {
+    "code": "AD",
+    "flag": "🇦🇩",
+    "nativeName": "Andorra",
+    "englishName": "Andorra",
+    "koreanName": "안도라"
+  },
+  {
+    "code": "AO",
+    "flag": "🇦🇴",
+    "nativeName": "Angola",
+    "englishName": "Angola",
+    "koreanName": "앙골라"
+  },
+  {
+    "code": "AI",
+    "flag": "🇦🇮",
+    "nativeName": "Anguilla",
+    "englishName": "Anguilla",
+    "koreanName": "앵귈라"
+  },
+  {
+    "code": "AQ",
+    "flag": "🇦🇶",
+    "nativeName": "Antarctica",
+    "englishName": "Antarctica",
+    "koreanName": "남극"
+  },
+  {
+    "code": "AG",
+    "flag": "🇦🇬",
+    "nativeName": "Antigua and Barbuda",
+    "englishName": "Antigua and Barbuda",
+    "koreanName": "앤티가 바부다"
+  },
+  {
+    "code": "AR",
+    "flag": "🇦🇷",
+    "nativeName": "Argentina",
+    "englishName": "Argentina",
+    "koreanName": "아르헨티나"
+  },
+  {
+    "code": "AW",
+    "flag": "🇦🇼",
+    "nativeName": "Aruba",
+    "englishName": "Aruba",
+    "koreanName": "아루바"
+  },
+  {
+    "code": "AU",
+    "flag": "🇦🇺",
+    "nativeName": "Australia",
+    "englishName": "Australia",
+    "koreanName": "호주"
+  },
+  {
+    "code": "AZ",
+    "flag": "🇦🇿",
+    "nativeName": "Azərbaycan",
+    "englishName": "Azerbaijan",
+    "koreanName": "아제르바이잔"
+  },
+  {
+    "code": "BS",
+    "flag": "🇧🇸",
+    "nativeName": "Bahamas",
+    "englishName": "Bahamas",
+    "koreanName": "바하마"
+  },
+  {
+    "code": "BB",
+    "flag": "🇧🇧",
+    "nativeName": "Barbados",
+    "englishName": "Barbados",
+    "koreanName": "바베이도스"
+  },
+  {
+    "code": "BE",
+    "flag": "🇧🇪",
+    "nativeName": "Belgien",
+    "englishName": "Belgium",
+    "koreanName": "벨기에"
+  },
+  {
+    "code": "BZ",
+    "flag": "🇧🇿",
+    "nativeName": "Belize",
+    "englishName": "Belize",
+    "koreanName": "벨리즈"
+  },
+  {
+    "code": "BJ",
+    "flag": "🇧🇯",
+    "nativeName": "Bénin",
+    "englishName": "Benin",
+    "koreanName": "베냉"
+  },
+  {
+    "code": "BM",
+    "flag": "🇧🇲",
+    "nativeName": "Bermuda",
+    "englishName": "Bermuda",
+    "koreanName": "버뮤다"
+  },
+  {
+    "code": "BA",
+    "flag": "🇧🇦",
+    "nativeName": "Bosna i Hercegovina",
+    "englishName": "Bosnia and Herzegovina",
+    "koreanName": "보스니아 헤르체고비나"
+  },
+  {
+    "code": "BW",
+    "flag": "🇧🇼",
+    "nativeName": "Botswana",
+    "englishName": "Botswana",
+    "koreanName": "보츠와나"
+  },
+  {
+    "code": "BV",
+    "flag": "🇧🇻",
+    "nativeName": "Bouvetøya",
+    "englishName": "Bouvet Island",
+    "koreanName": "부베 섬"
+  },
+  {
+    "code": "BR",
+    "flag": "🇧🇷",
+    "nativeName": "Brasil",
+    "englishName": "Brazil",
+    "koreanName": "브라질"
+  },
+  {
+    "code": "IO",
+    "flag": "🇮🇴",
+    "nativeName": "British Indian Ocean Territory",
+    "englishName": "British Indian Ocean Territory",
+    "koreanName": "인도"
+  },
+  {
+    "code": "VG",
+    "flag": "🇻🇬",
+    "nativeName": "British Virgin Islands",
+    "englishName": "British Virgin Islands",
+    "koreanName": "영국령 버진아일랜드"
+  },
+  {
+    "code": "BF",
+    "flag": "🇧🇫",
+    "nativeName": "Burkina Faso",
+    "englishName": "Burkina Faso",
+    "koreanName": "부르키나파소"
+  },
+  {
+    "code": "BI",
+    "flag": "🇧🇮",
+    "nativeName": "Burundi",
+    "englishName": "Burundi",
+    "koreanName": "부룬디"
+  },
+  {
+    "code": "CV",
+    "flag": "🇨🇻",
+    "nativeName": "Cabo Verde",
+    "englishName": "Cape Verde",
+    "koreanName": "카보베르데"
+  },
+  {
+    "code": "CM",
+    "flag": "🇨🇲",
+    "nativeName": "Cameroon",
+    "englishName": "Cameroon",
+    "koreanName": "카메룬"
+  },
+  {
+    "code": "CA",
+    "flag": "🇨🇦",
+    "nativeName": "Canada",
+    "englishName": "Canada",
+    "koreanName": "캐나다"
+  },
+  {
+    "code": "BQ",
+    "flag": "🇧🇶",
+    "nativeName": "Caribisch Nederland",
+    "englishName": "Caribbean Netherlands",
+    "koreanName": "카리브 네덜란드"
+  },
+  {
+    "code": "KY",
+    "flag": "🇰🇾",
+    "nativeName": "Cayman Islands",
+    "englishName": "Cayman Islands",
+    "koreanName": "케이맨 제도"
+  },
+  {
+    "code": "CZ",
+    "flag": "🇨🇿",
+    "nativeName": "Česko",
+    "englishName": "Czechia",
+    "koreanName": "체코"
+  },
+  {
+    "code": "CL",
+    "flag": "🇨🇱",
+    "nativeName": "Chile",
+    "englishName": "Chile",
+    "koreanName": "칠레"
+  },
+  {
+    "code": "CX",
+    "flag": "🇨🇽",
+    "nativeName": "Christmas Island",
+    "englishName": "Christmas Island",
+    "koreanName": "크리스마스 섬"
+  },
+  {
+    "code": "CC",
+    "flag": "🇨🇨",
+    "nativeName": "Cocos (Keeling) Islands",
+    "englishName": "Cocos (Keeling) Islands",
+    "koreanName": "코코스 제도"
+  },
+  {
+    "code": "CO",
+    "flag": "🇨🇴",
+    "nativeName": "Colombia",
+    "englishName": "Colombia",
+    "koreanName": "콜롬비아"
+  },
+  {
+    "code": "CK",
+    "flag": "🇨🇰",
+    "nativeName": "Cook Islands",
+    "englishName": "Cook Islands",
+    "koreanName": "쿡 제도"
+  },
+  {
+    "code": "CR",
+    "flag": "🇨🇷",
+    "nativeName": "Costa Rica",
+    "englishName": "Costa Rica",
+    "koreanName": "코스타리카"
+  },
+  {
+    "code": "CI",
+    "flag": "🇨🇮",
+    "nativeName": "Côte d'Ivoire",
+    "englishName": "Ivory Coast",
+    "koreanName": "코트디부아르"
+  },
+  {
+    "code": "CU",
+    "flag": "🇨🇺",
+    "nativeName": "Cuba",
+    "englishName": "Cuba",
+    "koreanName": "쿠바"
+  },
+  {
+    "code": "CW",
+    "flag": "🇨🇼",
+    "nativeName": "Curaçao",
+    "englishName": "Curaçao",
+    "koreanName": "퀴라소"
+  },
+  {
+    "code": "DK",
+    "flag": "🇩🇰",
+    "nativeName": "Danmark",
+    "englishName": "Denmark",
+    "koreanName": "덴마크"
+  },
+  {
+    "code": "DE",
+    "flag": "🇩🇪",
+    "nativeName": "Deutschland",
+    "englishName": "Germany",
+    "koreanName": "독일"
+  },
+  {
+    "code": "DM",
+    "flag": "🇩🇲",
+    "nativeName": "Dominica",
+    "englishName": "Dominica",
+    "koreanName": "도미니카 공화국"
+  },
+  {
+    "code": "EC",
+    "flag": "🇪🇨",
+    "nativeName": "Ecuador",
+    "englishName": "Ecuador",
+    "koreanName": "에콰도르"
+  },
+  {
+    "code": "EE",
+    "flag": "🇪🇪",
+    "nativeName": "Eesti",
+    "englishName": "Estonia",
+    "koreanName": "에스토니아"
+  },
+  {
+    "code": "SV",
+    "flag": "🇸🇻",
+    "nativeName": "El Salvador",
+    "englishName": "El Salvador",
+    "koreanName": "엘살바도르"
+  },
+  {
+    "code": "ES",
+    "flag": "🇪🇸",
+    "nativeName": "España",
+    "englishName": "Spain",
+    "koreanName": "스페인"
+  },
+  {
+    "code": "SZ",
+    "flag": "🇸🇿",
+    "nativeName": "Eswatini",
+    "englishName": "Eswatini",
+    "koreanName": "에스와티니"
+  },
+  {
+    "code": "FO",
+    "flag": "🇫🇴",
+    "nativeName": "Færøerne",
+    "englishName": "Faroe Islands",
+    "koreanName": "페로 제도"
+  },
+  {
+    "code": "FK",
+    "flag": "🇫🇰",
+    "nativeName": "Falkland Islands",
+    "englishName": "Falkland Islands",
+    "koreanName": "포클랜드 제도"
+  },
+  {
+    "code": "FJ",
+    "flag": "🇫🇯",
+    "nativeName": "Fiji",
+    "englishName": "Fiji",
+    "koreanName": "피지"
+  },
+  {
+    "code": "FR",
+    "flag": "🇫🇷",
+    "nativeName": "France",
+    "englishName": "France",
+    "koreanName": "프랑스"
+  },
+  {
+    "code": "GA",
+    "flag": "🇬🇦",
+    "nativeName": "Gabon",
+    "englishName": "Gabon",
+    "koreanName": "가봉"
+  },
+  {
+    "code": "GM",
+    "flag": "🇬🇲",
+    "nativeName": "Gambia",
+    "englishName": "Gambia",
+    "koreanName": "감비아"
+  },
+  {
+    "code": "GH",
+    "flag": "🇬🇭",
+    "nativeName": "Ghana",
+    "englishName": "Ghana",
+    "koreanName": "가나"
+  },
+  {
+    "code": "GI",
+    "flag": "🇬🇮",
+    "nativeName": "Gibraltar",
+    "englishName": "Gibraltar",
+    "koreanName": "지브롤터"
+  },
+  {
+    "code": "GD",
+    "flag": "🇬🇩",
+    "nativeName": "Grenada",
+    "englishName": "Grenada",
+    "koreanName": "그레나다"
+  },
+  {
+    "code": "GP",
+    "flag": "🇬🇵",
+    "nativeName": "Guadeloupe",
+    "englishName": "Guadeloupe",
+    "koreanName": "과들루프"
+  },
+  {
+    "code": "GU",
+    "flag": "🇬🇺",
+    "nativeName": "Guåhån",
+    "englishName": "Guam",
+    "koreanName": "괌"
+  },
+  {
+    "code": "GT",
+    "flag": "🇬🇹",
+    "nativeName": "Guatemala",
+    "englishName": "Guatemala",
+    "koreanName": "과테말라"
+  },
+  {
+    "code": "GG",
+    "flag": "🇬🇬",
+    "nativeName": "Guernsey",
+    "englishName": "Guernsey",
+    "koreanName": "건지 섬"
+  },
+  {
+    "code": "GW",
+    "flag": "🇬🇼",
+    "nativeName": "Guiné-Bissau",
+    "englishName": "Guinea-Bissau",
+    "koreanName": "기니비사우"
+  },
+  {
+    "code": "GN",
+    "flag": "🇬🇳",
+    "nativeName": "Guinée",
+    "englishName": "Guinea",
+    "koreanName": "기니"
+  },
+  {
+    "code": "GQ",
+    "flag": "🇬🇶",
+    "nativeName": "Guinée équatoriale",
+    "englishName": "Equatorial Guinea",
+    "koreanName": "적도 기니"
+  },
+  {
+    "code": "GY",
+    "flag": "🇬🇾",
+    "nativeName": "Guyana",
+    "englishName": "Guyana",
+    "koreanName": "가이아나"
+  },
+  {
+    "code": "GF",
+    "flag": "🇬🇫",
+    "nativeName": "Guyane française",
+    "englishName": "French Guiana",
+    "koreanName": "프랑스령 기아나"
+  },
+  {
+    "code": "HT",
+    "flag": "🇭🇹",
+    "nativeName": "Haïti",
+    "englishName": "Haiti",
+    "koreanName": "아이티"
+  },
+  {
+    "code": "HM",
+    "flag": "🇭🇲",
+    "nativeName": "Heard Island and McDonald Islands",
+    "englishName": "Heard Island and McDonald Islands",
+    "koreanName": "허드 맥도널드 제도"
+  },
+  {
+    "code": "HN",
+    "flag": "🇭🇳",
+    "nativeName": "Honduras",
+    "englishName": "Honduras",
+    "koreanName": "온두라스"
+  },
+  {
+    "code": "HK",
+    "flag": "🇭🇰",
+    "nativeName": "Hong Kong",
+    "englishName": "Hong Kong",
+    "koreanName": "홍콩"
+  },
+  {
+    "code": "HR",
+    "flag": "🇭🇷",
+    "nativeName": "Hrvatska",
+    "englishName": "Croatia",
+    "koreanName": "크로아티아"
+  },
+  {
+    "code": "IN",
+    "flag": "🇮🇳",
+    "nativeName": "India",
+    "englishName": "India",
+    "koreanName": "인도"
+  },
+  {
+    "code": "ID",
+    "flag": "🇮🇩",
+    "nativeName": "Indonesia",
+    "englishName": "Indonesia",
+    "koreanName": "인도네시아"
+  },
+  {
+    "code": "IE",
+    "flag": "🇮🇪",
+    "nativeName": "Ireland",
+    "englishName": "Ireland",
+    "koreanName": "아일랜드"
+  },
+  {
+    "code": "IS",
+    "flag": "🇮🇸",
+    "nativeName": "Ísland",
+    "englishName": "Iceland",
+    "koreanName": "아이슬란드"
+  },
+  {
+    "code": "IM",
+    "flag": "🇮🇲",
+    "nativeName": "Isle of Man",
+    "englishName": "Isle of Man",
+    "koreanName": "맨섬"
+  },
+  {
+    "code": "IT",
+    "flag": "🇮🇹",
+    "nativeName": "Italia",
+    "englishName": "Italy",
+    "koreanName": "이탈리아"
+  },
+  {
+    "code": "JM",
+    "flag": "🇯🇲",
+    "nativeName": "Jamaica",
+    "englishName": "Jamaica",
+    "koreanName": "자메이카"
+  },
+  {
+    "code": "JE",
+    "flag": "🇯🇪",
+    "nativeName": "Jersey",
+    "englishName": "Jersey",
+    "koreanName": "저지 섬"
+  },
+  {
+    "code": "GL",
+    "flag": "🇬🇱",
+    "nativeName": "Kalaallit Nunaat",
+    "englishName": "Greenland",
+    "koreanName": "그린란드"
+  },
+  {
+    "code": "KH",
+    "flag": "🇰🇭",
+    "nativeName": "Kâmpŭchéa",
+    "englishName": "Cambodia",
+    "koreanName": "캄보디아"
+  },
+  {
+    "code": "KE",
+    "flag": "🇰🇪",
+    "nativeName": "Kenya",
+    "englishName": "Kenya",
+    "koreanName": "케냐"
+  },
+  {
+    "code": "KI",
+    "flag": "🇰🇮",
+    "nativeName": "Kiribati",
+    "englishName": "Kiribati",
+    "koreanName": "키리바시"
+  },
+  {
+    "code": "XK",
+    "flag": "🇽🇰",
+    "nativeName": "Kosova",
+    "englishName": "Kosovo",
+    "koreanName": "코소보"
+  },
+  {
+    "code": "RE",
+    "flag": "🇷🇪",
+    "nativeName": "La Réunion",
+    "englishName": "Réunion",
+    "koreanName": "레위니옹"
+  },
+  {
+    "code": "LV",
+    "flag": "🇱🇻",
+    "nativeName": "Latvija",
+    "englishName": "Latvia",
+    "koreanName": "라트비아"
+  },
+  {
+    "code": "LS",
+    "flag": "🇱🇸",
+    "nativeName": "Lesotho",
+    "englishName": "Lesotho",
+    "koreanName": "레소토"
+  },
+  {
+    "code": "LR",
+    "flag": "🇱🇷",
+    "nativeName": "Liberia",
+    "englishName": "Liberia",
+    "koreanName": "라이베리아"
+  },
+  {
+    "code": "LI",
+    "flag": "🇱🇮",
+    "nativeName": "Liechtenstein",
+    "englishName": "Liechtenstein",
+    "koreanName": "리히텐슈타인"
+  },
+  {
+    "code": "LT",
+    "flag": "🇱🇹",
+    "nativeName": "Lietuva",
+    "englishName": "Lithuania",
+    "koreanName": "리투아니아"
+  },
+  {
+    "code": "LU",
+    "flag": "🇱🇺",
+    "nativeName": "Luxemburg",
+    "englishName": "Luxembourg",
+    "koreanName": "룩셈부르크"
+  },
+  {
+    "code": "MO",
+    "flag": "🇲🇴",
+    "nativeName": "Macau",
+    "englishName": "Macau",
+    "koreanName": "마카오"
+  },
+  {
+    "code": "MG",
+    "flag": "🇲🇬",
+    "nativeName": "Madagascar",
+    "englishName": "Madagascar",
+    "koreanName": "마다가스카르"
+  },
+  {
+    "code": "HU",
+    "flag": "🇭🇺",
+    "nativeName": "Magyarország",
+    "englishName": "Hungary",
+    "koreanName": "헝가리"
+  },
+  {
+    "code": "MW",
+    "flag": "🇲🇼",
+    "nativeName": "Malawi",
+    "englishName": "Malawi",
+    "koreanName": "말라위"
+  },
+  {
+    "code": "MY",
+    "flag": "🇲🇾",
+    "nativeName": "Malaysia",
+    "englishName": "Malaysia",
+    "koreanName": "말레이시아"
+  },
+  {
+    "code": "ML",
+    "flag": "🇲🇱",
+    "nativeName": "Mali",
+    "englishName": "Mali",
+    "koreanName": "말리"
+  },
+  {
+    "code": "MT",
+    "flag": "🇲🇹",
+    "nativeName": "Malta",
+    "englishName": "Malta",
+    "koreanName": "몰타"
+  },
+  {
+    "code": "MH",
+    "flag": "🇲🇭",
+    "nativeName": "Marshall Islands",
+    "englishName": "Marshall Islands",
+    "koreanName": "마셜 제도"
+  },
+  {
+    "code": "MQ",
+    "flag": "🇲🇶",
+    "nativeName": "Martinique",
+    "englishName": "Martinique",
+    "koreanName": "마르티니크"
+  },
+  {
+    "code": "MU",
+    "flag": "🇲🇺",
+    "nativeName": "Mauritius",
+    "englishName": "Mauritius",
+    "koreanName": "모리셔스"
+  },
+  {
+    "code": "YT",
+    "flag": "🇾🇹",
+    "nativeName": "Mayotte",
+    "englishName": "Mayotte",
+    "koreanName": "마요트"
+  },
+  {
+    "code": "MX",
+    "flag": "🇲🇽",
+    "nativeName": "México",
+    "englishName": "Mexico",
+    "koreanName": "멕시코"
+  },
+  {
+    "code": "FM",
+    "flag": "🇫🇲",
+    "nativeName": "Micronesia",
+    "englishName": "Micronesia",
+    "koreanName": "미크로네시아"
+  },
+  {
+    "code": "MZ",
+    "flag": "🇲🇿",
+    "nativeName": "Moçambique",
+    "englishName": "Mozambique",
+    "koreanName": "모잠비크"
+  },
+  {
+    "code": "MD",
+    "flag": "🇲🇩",
+    "nativeName": "Moldova",
+    "englishName": "Moldova",
+    "koreanName": "몰도바"
+  },
+  {
+    "code": "MC",
+    "flag": "🇲🇨",
+    "nativeName": "Monaco",
+    "englishName": "Monaco",
+    "koreanName": "모나코"
+  },
+  {
+    "code": "MS",
+    "flag": "🇲🇸",
+    "nativeName": "Montserrat",
+    "englishName": "Montserrat",
+    "koreanName": "몬트세랫"
+  },
+  {
+    "code": "NA",
+    "flag": "🇳🇦",
+    "nativeName": "Namibië",
+    "englishName": "Namibia",
+    "koreanName": "나미비아"
+  },
+  {
+    "code": "NR",
+    "flag": "🇳🇷",
+    "nativeName": "Nauru",
+    "englishName": "Nauru",
+    "koreanName": "나우루"
+  },
+  {
+    "code": "NL",
+    "flag": "🇳🇱",
+    "nativeName": "Nederland",
+    "englishName": "Netherlands",
+    "koreanName": "네덜란드"
+  },
+  {
+    "code": "BN",
+    "flag": "🇧🇳",
+    "nativeName": "Negara Brunei Darussalam",
+    "englishName": "Brunei",
+    "koreanName": "브루나이"
+  },
+  {
+    "code": "NZ",
+    "flag": "🇳🇿",
+    "nativeName": "New Zealand",
+    "englishName": "New Zealand",
+    "koreanName": "뉴질랜드"
+  },
+  {
+    "code": "NI",
+    "flag": "🇳🇮",
+    "nativeName": "Nicaragua",
+    "englishName": "Nicaragua",
+    "koreanName": "니카라과"
+  },
+  {
+    "code": "NE",
+    "flag": "🇳🇪",
+    "nativeName": "Niger",
+    "englishName": "Niger",
+    "koreanName": "니제르"
+  },
+  {
+    "code": "NG",
+    "flag": "🇳🇬",
+    "nativeName": "Nigeria",
+    "englishName": "Nigeria",
+    "koreanName": "나이지리아"
+  },
+  {
+    "code": "NU",
+    "flag": "🇳🇺",
+    "nativeName": "Niue",
+    "englishName": "Niue",
+    "koreanName": "니우에"
+  },
+  {
+    "code": "NO",
+    "flag": "🇳🇴",
+    "nativeName": "Noreg",
+    "englishName": "Norway",
+    "koreanName": "노르웨이"
+  },
+  {
+    "code": "NF",
+    "flag": "🇳🇫",
+    "nativeName": "Norfolk Island",
+    "englishName": "Norfolk Island",
+    "koreanName": "노퍽 섬"
+  },
+  {
+    "code": "MP",
+    "flag": "🇲🇵",
+    "nativeName": "Northern Mariana Islands",
+    "englishName": "Northern Mariana Islands",
+    "koreanName": "북마리아나 제도"
+  },
+  {
+    "code": "NC",
+    "flag": "🇳🇨",
+    "nativeName": "Nouvelle-Calédonie",
+    "englishName": "New Caledonia",
+    "koreanName": "누벨칼레도니"
+  },
+  {
+    "code": "AT",
+    "flag": "🇦🇹",
+    "nativeName": "Österreich",
+    "englishName": "Austria",
+    "koreanName": "오스트리아"
+  },
+  {
+    "code": "PK",
+    "flag": "🇵🇰",
+    "nativeName": "Pakistan",
+    "englishName": "Pakistan",
+    "koreanName": "파키스탄"
+  },
+  {
+    "code": "PW",
+    "flag": "🇵🇼",
+    "nativeName": "Palau",
+    "englishName": "Palau",
+    "koreanName": "팔라우"
+  },
+  {
+    "code": "PA",
+    "flag": "🇵🇦",
+    "nativeName": "Panamá",
+    "englishName": "Panama",
+    "koreanName": "파나마"
+  },
+  {
+    "code": "PG",
+    "flag": "🇵🇬",
+    "nativeName": "Papua New Guinea",
+    "englishName": "Papua New Guinea",
+    "koreanName": "파푸아뉴기니"
+  },
+  {
+    "code": "PY",
+    "flag": "🇵🇾",
+    "nativeName": "Paraguái",
+    "englishName": "Paraguay",
+    "koreanName": "파라과이"
+  },
+  {
+    "code": "PH",
+    "flag": "🇵🇭",
+    "nativeName": "Philippines",
+    "englishName": "Philippines",
+    "koreanName": "필리핀"
+  },
+  {
+    "code": "PE",
+    "flag": "🇵🇪",
+    "nativeName": "Piruw",
+    "englishName": "Peru",
+    "koreanName": "페루"
+  },
+  {
+    "code": "PN",
+    "flag": "🇵🇳",
+    "nativeName": "Pitcairn Islands",
+    "englishName": "Pitcairn Islands",
+    "koreanName": "핏케언 제도"
+  },
+  {
+    "code": "PL",
+    "flag": "🇵🇱",
+    "nativeName": "Polska",
+    "englishName": "Poland",
+    "koreanName": "폴란드"
+  },
+  {
+    "code": "PF",
+    "flag": "🇵🇫",
+    "nativeName": "Polynésie française",
+    "englishName": "French Polynesia",
+    "koreanName": "프랑스령 폴리네시아"
+  },
+  {
+    "code": "PT",
+    "flag": "🇵🇹",
+    "nativeName": "Portugal",
+    "englishName": "Portugal",
+    "koreanName": "포르투갈"
+  },
+  {
+    "code": "PR",
+    "flag": "🇵🇷",
+    "nativeName": "Puerto Rico",
+    "englishName": "Puerto Rico",
+    "koreanName": "푸에르토리코"
+  },
+  {
+    "code": "CD",
+    "flag": "🇨🇩",
+    "nativeName": "RD Congo",
+    "englishName": "DR Congo",
+    "koreanName": "콩고 민주 공화국"
+  },
+  {
+    "code": "DO",
+    "flag": "🇩🇴",
+    "nativeName": "República Dominicana",
+    "englishName": "Dominican Republic",
+    "koreanName": "도미니카 공화국"
+  },
+  {
+    "code": "CF",
+    "flag": "🇨🇫",
+    "nativeName": "République centrafricaine",
+    "englishName": "Central African Republic",
+    "koreanName": "중앙아프리카 공화국"
+  },
+  {
+    "code": "CG",
+    "flag": "🇨🇬",
+    "nativeName": "République du Congo",
+    "englishName": "Republic of the Congo",
+    "koreanName": "콩고"
+  },
+  {
+    "code": "RO",
+    "flag": "🇷🇴",
+    "nativeName": "România",
+    "englishName": "Romania",
+    "koreanName": "루마니아"
+  },
+  {
+    "code": "RW",
+    "flag": "🇷🇼",
+    "nativeName": "Rwanda",
+    "englishName": "Rwanda",
+    "koreanName": "르완다"
+  },
+  {
+    "code": "SH",
+    "flag": "🇸🇭",
+    "nativeName": "Saint Helena, Ascension and Tristan da Cunha",
+    "englishName": "Saint Helena, Ascension and Tristan da Cunha",
+    "koreanName": "세인트헬레나"
+  },
+  {
+    "code": "KN",
+    "flag": "🇰🇳",
+    "nativeName": "Saint Kitts and Nevis",
+    "englishName": "Saint Kitts and Nevis",
+    "koreanName": "세인트키츠 네비스"
+  },
+  {
+    "code": "LC",
+    "flag": "🇱🇨",
+    "nativeName": "Saint Lucia",
+    "englishName": "Saint Lucia",
+    "koreanName": "세인트루시아"
+  },
+  {
+    "code": "VC",
+    "flag": "🇻🇨",
+    "nativeName": "Saint Vincent and the Grenadines",
+    "englishName": "Saint Vincent and the Grenadines",
+    "koreanName": "세인트빈센트 그레나딘"
+  },
+  {
+    "code": "BL",
+    "flag": "🇧🇱",
+    "nativeName": "Saint-Barthélemy",
+    "englishName": "Saint Barthélemy",
+    "koreanName": "생바르텔레미"
+  },
+  {
+    "code": "MF",
+    "flag": "🇲🇫",
+    "nativeName": "Saint-Martin",
+    "englishName": "Saint Martin",
+    "koreanName": "생마르탱"
+  },
+  {
+    "code": "PM",
+    "flag": "🇵🇲",
+    "nativeName": "Saint-Pierre-et-Miquelon",
+    "englishName": "Saint Pierre and Miquelon",
+    "koreanName": "생피에르 미클롱"
+  },
+  {
+    "code": "WS",
+    "flag": "🇼🇸",
+    "nativeName": "Samoa",
+    "englishName": "Samoa",
+    "koreanName": "사모아"
+  },
+  {
+    "code": "SM",
+    "flag": "🇸🇲",
+    "nativeName": "San Marino",
+    "englishName": "San Marino",
+    "koreanName": "산마리노"
+  },
+  {
+    "code": "ST",
+    "flag": "🇸🇹",
+    "nativeName": "São Tomé e Príncipe",
+    "englishName": "São Tomé and Príncipe",
+    "koreanName": "상투메 프린시페"
+  },
+  {
+    "code": "SN",
+    "flag": "🇸🇳",
+    "nativeName": "Sénégal",
+    "englishName": "Senegal",
+    "koreanName": "세네갈"
+  },
+  {
+    "code": "SC",
+    "flag": "🇸🇨",
+    "nativeName": "Sesel",
+    "englishName": "Seychelles",
+    "koreanName": "세이셸"
+  },
+  {
+    "code": "AL",
+    "flag": "🇦🇱",
+    "nativeName": "Shqipëria",
+    "englishName": "Albania",
+    "koreanName": "알바니아"
+  },
+  {
+    "code": "SL",
+    "flag": "🇸🇱",
+    "nativeName": "Sierra Leone",
+    "englishName": "Sierra Leone",
+    "koreanName": "시에라리온"
+  },
+  {
+    "code": "SG",
+    "flag": "🇸🇬",
+    "nativeName": "Singapore",
+    "englishName": "Singapore",
+    "koreanName": "싱가포르"
+  },
+  {
+    "code": "SX",
+    "flag": "🇸🇽",
+    "nativeName": "Sint Maarten",
+    "englishName": "Sint Maarten",
+    "koreanName": "신트마르턴"
+  },
+  {
+    "code": "SI",
+    "flag": "🇸🇮",
+    "nativeName": "Slovenija",
+    "englishName": "Slovenia",
+    "koreanName": "슬로베니아"
+  },
+  {
+    "code": "SK",
+    "flag": "🇸🇰",
+    "nativeName": "Slovensko",
+    "englishName": "Slovakia",
+    "koreanName": "슬로바키아"
+  },
+  {
+    "code": "SB",
+    "flag": "🇸🇧",
+    "nativeName": "Solomon Islands",
+    "englishName": "Solomon Islands",
+    "koreanName": "솔로몬 제도"
+  },
+  {
+    "code": "ZA",
+    "flag": "🇿🇦",
+    "nativeName": "South Africa",
+    "englishName": "South Africa",
+    "koreanName": "남아프리카"
+  },
+  {
+    "code": "GS",
+    "flag": "🇬🇸",
+    "nativeName": "South Georgia",
+    "englishName": "South Georgia",
+    "koreanName": "조지아"
+  },
+  {
+    "code": "SS",
+    "flag": "🇸🇸",
+    "nativeName": "South Sudan",
+    "englishName": "South Sudan",
+    "koreanName": "남수단"
+  },
+  {
+    "code": "CH",
+    "flag": "🇨🇭",
+    "nativeName": "Suisse",
+    "englishName": "Switzerland",
+    "koreanName": "스위스"
+  },
+  {
+    "code": "FI",
+    "flag": "🇫🇮",
+    "nativeName": "Suomi",
+    "englishName": "Finland",
+    "koreanName": "핀란드"
+  },
+  {
+    "code": "SR",
+    "flag": "🇸🇷",
+    "nativeName": "Suriname",
+    "englishName": "Suriname",
+    "koreanName": "수리남"
+  },
+  {
+    "code": "SJ",
+    "flag": "🇸🇯",
+    "nativeName": "Svalbard og Jan Mayen",
+    "englishName": "Svalbard and Jan Mayen",
+    "koreanName": "스발바르 얀마옌 제도"
+  },
+  {
+    "code": "SE",
+    "flag": "🇸🇪",
+    "nativeName": "Sverige",
+    "englishName": "Sweden",
+    "koreanName": "스웨덴"
+  },
+  {
+    "code": "TZ",
+    "flag": "🇹🇿",
+    "nativeName": "Tanzania",
+    "englishName": "Tanzania",
+    "koreanName": "탄자니아"
+  },
+  {
+    "code": "TF",
+    "flag": "🇹🇫",
+    "nativeName": "Terres australes et antarctiques françaises",
+    "englishName": "French Southern and Antarctic Lands",
+    "koreanName": "프랑스령 남부와 남극 지역"
+  },
+  {
+    "code": "TL",
+    "flag": "🇹🇱",
+    "nativeName": "Timor-Leste",
+    "englishName": "Timor-Leste",
+    "koreanName": "동티모르"
+  },
+  {
+    "code": "TG",
+    "flag": "🇹🇬",
+    "nativeName": "Togo",
+    "englishName": "Togo",
+    "koreanName": "토고"
+  },
+  {
+    "code": "TK",
+    "flag": "🇹🇰",
+    "nativeName": "Tokelau",
+    "englishName": "Tokelau",
+    "koreanName": "토켈라우"
+  },
+  {
+    "code": "TO",
+    "flag": "🇹🇴",
+    "nativeName": "Tonga",
+    "englishName": "Tonga",
+    "koreanName": "통가"
+  },
+  {
+    "code": "TT",
+    "flag": "🇹🇹",
+    "nativeName": "Trinidad and Tobago",
+    "englishName": "Trinidad and Tobago",
+    "koreanName": "트리니다드 토바고"
+  },
+  {
+    "code": "TR",
+    "flag": "🇹🇷",
+    "nativeName": "Türkiye",
+    "englishName": "Türkiye",
+    "koreanName": "터키"
+  },
+  {
+    "code": "TC",
+    "flag": "🇹🇨",
+    "nativeName": "Turks and Caicos Islands",
+    "englishName": "Turks and Caicos Islands",
+    "koreanName": "터크스 케이커스 제도"
+  },
+  {
+    "code": "TV",
+    "flag": "🇹🇻",
+    "nativeName": "Tuvalu",
+    "englishName": "Tuvalu",
+    "koreanName": "투발루"
+  },
+  {
+    "code": "UG",
+    "flag": "🇺🇬",
+    "nativeName": "Uganda",
+    "englishName": "Uganda",
+    "koreanName": "우간다"
+  },
+  {
+    "code": "GB",
+    "flag": "🇬🇧",
+    "nativeName": "United Kingdom",
+    "englishName": "United Kingdom",
+    "koreanName": "영국"
+  },
+  {
+    "code": "US",
+    "flag": "🇺🇸",
+    "nativeName": "United States",
+    "englishName": "United States",
+    "koreanName": "미국"
+  },
+  {
+    "code": "UM",
+    "flag": "🇺🇲",
+    "nativeName": "United States Minor Outlying Islands",
+    "englishName": "United States Minor Outlying Islands",
+    "koreanName": "미국령 군소 제도"
+  },
+  {
+    "code": "VI",
+    "flag": "🇻🇮",
+    "nativeName": "United States Virgin Islands",
+    "englishName": "United States Virgin Islands",
+    "koreanName": "미국령 버진아일랜드"
+  },
+  {
+    "code": "UY",
+    "flag": "🇺🇾",
+    "nativeName": "Uruguay",
+    "englishName": "Uruguay",
+    "koreanName": "우루과이"
+  },
+  {
+    "code": "VU",
+    "flag": "🇻🇺",
+    "nativeName": "Vanuatu",
+    "englishName": "Vanuatu",
+    "koreanName": "바누아투"
+  },
+  {
+    "code": "VA",
+    "flag": "🇻🇦",
+    "nativeName": "Vaticano",
+    "englishName": "Vatican City",
+    "koreanName": "바티칸"
+  },
+  {
+    "code": "VE",
+    "flag": "🇻🇪",
+    "nativeName": "Venezuela",
+    "englishName": "Venezuela",
+    "koreanName": "베네수엘라"
+  },
+  {
+    "code": "VN",
+    "flag": "🇻🇳",
+    "nativeName": "Việt Nam",
+    "englishName": "Vietnam",
+    "koreanName": "베트남"
+  },
+  {
+    "code": "WF",
+    "flag": "🇼🇫",
+    "nativeName": "Wallis et Futuna",
+    "englishName": "Wallis and Futuna",
+    "koreanName": "왈리스 퓌튀나"
+  },
+  {
+    "code": "EH",
+    "flag": "🇪🇭",
+    "nativeName": "Western Sahara",
+    "englishName": "Western Sahara",
+    "koreanName": "서사하라"
+  },
+  {
+    "code": "BO",
+    "flag": "🇧🇴",
+    "nativeName": "Wuliwya",
+    "englishName": "Bolivia",
+    "koreanName": "볼리비아"
+  },
+  {
+    "code": "ZM",
+    "flag": "🇿🇲",
+    "nativeName": "Zambia",
+    "englishName": "Zambia",
+    "koreanName": "잠비아"
+  },
+  {
+    "code": "ZW",
+    "flag": "🇿🇼",
+    "nativeName": "Zimbabwe",
+    "englishName": "Zimbabwe",
+    "koreanName": "짐바브웨"
+  },
+  {
+    "code": "GR",
+    "flag": "🇬🇷",
+    "nativeName": "Ελλάδα",
+    "englishName": "Greece",
+    "koreanName": "그리스"
+  },
+  {
+    "code": "CY",
+    "flag": "🇨🇾",
+    "nativeName": "Κύπρος",
+    "englishName": "Cyprus",
+    "koreanName": "키프로스"
+  },
+  {
+    "code": "BY",
+    "flag": "🇧🇾",
+    "nativeName": "Белару́сь",
+    "englishName": "Belarus",
+    "koreanName": "벨라루스"
+  },
+  {
+    "code": "BG",
+    "flag": "🇧🇬",
+    "nativeName": "България",
+    "englishName": "Bulgaria",
+    "koreanName": "불가리아"
+  },
+  {
+    "code": "KG",
+    "flag": "🇰🇬",
+    "nativeName": "Кыргызстан",
+    "englishName": "Kyrgyzstan",
+    "koreanName": "키르기스스탄"
+  },
+  {
+    "code": "KZ",
+    "flag": "🇰🇿",
+    "nativeName": "Қазақстан",
+    "englishName": "Kazakhstan",
+    "koreanName": "카자흐스탄"
+  },
+  {
+    "code": "MK",
+    "flag": "🇲🇰",
+    "nativeName": "Македонија",
+    "englishName": "North Macedonia",
+    "koreanName": "북마케도니아"
+  },
+  {
+    "code": "MN",
+    "flag": "🇲🇳",
+    "nativeName": "Монгол улс",
+    "englishName": "Mongolia",
+    "koreanName": "몽골국"
+  },
+  {
+    "code": "RU",
+    "flag": "🇷🇺",
+    "nativeName": "Россия",
+    "englishName": "Russia",
+    "koreanName": "러시아"
+  },
+  {
+    "code": "RS",
+    "flag": "🇷🇸",
+    "nativeName": "Србија",
+    "englishName": "Serbia",
+    "koreanName": "세르비아"
+  },
+  {
+    "code": "TJ",
+    "flag": "🇹🇯",
+    "nativeName": "Таджикистан",
+    "englishName": "Tajikistan",
+    "koreanName": "타지키스탄"
+  },
+  {
+    "code": "TM",
+    "flag": "🇹🇲",
+    "nativeName": "Туркмения",
+    "englishName": "Turkmenistan",
+    "koreanName": "투르크메니스탄"
+  },
+  {
+    "code": "UZ",
+    "flag": "🇺🇿",
+    "nativeName": "Узбекистан",
+    "englishName": "Uzbekistan",
+    "koreanName": "우즈베키스탄"
+  },
+  {
+    "code": "UA",
+    "flag": "🇺🇦",
+    "nativeName": "Україна",
+    "englishName": "Ukraine",
+    "koreanName": "우크라이나"
+  },
+  {
+    "code": "ME",
+    "flag": "🇲🇪",
+    "nativeName": "Црна Гора",
+    "englishName": "Montenegro",
+    "koreanName": "몬테네그로"
+  },
+  {
+    "code": "GE",
+    "flag": "🇬🇪",
+    "nativeName": "საქართველო",
+    "englishName": "Georgia",
+    "koreanName": "조지아"
+  },
+  {
+    "code": "AM",
+    "flag": "🇦🇲",
+    "nativeName": "Հայաստան",
+    "englishName": "Armenia",
+    "koreanName": "아르메니아"
+  },
+  {
+    "code": "ER",
+    "flag": "🇪🇷",
+    "nativeName": "إريتريا",
+    "englishName": "Eritrea",
+    "koreanName": "에리트레아"
+  },
+  {
+    "code": "IL",
+    "flag": "🇮🇱",
+    "nativeName": "إسرائيل",
+    "englishName": "Israel",
+    "koreanName": "이스라엘"
+  },
+  {
+    "code": "AF",
+    "flag": "🇦🇫",
+    "nativeName": "افغانستان",
+    "englishName": "Afghanistan",
+    "koreanName": "아프가니스탄"
+  },
+  {
+    "code": "JO",
+    "flag": "🇯🇴",
+    "nativeName": "الأردن",
+    "englishName": "Jordan",
+    "koreanName": "요르단"
+  },
+  {
+    "code": "AE",
+    "flag": "🇦🇪",
+    "nativeName": "الإمارات",
+    "englishName": "United Arab Emirates",
+    "koreanName": "아랍에미리트"
+  },
+  {
+    "code": "BH",
+    "flag": "🇧🇭",
+    "nativeName": "البحرين",
+    "englishName": "Bahrain",
+    "koreanName": "바레인"
+  },
+  {
+    "code": "DZ",
+    "flag": "🇩🇿",
+    "nativeName": "الجزائر",
+    "englishName": "Algeria",
+    "koreanName": "알제리"
+  },
+  {
+    "code": "SA",
+    "flag": "🇸🇦",
+    "nativeName": "السعودية",
+    "englishName": "Saudi Arabia",
+    "koreanName": "사우디아라비아"
+  },
+  {
+    "code": "SD",
+    "flag": "🇸🇩",
+    "nativeName": "السودان",
+    "englishName": "Sudan",
+    "koreanName": "수단"
+  },
+  {
+    "code": "SO",
+    "flag": "🇸🇴",
+    "nativeName": "الصومال",
+    "englishName": "Somalia",
+    "koreanName": "소말리아"
+  },
+  {
+    "code": "IQ",
+    "flag": "🇮🇶",
+    "nativeName": "العراق",
+    "englishName": "Iraq",
+    "koreanName": "이라크"
+  },
+  {
+    "code": "KW",
+    "flag": "🇰🇼",
+    "nativeName": "الكويت",
+    "englishName": "Kuwait",
+    "koreanName": "쿠웨이트"
+  },
+  {
+    "code": "MA",
+    "flag": "🇲🇦",
+    "nativeName": "المغرب",
+    "englishName": "Morocco",
+    "koreanName": "모로코"
+  },
+  {
+    "code": "YE",
+    "flag": "🇾🇪",
+    "nativeName": "اليمن",
+    "englishName": "Yemen",
+    "koreanName": "예멘"
+  },
+  {
+    "code": "IR",
+    "flag": "🇮🇷",
+    "nativeName": "ایران",
+    "englishName": "Iran",
+    "koreanName": "이란"
+  },
+  {
+    "code": "TD",
+    "flag": "🇹🇩",
+    "nativeName": "تشاد",
+    "englishName": "Chad",
+    "koreanName": "차드"
+  },
+  {
+    "code": "TN",
+    "flag": "🇹🇳",
+    "nativeName": "تونس",
+    "englishName": "Tunisia",
+    "koreanName": "튀니지"
+  },
+  {
+    "code": "KM",
+    "flag": "🇰🇲",
+    "nativeName": "جزر القمر",
+    "englishName": "Comoros",
+    "koreanName": "코모로"
+  },
+  {
+    "code": "DJ",
+    "flag": "🇩🇯",
+    "nativeName": "جيبوتي",
+    "englishName": "Djibouti",
+    "koreanName": "지부티"
+  },
+  {
+    "code": "SY",
+    "flag": "🇸🇾",
+    "nativeName": "سوريا",
+    "englishName": "Syria",
+    "koreanName": "시리아"
+  },
+  {
+    "code": "OM",
+    "flag": "🇴🇲",
+    "nativeName": "عمان",
+    "englishName": "Oman",
+    "koreanName": "오만"
+  },
+  {
+    "code": "PS",
+    "flag": "🇵🇸",
+    "nativeName": "فلسطين",
+    "englishName": "Palestine",
+    "koreanName": "팔레스타인"
+  },
+  {
+    "code": "QA",
+    "flag": "🇶🇦",
+    "nativeName": "قطر",
+    "englishName": "Qatar",
+    "koreanName": "카타르"
+  },
+  {
+    "code": "LB",
+    "flag": "🇱🇧",
+    "nativeName": "لبنان",
+    "englishName": "Lebanon",
+    "koreanName": "레바논"
+  },
+  {
+    "code": "LY",
+    "flag": "🇱🇾",
+    "nativeName": "ليبيا",
+    "englishName": "Libya",
+    "koreanName": "리비아"
+  },
+  {
+    "code": "EG",
+    "flag": "🇪🇬",
+    "nativeName": "مصر",
+    "englishName": "Egypt",
+    "koreanName": "이집트"
+  },
+  {
+    "code": "MR",
+    "flag": "🇲🇷",
+    "nativeName": "موريتانيا",
+    "englishName": "Mauritania",
+    "koreanName": "모리타니"
+  },
+  {
+    "code": "MV",
+    "flag": "🇲🇻",
+    "nativeName": "ދިވެހިރާއްޖޭގެ",
+    "englishName": "Maldives",
+    "koreanName": "몰디브"
+  },
+  {
+    "code": "ET",
+    "flag": "🇪🇹",
+    "nativeName": "ኢትዮጵያ",
+    "englishName": "Ethiopia",
+    "koreanName": "에티오피아"
+  },
+  {
+    "code": "NP",
+    "flag": "🇳🇵",
+    "nativeName": "नेपाल",
+    "englishName": "Nepal",
+    "koreanName": "네팔"
+  },
+  {
+    "code": "BD",
+    "flag": "🇧🇩",
+    "nativeName": "বাংলাদেশ",
+    "englishName": "Bangladesh",
+    "koreanName": "방글라데시"
+  },
+  {
+    "code": "LK",
+    "flag": "🇱🇰",
+    "nativeName": "ශ්‍රී ලංකාව",
+    "englishName": "Sri Lanka",
+    "koreanName": "스리랑카"
+  },
+  {
+    "code": "TH",
+    "flag": "🇹🇭",
+    "nativeName": "ประเทศไทย",
+    "englishName": "Thailand",
+    "koreanName": "태국"
+  },
+  {
+    "code": "LA",
+    "flag": "🇱🇦",
+    "nativeName": "ສປປລາວ",
+    "englishName": "Laos",
+    "koreanName": "라오스"
+  },
+  {
+    "code": "BT",
+    "flag": "🇧🇹",
+    "nativeName": "འབྲུག་ཡུལ་",
+    "englishName": "Bhutan",
+    "koreanName": "부탄"
+  },
+  {
+    "code": "MM",
+    "flag": "🇲🇲",
+    "nativeName": "မြန်မာ",
+    "englishName": "Myanmar",
+    "koreanName": "미얀마"
+  },
+  {
+    "code": "KP",
+    "flag": "🇰🇵",
+    "nativeName": "조선",
+    "englishName": "North Korea",
+    "koreanName": "조선"
+  },
+  {
+    "code": "KR",
+    "flag": "🇰🇷",
+    "nativeName": "한국",
+    "englishName": "South Korea",
+    "koreanName": "한국"
+  }
+]

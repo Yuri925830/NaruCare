@@ -13,6 +13,7 @@
     "test": "vitest run",
     "visual:check": "node scripts/visual-check.mjs",
     "naru:extract": "python scripts/extract-naru-poses.py",
+    "countries:generate": "node scripts/generate-countries.mjs",
     "locales:generate": "node scripts/generate-locales.mjs",
     "worker:types": "wrangler types --config worker/wrangler.jsonc worker/worker-configuration.d.ts",
     "worker:check": "wrangler deploy --config worker/wrangler.jsonc --dry-run --outdir .wrangler-dry-run",
@@ -37,6 +38,7 @@
     "typescript": "^7.0.2",
     "vite": "^8.1.5",
     "vitest": "^4.1.10",
+    "world-countries": "^5.1.0",
     "wrangler": "^4.112.0"
   }
 }

@@ -14,6 +14,11 @@ export function NaruPose({ pose = 1, className = "" }: { pose?: number; classNam
   return <span className={`naru-pose ${className}`} aria-hidden="true"><img src={`./naru/${filename}`} alt="" /></span>;
 }
 
+/** High-resolution transparent standard character supplied as the canonical Naru artwork. */
+export function NaruStandard({ className = "" }: { className?: string }) {
+  return <span className={`naru-standard ${className}`} aria-hidden="true"><img src="./naru-standard.png" alt="" /></span>;
+}
+
 export function Panel({ className = "", children }: { className?: string; children?: ReactNode }) {
   return <section className={`panel ${className}`}>{children}</section>;
 }
@@ -45,11 +50,13 @@ interface AppShellProps {
   user: SessionUser;
   onNavigate: (view: View) => void;
   onLanguage: () => void;
+  onBack: () => void;
+  canGoBack: boolean;
   children: ReactNode;
   hideHeader?: boolean;
 }
 
-export function AppShell({ view, title, user, onNavigate, onLanguage, children, hideHeader }: AppShellProps) {
+export function AppShell({ view, title, user, onNavigate, onLanguage, onBack, canGoBack, children, hideHeader }: AppShellProps) {
   const { t } = useI18n();
   const card = user.card;
   const isActive = (id: View) => id === view || (id === "agent" && ["hospitals", "navigation", "translation", "companions", "companions-notice", "companions-filter", "companion-detail", "companion-chat", "companion-waiting", "companion-payment", "companion-arrived", "companion-service", "companion-finished"].includes(view));
@@ -68,7 +75,7 @@ export function AppShell({ view, title, user, onNavigate, onLanguage, children, 
       </button>
     </aside>
     <main className="app-main">
-      {!hideHeader && <header className="page-header"><h1>{title}</h1><div><LanguageButton onClick={onLanguage} /><StatusPill><ShieldCheck size={15} />{t("privacyProtected")}</StatusPill></div></header>}
+      {!hideHeader && <header className="page-header"><div className="page-title-group">{canGoBack && <PageBack onClick={onBack} />}<h1>{title}</h1></div><div className="page-actions"><LanguageButton onClick={onLanguage} /><StatusPill><ShieldCheck size={15} />{t("privacyProtected")}</StatusPill></div></header>}
       <div className="page-content">{children}</div>
     </main>
     <nav className="bottom-nav">
@@ -82,10 +89,10 @@ export function AppShell({ view, title, user, onNavigate, onLanguage, children, 
 export function LanguageSelector({ onDone, compact = false }: { onDone: () => void; compact?: boolean }) {
   const { locale, setLocale, option, t } = useI18n();
   return <div className={`language-selector ${compact ? "compact" : ""}`}>
-    {!compact && <div className="language-hero"><div><strong>{t("naruSpeaks")}</strong><h3>中文 · 한국어</h3><h3>English · 日本語</h3></div><NaruPose pose={1} className="language-hero-naru" /></div>}
+    {!compact && <div className="language-hero"><div><strong>{t("naruSpeaks")}</strong><h3>中文 · 한국어</h3><h3>English · 日本語</h3></div><div className="language-hero-characters"><NaruPose pose={1} className="language-hero-naru" /><NaruPose pose={3} className="language-hero-accent" /></div></div>}
     <div className="language-list" role="radiogroup" aria-label={t("chooseLanguage")}>
       {localeOptions.map((item) => <button key={item.code} className={locale === item.code ? "selected" : ""} onClick={() => setLocale(item.code)} role="radio" aria-checked={locale === item.code}>
-        <span className="locale-badge">{item.badge}</span><strong>{item.nativeName}<small>{item.englishName}</small></strong><i>{locale === item.code ? "✓" : ""}</i>
+        <span className="locale-badge">{item.badge}</span><strong dir={item.direction || "ltr"}>{item.nativeName}<small>{item.englishName}</small></strong><i>{locale === item.code ? "✓" : ""}</i>
       </button>)}
     </div>
     <Button className="language-continue" onClick={onDone}><Globe2 size={19} />{t("useLanguage", { language: option.nativeName })}</Button>
@@ -131,6 +138,24 @@ export function InteractiveMap({ center, hospitals = [], selected, route = [], o
   }, []);
 
   useEffect(() => {
+    const element = container.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    let frame = 0;
+    const invalidate = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => mapRef.current?.invalidateSize({ pan: false }));
+    };
+    const observer = new ResizeObserver(invalidate);
+    observer.observe(element);
+    document.addEventListener("visibilitychange", invalidate);
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", invalidate);
+      window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
+  useEffect(() => {
     const map = mapRef.current;
     const layer = layerRef.current;
     if (!map || !layer) return;
@@ -151,6 +176,7 @@ export function InteractiveMap({ center, hospitals = [], selected, route = [], o
       L.polyline(route, { color: "#785a4d", weight: 6, opacity: .92, lineCap: "round" }).addTo(layer);
       route.forEach((point) => bounds.push(point));
     }
+    map.invalidateSize({ pan: false });
     if (bounds.length > 1) map.fitBounds(L.latLngBounds(bounds), { padding: [38, 38], maxZoom: 16 });
     else map.setView(center, 15);
   }, [center[0], center[1], hospitals, selected?.id, route, onSelect]);

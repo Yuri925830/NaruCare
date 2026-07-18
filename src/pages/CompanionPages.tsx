@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { BadgeCheck, Check, Clock3, MessageCircleMore, Mic, Phone, ShieldCheck, Star, UserRound, WalletCards } from "lucide-react";
 import { api } from "../api";
-import { Button, formatWon, InfoBanner, NaruPose, Panel, StatusPill } from "../components";
+import { Button, formatWon, InfoBanner, NaruPose, NaruStandard, Panel, StatusPill } from "../components";
 import { localeOptions, useI18n } from "../i18n";
 import type { Companion, CompanionFilters, CompanionOrder } from "../types";
 
@@ -10,7 +10,7 @@ export function CompanionNoticePage({ onContinue }: { onContinue: () => void }) 
   const [agreed, setAgreed] = useState(false);
   const rules = [[t("companionRule1"), t("companionRule1Desc")], [t("companionRule2"), t("companionRule2Desc")], [t("companionRule3"), t("companionRule3Desc")], [t("companionRule4"), t("companionRule4Desc")]];
   return <Panel className="companion-notice-panel">
-    <InfoBanner title={t("beforeCompanion")} action={<NaruPose pose={9} className="companion-notice-naru" />}>{t("beforeCompanionDesc")}</InfoBanner>
+    <InfoBanner title={t("beforeCompanion")} action={<><NaruPose pose={9} className="companion-notice-naru" /><NaruPose pose={13} className="companion-notice-accent" /></>}>{t("beforeCompanionDesc")}</InfoBanner>
     <div className="notice-grid">{rules.map(([title, desc], index) => <article key={title}><span>{String(index + 1).padStart(2, "0")}</span><strong>{title}<small>{desc}</small></strong></article>)}</div>
     <div className="notice-actions"><label className={`agree-check ${agreed ? "checked" : ""}`}><input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} /><span><Check /></span>{t("agreeNotice")}</label><Button disabled={!agreed} onClick={onContinue}><UserRound size={18} />{t("findCompanion")}</Button></div>
   </Panel>;
@@ -33,7 +33,7 @@ export function CompanionFilterPage({ filters, onChange, onMatch }: { filters: C
       </div>
       <Button onClick={onMatch}><UserRound size={18} />{t("aiMatch")}</Button>
     </Panel>
-    <aside className="filter-naru"><NaruPose pose={12} className="filter-naru-pose" /><h2>Naru</h2><p>{t("preciseMatch")}</p><div><small>{t("matchesFound", { count: 24 })}</small><strong>24</strong></div></aside>
+    <aside className="filter-naru"><NaruStandard className="filter-naru-pose" /><NaruPose pose={12} className="companion-filter-decoration" /><h2>Naru</h2><p>{t("preciseMatch")}</p><div><small>{t("matchesFound", { count: 24 })}</small><strong>24</strong></div></aside>
   </div>;
 }
 
@@ -84,11 +84,10 @@ export function CompanionWaitingPage({ person, onAccepted, onMessage, onCancel }
   const [seconds, setSeconds] = useState(20 * 60);
   useEffect(() => {
     const timer = window.setInterval(() => setSeconds((value) => Math.max(0, value - 1)), 1000);
-    const demoAccept = api.isDemo() ? window.setTimeout(onAccepted, 6500) : 0;
-    return () => { clearInterval(timer); if (demoAccept) clearTimeout(demoAccept); };
-  }, [onAccepted]);
+      return () => clearInterval(timer);
+    }, []);
   const display = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
-  return <Panel className="waiting-panel"><div className="waiting-clock"><NaruPose pose={13} className="companion-waiting-naru" /><div>{display}</div><h2>{t("waitingNamed", { name: person.name })}</h2><p>{t("timeoutNoCharge")}</p></div><div className="waiting-info"><article><span className="person-avatar">{person.nativeName.slice(0, 1)}</span><strong>{person.name}<small>{t("todayAt", { time: "16:00" })}</small></strong></article><div className="waiting-contact"><Button variant="secondary" onClick={onMessage}><MessageCircleMore />{t("privateMessage")}</Button>{person.phone && <Button variant="ghost" onClick={() => { window.location.href = `tel:${person.phone}`; }}><Phone />{t("callPhone")}</Button>}</div><InfoBanner tone="mint" icon="shield" title={t("nextStep")}>{t("confirmDeposit")}</InfoBanner><Button variant="ghost" onClick={onCancel}>{t("cancelRequest")}</Button></div></Panel>;
+    return <Panel className="waiting-panel"><div className="waiting-clock"><NaruStandard className="companion-waiting-naru" /><div>{display}</div><h2>{t("waitingNamed", { name: person.name })}</h2><p>{t("timeoutNoCharge")}</p></div><div className="waiting-info"><article><span className="person-avatar">{person.nativeName.slice(0, 1)}</span><strong>{person.name}<small>{t("todayAt", { time: "16:00" })}</small></strong></article><div className="waiting-contact"><Button variant="secondary" onClick={onMessage}><MessageCircleMore />{t("privateMessage")}</Button>{person.phone && <Button variant="ghost" onClick={() => { window.location.href = `tel:${person.phone}`; }}><Phone />{t("callPhone")}</Button>}</div><InfoBanner tone="mint" icon="shield" title={t("nextStep")}>{t("confirmDeposit")}</InfoBanner><Button className="simulate-accept" variant="mint" onClick={onAccepted}><BadgeCheck />{t("simulateAccepted")}</Button><Button variant="ghost" onClick={onCancel}>{t("cancelRequest")}</Button></div></Panel>;
 }
 
 export function CompanionPaymentPage({ order, onPay }: { order: CompanionOrder; onPay: (method: string) => void }) {

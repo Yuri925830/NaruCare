@@ -25,6 +25,9 @@ export interface MedicalCard {
   name: string;
   nationality: string;
   address?: string;
+  latitude?: number;
+  longitude?: number;
+  locationAccuracy?: number;
   age: string;
   gender: string;
   documentType: string;
@@ -33,6 +36,7 @@ export interface MedicalCard {
   conditions: string;
   medications: string;
   surgeries: string;
+  symptoms: string;
   notes: string;
   language: string;
   korean?: Record<string, string>;
@@ -95,6 +99,8 @@ export interface LocationState {
   lng: number;
   address: string;
   verified: boolean;
+  accuracy?: number;
+  timestamp?: number;
 }
 
 export interface VisitRecord {

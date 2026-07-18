@@ -13,6 +13,9 @@ interface MedicalCardPayload {
   name: string;
   nationality: string;
   address?: string;
+  latitude?: number;
+  longitude?: number;
+  locationAccuracy?: number;
   age: string;
   gender: string;
   documentType: string;
@@ -21,6 +24,7 @@ interface MedicalCardPayload {
   conditions: string;
   medications: string;
   surgeries: string;
+  symptoms: string;
   notes: string;
   language: string;
   korean?: Record<string, string>;
@@ -238,10 +242,14 @@ function validateCard(body: JsonObject): MedicalCardPayload {
   const korean = body.korean && typeof body.korean === "object" && !Array.isArray(body.korean)
     ? Object.fromEntries(Object.entries(body.korean).filter((entry): entry is [string, string] => typeof entry[1] === "string").map(([key, value]) => [key.slice(0, 80), value.slice(0, 1_000)]))
     : {};
+  const latitude = Number(body.latitude); const longitude = Number(body.longitude); const locationAccuracy = Number(body.locationAccuracy);
   return {
     name: assertString(body.name, "name", 1, 80),
     nationality: assertString(body.nationality, "nationality", 1, 80),
     address: typeof body.address === "string" ? body.address.trim().slice(0, 300) : "",
+    latitude: Number.isFinite(latitude) && Math.abs(latitude) <= 90 ? latitude : undefined,
+    longitude: Number.isFinite(longitude) && Math.abs(longitude) <= 180 ? longitude : undefined,
+    locationAccuracy: Number.isFinite(locationAccuracy) && locationAccuracy >= 0 ? Math.min(locationAccuracy, 100_000) : undefined,
     age: assertString(body.age, "age", 1, 3),
     gender: assertString(body.gender, "gender", 1, 20),
     documentType: assertString(body.documentType, "documentType", 1, 40),
@@ -250,6 +258,7 @@ function validateCard(body: JsonObject): MedicalCardPayload {
     conditions: typeof body.conditions === "string" ? body.conditions.slice(0, 1_000) : "",
     medications: typeof body.medications === "string" ? body.medications.slice(0, 1_000) : "",
     surgeries: typeof body.surgeries === "string" ? body.surgeries.slice(0, 1_000) : "",
+    symptoms: typeof body.symptoms === "string" ? body.symptoms.slice(0, 2_000) : "",
     notes: typeof body.notes === "string" ? body.notes.slice(0, 1_000) : "",
     language: assertString(body.language, "language", 2, 20),
     korean,
@@ -545,6 +554,19 @@ async function listRecords(request: Request, env: Env) {
   return json({ records: result.results });
 }
 
+async function updateRecord(request: Request, env: Env, recordId: string) {
+  const userId = await requireUser(request, env); const body = await readJson(request);
+  const current = await env.DB.prepare("SELECT id,hospital,department,symptoms,visit_date AS date,status FROM visit_records WHERE id=? AND user_id=?").bind(recordId, userId).first<{ id: string; hospital: string; department: string; symptoms: string; date: string; status: string }>();
+  if (!current) throw new ApiException(404, "record_not_found", "Visit record not found");
+  const hospital = body.hospital === undefined ? current.hospital : assertString(body.hospital, "hospital", 1, 200);
+  const department = body.department === undefined ? current.department : assertString(body.department, "department", 1, 200);
+  const symptoms = body.symptoms === undefined ? current.symptoms : assertString(body.symptoms, "symptoms", 1, 1_000);
+  const date = body.date === undefined ? current.date : assertString(body.date, "date", 4, 30);
+  const status = body.status === undefined ? current.status : assertString(body.status, "status", 1, 100);
+  await env.DB.prepare("UPDATE visit_records SET hospital=?,department=?,symptoms=?,visit_date=?,status=? WHERE id=? AND user_id=?").bind(hospital, department, symptoms, date, status, recordId, userId).run();
+  return json({ id: recordId, hospital, department, symptoms, date, status });
+}
+
 async function routeRequest(request: Request, env: Env) {
   const url = new URL(request.url); const path = url.pathname;
   if (request.method === "POST" && path === "/api/auth/register") return authRegister(request, env);
@@ -566,6 +588,8 @@ async function routeRequest(request: Request, env: Env) {
   if (request.method === "PUT" && recordingMatch) return uploadRecording(request, env, decodeURIComponent(recordingMatch[1]), Number(recordingMatch[2]));
   if (request.method === "POST" && path === "/api/records") return createRecord(request, env);
   if (request.method === "GET" && path === "/api/records") return listRecords(request, env);
+  const recordMatch = path.match(/^\/api\/records\/([^/]+)$/);
+  if (request.method === "PATCH" && recordMatch) return updateRecord(request, env, decodeURIComponent(recordMatch[1]));
   if (request.method === "GET" && path === "/api/health") return json({ status: "ok", service: "narucare-api" });
   throw new ApiException(404, "not_found", "Endpoint not found");
 }

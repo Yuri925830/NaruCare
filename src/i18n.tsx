@@ -398,6 +398,19 @@ export const en = {
   loading: "Loading…",
   retry: "Retry",
   demoMode: "Offline demo mode",
+  currentSymptoms: "Current symptoms",
+  symptomsHelp: "Describe what you feel now, when it started, and any suspected trigger",
+  symptomsAutoFill: "Naru also updates this field automatically when you describe symptoms in chat.",
+  locationAccuracy: "GPS accuracy {accuracy}",
+  returnHospitals: "Return to hospital choices",
+  simulateAccepted: "Demo: companion has accepted",
+  finishVisitAssistance: "Finish this visit assistance",
+  recordStatusSearching: "Finding a hospital",
+  recordStatusHospitalSelected: "Hospital selected",
+  recordStatusNavigating: "Navigating to hospital",
+  recordStatusArrived: "Arrived · translation available",
+  recordStatusCompanion: "Companion requested",
+  recordStatusCompleted: "Visit assistance completed",
   errorGeneric: "Something went wrong. Please try again.",
 };
 
@@ -425,7 +438,7 @@ const zh: Messages = {
   emergencyCall: "紧急呼叫", dangerDetected: "检测到危急症状", emergencyQuestion: "Naru 发现您的情况很危急，您是否需要我直接帮助您呼叫救护车？", emergencyActions: "呼叫后将自动执行", emergencyActionsDesc: "获取当前位置 · 拨打 119 · 韩语循环播报 · 持续翻译", needCallNow: "需要，立即呼叫 119", declineCall: "暂时不需要，继续寻找医院", emergencyNoCardHint: "即使尚未建立就诊卡，也可以直接使用紧急呼叫。", calling119: "正在呼叫 119", connecting119: "正在连接韩国急救中心…", locationObtained: "已获取当前位置 · 扬声器已准备", currentAddress: "当前位置", koreanLoop: "正在循环播报韩语", startKoreanLoop: "电话已接通，开始韩语播报", autoLoop: "自动循环中", chineseConfirmation: "播报内容确认", emergencyKoreanKnown: "환자는 외국인이라 한국어를 할 수 없습니다. 저는 환자의 AI 의료 보조 도우미입니다. 환자 이름은 {name}이고, 주소는 {address}입니다. 현재 매우 위급하며, 증상은 {symptoms}입니다. 신속히 출동해 주세요. 저는 계속해서 환자와의 통역을 도와드리겠습니다.", emergencyKoreanUnknown: "환자는 외국인이라 한국어를 할 수 없습니다. 저는 환자의 AI 의료 보조 도우미입니다. 환자 이름은 {name}이고, 주소는 {address}입니다. 현재 매우 위급하며, 증상은 알 수 없습니다. 신속히 출동해 주세요. 저는 계속해서 환자와의 통역을 도와드리겠습니다.", unknown: "未知", breathingSymptoms: "无法呼吸并伴有剧烈疼痛", openEmergencyTranslation: "打开翻译", endCall: "结束紧急模式", browserCallNote: "出于安全原因，浏览器需要您点击 119 拨号并在接通后确认，Naru 随即开始循环播报韩语。", emergencyConfirmationKnown: "患者是外国人，不会韩语。我是患者的 AI 医疗辅助助手。患者姓名为 {name}，地址为 {address}，情况非常危急，症状为 {symptoms}。请迅速到达该地点，我会一直帮助您和患者进行翻译沟通。", emergencyConfirmationUnknown: "患者是外国人，不会韩语。我是患者的 AI 医疗辅助助手。患者姓名为 {name}，地址为 {address}，情况非常危急，症状未知。请迅速到达该地点，我会一直帮助您和患者进行翻译沟通。",
   profileTitle: "我的", account: "账号 ID：{id}", editProfile: "编辑个人资料", accountServices: "账户与服务", myMedicalCard: "我的就诊卡", visitRecords: "就诊记录", companionOrders: "真人陪诊订单", completedCount: "{count} 个已完成", paymentMethods: "支付方式", notLinked: "暂未绑定", languageSettings: "语言设置", privacySecurity: "隐私与安全", passwordData: "密码与数据管理", privacyPromise: "隐私承诺", privacyPromiseDesc: "可随时查看、修改或删除您的就诊数据。", logout: "退出登录",
   recordsTitle: "就诊记录", recordsDesc: "每次就诊都会自动整理", recordsSub: "医院、翻译、陪诊、录音和费用记录集中保存，并由您决定是否保留。", translationRecord: "翻译记录", companionRecord: "陪诊记录", feeRecord: "费用明细", viewFullRecord: "查看完整记录", recordManaged: "记录由您管理", exportDelete: "可随时导出或永久删除。", noRecords: "暂时没有就诊记录。",
-  close: "关闭", back: "返回", cancel: "取消", confirm: "确认", save: "保存", loading: "加载中…", retry: "重试", demoMode: "离线演示模式", errorGeneric: "出现问题，请重试。",
+  close: "关闭", back: "返回", cancel: "取消", confirm: "确认", save: "保存", loading: "加载中…", retry: "重试", demoMode: "离线演示模式", currentSymptoms: "当前症状", symptomsHelp: "请描述现在的感觉、开始时间和可能诱因", symptomsAutoFill: "您在与 Naru 对话中描述症状时，这里也会自动更新。", locationAccuracy: "GPS 精度 {accuracy}", returnHospitals: "返回附近医院继续选择", simulateAccepted: "演示：陪诊师已接受", finishVisitAssistance: "结束本次就诊帮助", recordStatusSearching: "正在寻找医院", recordStatusHospitalSelected: "已选择医院", recordStatusNavigating: "正在前往医院", recordStatusArrived: "已到院 · 可使用翻译", recordStatusCompanion: "已申请真人陪诊", recordStatusCompleted: "本次就诊帮助已完成", errorGeneric: "出现问题，请重试。",
 };
 
 // These packs contain reviewed overrides only. Generated locale copy fills the
@@ -470,13 +483,15 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     const nextOption = localeOptions.find((item) => item.code === next) || localeOptions[0];
     localStorage.setItem("narucare-locale", nextOption.code);
     document.documentElement.lang = nextOption.code;
-    document.documentElement.dir = nextOption.direction || "ltr";
+    document.documentElement.dir = "ltr";
+    document.documentElement.dataset.localeDirection = nextOption.direction || "ltr";
     setLocaleState(nextOption.code);
   }, []);
 
   useEffect(() => {
     document.documentElement.lang = option.code;
-    document.documentElement.dir = option.direction || "ltr";
+    document.documentElement.dir = "ltr";
+    document.documentElement.dataset.localeDirection = option.direction || "ltr";
   }, [option]);
 
   const t = useCallback((key: keyof Messages, vars?: Record<string, string | number>) => {
