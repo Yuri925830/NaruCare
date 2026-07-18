@@ -154,6 +154,8 @@ export interface CompanionOrder {
   hospital: Hospital | null;
   status: "requested" | "accepted" | "deposit_paid" | "arrived" | "in_service" | "completed" | "cancelled";
   durationMinutes: number;
+  serviceStartedAt?: string;
+  actualDurationMinutes?: number;
   deposit: number;
   paymentMethod: string;
   balancePaid?: boolean;

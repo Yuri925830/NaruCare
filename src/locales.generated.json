@@ -54,6 +54,8 @@
     "medicalEducationFallback": "Puedo explicarle información médica general, pero no puedo diagnosticarlo desde el chat ni recomendarle cambiar el medicamento recetado sin un médico. Dime la condición o medicamento que quieres entender. Si esto le está sucediendo ahora, dígame también cuánto tiempo ha durado, qué tan grave es y cualquier otro síntoma.",
     "medicalEducationBoundary": "Esta es información médica general, no un diagnóstico. No comience, suspenda ni cambie la dosis de un medicamento recetado sin la intervención de un médico o farmacéutico.",
     "naruConversationFallback": "Estoy aquí contigo. Puede hablar conmigo normalmente, hacerme una pregunta sobre conocimientos médicos o describir los síntomas que le están sucediendo ahora. Si necesito más detalles, lo haré paso a paso.",
+    "hospitalConsentPrompt": "He organizado lo que acabas de describir y lo guardé en tu tarjeta médica. ¿Le gustaría ir a un hospital cercano? Si está de acuerdo, puedo encontrar instalaciones cercanas que puedan atenderlo ahora.",
+    "hospitalOfferDeclined": "Vale, no buscaré un hospital ahora mismo. Infórmeme de inmediato si los síntomas empeoran, no mejoran o si presenta signos de advertencia como dificultad para respirar o dolor intenso.",
     "inputPlaceholder": "Describe tus síntomas o lo que necesitas…",
     "promptUnwell": "me siento mal",
     "promptCard": "Ayúdame a crear una tarjeta médica.",
@@ -402,7 +404,12 @@
     "orderArrived": "llegó el compañero",
     "orderInService": "Servicio en progreso",
     "orderCompleted": "Completado",
-    "orderCancelled": "Cancelado"
+    "orderCancelled": "Cancelado",
+    "serviceDuration": "Duración del servicio de acompañante",
+    "minimumServiceDuration": "Mínimo 1 hora · ajustar en incrementos de 30 minutos",
+    "estimatedServiceTotal": "Total estimado del servicio",
+    "serviceTimeEnded": "El tiempo de servicio seleccionado ha finalizado",
+    "serviceTimeEndedDesc": "Elige si deseas finalizar el servicio ahora o extenderlo 30 minutos. La facturación se basa en la duración real final del servicio, con un mínimo de una hora."
   },
   "fr": {
     "brandSub": "Assistant de visite médicale IA agentique",
@@ -459,6 +466,8 @@
     "medicalEducationFallback": "Je peux vous expliquer des informations médicales générales, mais je ne peux pas vous diagnostiquer par chat ni recommander de changer de médicament sur ordonnance sans un clinicien. Dites-moi la maladie ou le médicament que vous souhaitez comprendre. Si cela vous arrive maintenant, dites-moi également depuis combien de temps cela dure, quelle est sa gravité et tout autre symptôme.",
     "medicalEducationBoundary": "Il s’agit d’informations médicales générales et non d’un diagnostic. Ne commencez pas, n'arrêtez pas et ne modifiez pas la dose d'un médicament sur ordonnance sans l'aide d'un clinicien ou d'un pharmacien.",
     "naruConversationFallback": "Je suis ici avec toi. Vous pouvez me parler normalement, poser une question de connaissances médicales ou décrire les symptômes qui vous arrivent actuellement. Si j'ai besoin de plus de détails, je poserai une étape à la fois.",
+    "hospitalConsentPrompt": "J'ai organisé ce que vous venez de décrire et je l'ai enregistré sur votre carte médicale. Souhaitez-vous vous rendre dans un hôpital à proximité ? Si vous êtes d'accord, je peux trouver des établissements à proximité qui pourront peut-être vous recevoir maintenant.",
+    "hospitalOfferDeclined": "D'accord, je ne chercherai pas d'hôpital pour le moment. Dites-moi immédiatement si les symptômes s'aggravent, ne s'améliorent pas ou si vous développez des signes avant-coureurs tels que des difficultés respiratoires ou une douleur intense.",
     "inputPlaceholder": "Décrivez vos symptômes ou ce dont vous avez besoin…",
     "promptUnwell": "je ne me sens pas bien",
     "promptCard": "Aidez-moi à créer une carte médicale",
@@ -807,7 +816,12 @@
     "orderArrived": "Le compagnon est arrivé",
     "orderInService": "Prestation en cours",
     "orderCompleted": "Terminé",
-    "orderCancelled": "Annulé"
+    "orderCancelled": "Annulé",
+    "serviceDuration": "Durée du service compagnon",
+    "minimumServiceDuration": "Minimum 1 heure · ajuster par incréments de 30 minutes",
+    "estimatedServiceTotal": "Total estimé du service",
+    "serviceTimeEnded": "La durée de service sélectionnée est terminée",
+    "serviceTimeEndedDesc": "Choisissez si vous souhaitez mettre fin au service maintenant ou le prolonger de 30 minutes. La facturation est basée sur la durée finale réelle de la prestation, avec un minimum d'une heure."
   },
   "de": {
     "brandSub": "Agentischer KI-Assistent für medizinische Besuche",
@@ -864,6 +878,8 @@
     "medicalEducationFallback": "Ich kann Ihnen allgemeine medizinische Informationen erläutern, aber ich kann Ihnen im Chat keine Diagnose stellen oder ohne einen Arzt einen Wechsel Ihrer verschreibungspflichtigen Medikamente empfehlen. Sagen Sie mir die Erkrankung oder das Medikament, das Sie verstehen möchten. Wenn Ihnen dies jetzt passiert, teilen Sie mir auch mit, wie lange es schon anhält, wie schwerwiegend es ist und welche anderen Symptome es gibt.",
     "medicalEducationBoundary": "Hierbei handelt es sich um allgemeine medizinische Informationen, nicht um eine Diagnose. Beginnen, stoppen oder ändern Sie die Dosis verschreibungspflichtiger Medikamente nicht ohne einen Arzt oder Apotheker.",
     "naruConversationFallback": "Ich bin hier bei dir. Sie können ganz normal mit mir sprechen, eine medizinische Frage stellen oder Symptome beschreiben, die bei Ihnen gerade auftreten. Wenn ich mehr Details benötige, werde ich Schritt für Schritt nachfragen.",
+    "hospitalConsentPrompt": "Ich habe das, was Sie gerade beschrieben haben, geordnet und auf Ihrer Gesundheitskarte gespeichert. Möchten Sie in ein nahegelegenes Krankenhaus gehen? Wenn Sie einverstanden sind, kann ich Einrichtungen in der Nähe finden, die Sie möglicherweise jetzt empfangen können.",
+    "hospitalOfferDeclined": "Okay, ich werde jetzt nicht nach einem Krankenhaus suchen. Informieren Sie mich sofort, wenn sich die Symptome verschlimmern, keine Besserung eintritt oder Sie Warnzeichen wie Atembeschwerden oder starke Schmerzen entwickeln.",
     "inputPlaceholder": "Beschreiben Sie Ihre Symptome oder was Sie brauchen ...",
     "promptUnwell": "Ich fühle mich unwohl",
     "promptCard": "Helfen Sie mir, eine Krankenkarte zu erstellen",
@@ -1212,7 +1228,12 @@
     "orderArrived": "Begleiter kam",
     "orderInService": "Dienst läuft",
     "orderCompleted": "Abgeschlossen",
-    "orderCancelled": "Abgesagt"
+    "orderCancelled": "Abgesagt",
+    "serviceDuration": "Dauer des Begleitdienstes",
+    "minimumServiceDuration": "Mindestens 1 Stunde · Anpassung in 30-Minuten-Schritten",
+    "estimatedServiceTotal": "Geschätzte Servicesumme",
+    "serviceTimeEnded": "Die ausgewählte Servicezeit ist abgelaufen",
+    "serviceTimeEndedDesc": "Wählen Sie, ob Sie den Dienst jetzt beenden oder um 30 Minuten verlängern möchten. Die Abrechnung basiert auf der endgültigen tatsächlichen Leistungsdauer, mit einem Minimum von einer Stunde."
   },
   "pt-BR": {
     "brandSub": "Assistente de visita médica Agentic AI",
@@ -1269,6 +1290,8 @@
     "medicalEducationFallback": "Posso explicar informações médicas gerais, mas não posso diagnosticar você pelo chat ou recomendar a troca de medicamentos prescritos sem um médico. Diga-me a condição ou medicamento que você deseja entender. Se isso estiver acontecendo com você agora, diga-me também quanto tempo durou, quão grave é e quaisquer outros sintomas.",
     "medicalEducationBoundary": "Esta é uma informação médica geral, não um diagnóstico. Não inicie, pare ou altere a dose de medicamentos prescritos sem um médico ou farmacêutico.",
     "naruConversationFallback": "Estou aqui com você. Você pode conversar comigo normalmente, fazer uma pergunta sobre conhecimentos médicos ou descrever os sintomas que estão acontecendo com você agora. Se precisar de mais detalhes, pedirei um passo de cada vez.",
+    "hospitalConsentPrompt": "Organizei o que você acabou de descrever e salvei em seu cartão médico. Você gostaria de ir a um hospital próximo? Se você concordar, posso encontrar instalações próximas que possam atendê-lo agora.",
+    "hospitalOfferDeclined": "Ok, não vou procurar um hospital agora. Informe-me imediatamente se os sintomas piorarem, não melhorarem ou se você desenvolver sinais de alerta, como dificuldade para respirar ou dor intensa.",
     "inputPlaceholder": "Descreva seus sintomas ou o que você precisa…",
     "promptUnwell": "Eu não me sinto bem",
     "promptCard": "Ajude-me a criar um cartão médico",
@@ -1617,7 +1640,12 @@
     "orderArrived": "Companheiro chegou",
     "orderInService": "Serviço em andamento",
     "orderCompleted": "Concluído",
-    "orderCancelled": "Cancelado"
+    "orderCancelled": "Cancelado",
+    "serviceDuration": "Duração do serviço complementar",
+    "minimumServiceDuration": "Mínimo de 1 hora · ajuste em incrementos de 30 minutos",
+    "estimatedServiceTotal": "Total estimado de serviço",
+    "serviceTimeEnded": "O tempo de serviço selecionado terminou",
+    "serviceTimeEndedDesc": "Escolha se deseja encerrar o serviço agora ou estendê-lo por 30 minutos. A faturação baseia-se na duração real final do serviço, com um mínimo de uma hora."
   },
   "ru": {
     "brandSub": "Агент-помощник по посещению врача с искусственным интеллектом",
@@ -1674,6 +1702,8 @@
     "medicalEducationFallback": "Я могу объяснить общую медицинскую информацию, но не могу поставить вам диагноз в чате или порекомендовать сменить рецептурный препарат без врача. Расскажите мне о состоянии или лекарстве, которое вы хотите понять. Если это происходит с вами сейчас, расскажите мне, как долго это длилось, насколько серьезно и какие еще симптомы есть.",
     "medicalEducationBoundary": "Это общая медицинская информация, а не диагноз. Не начинайте, не прекращайте и не меняйте дозу рецептурного лекарства без помощи врача или фармацевта.",
     "naruConversationFallback": "Я здесь с тобой. Вы можете поговорить со мной в обычном режиме, задать вопрос по медицинским знаниям или описать симптомы, которые с вами сейчас происходят. Если мне понадобится более подробная информация, я буду спрашивать поэтапно.",
+    "hospitalConsentPrompt": "Я систематизировал то, что вы только что описали, и сохранил в вашей медицинской карте. Хотели бы вы пойти в ближайшую больницу? Если вы согласны, я могу найти близлежащие учреждения, которые смогут вас принять.",
+    "hospitalOfferDeclined": "Хорошо, я не буду сейчас искать больницу. Немедленно сообщите мне, если симптомы ухудшатся, не улучшатся или у вас появятся настораживающие признаки, такие как затрудненное дыхание или сильная боль.",
     "inputPlaceholder": "Опишите ваши симптомы или что вам нужно…",
     "promptUnwell": "я плохо себя чувствую",
     "promptCard": "Помогите мне создать медицинскую карту",
@@ -2022,7 +2052,12 @@
     "orderArrived": "Спутник прибыл",
     "orderInService": "Обслуживание в процессе",
     "orderCompleted": "Завершено",
-    "orderCancelled": "Отменено"
+    "orderCancelled": "Отменено",
+    "serviceDuration": "Продолжительность услуги сопутствующего сервиса",
+    "minimumServiceDuration": "Минимум 1 час · корректировка с шагом 30 минут",
+    "estimatedServiceTotal": "Ориентировочная стоимость услуг",
+    "serviceTimeEnded": "Выбранное время обслуживания закончилось",
+    "serviceTimeEndedDesc": "Выберите, прекратить ли услугу сейчас или продлить ее на 30 минут. Выставление счетов основано на окончательной фактической продолжительности услуги, минимум один час."
   },
   "ar": {
     "brandSub": "مساعد الزيارة الطبية للوكيل AI",
@@ -2079,6 +2114,8 @@
     "medicalEducationFallback": "يمكنني شرح معلومات طبية عامة، لكن لا يمكنني تشخيص حالتك من خلال الدردشة أو التوصية بتغيير الدواء الموصوف دون طبيب. أخبرني بالحالة أو الدواء الذي تريد فهمه. إذا كان هذا يحدث لك الآن، أخبرني أيضًا عن مدة استمراره، ومدى خطورته، وأي أعراض أخرى.",
     "medicalEducationBoundary": "هذه معلومات طبية عامة وليست تشخيص. لا تبدأ أو توقف أو تغير جرعة الدواء الموصوف بدون طبيب أو صيدلي.",
     "naruConversationFallback": "أنا هنا معك. يمكنك التحدث معي بشكل طبيعي أو طرح سؤال طبي أو وصف الأعراض التي تحدث لك الآن. إذا كنت بحاجة إلى مزيد من التفاصيل، سأطلب خطوة واحدة في كل مرة.",
+    "hospitalConsentPrompt": "لقد قمت بتنظيم ما وصفته للتو وحفظته في بطاقتك الطبية. هل ترغب بالذهاب إلى مستشفى قريب؟ إذا وافقت، يمكنني العثور على مرافق قريبة قد تتمكن من رؤيتك الآن.",
+    "hospitalOfferDeclined": "حسنًا، لن أبحث عن مستشفى الآن. أخبرني على الفور إذا تفاقمت الأعراض، أو لم تتحسن، أو ظهرت عليك علامات تحذيرية مثل صعوبة في التنفس أو ألم شديد.",
     "inputPlaceholder": "قم بوصف أعراضك أو ما تحتاجه...",
     "promptUnwell": "أشعر بتوعك",
     "promptCard": "ساعدوني في إنشاء بطاقة طبية",
@@ -2427,7 +2464,12 @@
     "orderArrived": "وصل الرفيق",
     "orderInService": "الخدمة قيد التقدم",
     "orderCompleted": "مكتمل",
-    "orderCancelled": "تم الإلغاء"
+    "orderCancelled": "تم الإلغاء",
+    "serviceDuration": "مدة خدمة المرافق",
+    "minimumServiceDuration": "الحد الأدنى ساعة واحدة · اضبط بزيادات قدرها 30 دقيقة",
+    "estimatedServiceTotal": "إجمالي الخدمة المقدرة",
+    "serviceTimeEnded": "لقد انتهت مدة الخدمة المحددة",
+    "serviceTimeEndedDesc": "اختر ما إذا كنت تريد إنهاء الخدمة الآن أو تمديدها لمدة 30 دقيقة. تعتمد الفاتورة على مدة الخدمة الفعلية النهائية، بحد أدنى ساعة واحدة."
   },
   "hi": {
     "brandSub": "एजेंट एआई मेडिकल विजिट सहायक",
@@ -2484,6 +2526,8 @@
     "medicalEducationFallback": "मैं सामान्य चिकित्सा जानकारी समझा सकता हूं, लेकिन मैं चैट से आपका निदान नहीं कर सकता या चिकित्सक के बिना डॉक्टर के पर्चे वाली दवा बदलने की अनुशंसा नहीं कर सकता। मुझे वह स्थिति या दवा बताएं जिसे आप समझना चाहते हैं। यदि यह अब आपके साथ हो रहा है, तो मुझे यह भी बताएं कि यह कितने समय तक रहा, यह कितना गंभीर है, और क्या कोई अन्य लक्षण हैं।",
     "medicalEducationBoundary": "यह सामान्य चिकित्सीय जानकारी है, निदान नहीं। चिकित्सक या फार्मासिस्ट के बिना प्रिस्क्रिप्शन दवा की खुराक शुरू, बंद या परिवर्तित न करें।",
     "naruConversationFallback": "मैं यहां आपके साथ हूं. आप मुझसे सामान्य रूप से बात कर सकते हैं, चिकित्सीय ज्ञान संबंधी प्रश्न पूछ सकते हैं, या उन लक्षणों का वर्णन कर सकते हैं जो अभी आपके साथ हो रहे हैं। यदि मुझे अधिक विवरण की आवश्यकता है, तो मैं एक समय में एक चरण पूछूंगा।",
+    "hospitalConsentPrompt": "आपने अभी जो वर्णन किया है उसे मैंने व्यवस्थित कर दिया है और इसे आपके मेडिकल कार्ड में सहेज लिया है। क्या आप नजदीकी अस्पताल जाना चाहेंगे? यदि आप सहमत हैं, तो मैं आस-पास की सुविधाएं ढूंढ सकता हूं जो अब आपको देखने में सक्षम हो सकती हैं।",
+    "hospitalOfferDeclined": "ठीक है, मैं अभी अस्पताल की तलाश नहीं करूंगा। यदि लक्षण बदतर हो जाएं, सुधार न हो, या आपको सांस लेने में परेशानी या गंभीर दर्द जैसे चेतावनी संकेत दिखाई दें तो तुरंत मुझे बताएं।",
     "inputPlaceholder": "अपने लक्षण बताएं या आपको क्या चाहिए...",
     "promptUnwell": "मैं अस्वस्थ महसूस कर रहा हूं",
     "promptCard": "मेडिकल कार्ड बनाने में मेरी सहायता करें",
@@ -2832,7 +2876,12 @@
     "orderArrived": "साथी आ गया",
     "orderInService": "सेवा प्रगति पर है",
     "orderCompleted": "पूरा हुआ",
-    "orderCancelled": "रद्द कर दिया गया"
+    "orderCancelled": "रद्द कर दिया गया",
+    "serviceDuration": "सहयोगी सेवा अवधि",
+    "minimumServiceDuration": "न्यूनतम 1 घंटा · 30 मिनट की वृद्धि में समायोजित करें",
+    "estimatedServiceTotal": "अनुमानित सेवा कुल",
+    "serviceTimeEnded": "चयनित सेवा समय समाप्त हो गया है",
+    "serviceTimeEndedDesc": "चुनें कि सेवा को अभी समाप्त करना है या इसे 30 मिनट तक बढ़ाना है। बिलिंग अंतिम वास्तविक सेवा अवधि पर आधारित होती है, न्यूनतम एक घंटे की।"
   },
   "id": {
     "brandSub": "Asisten kunjungan medis AI agen",
@@ -2889,6 +2938,8 @@
     "medicalEducationFallback": "Saya dapat menjelaskan informasi medis umum, tetapi saya tidak dapat mendiagnosis Anda dari obrolan atau merekomendasikan penggantian resep obat tanpa dokter. Ceritakan kondisi atau obat yang ingin anda pahami. Jika hal ini terjadi pada Anda sekarang, beri tahu saya sudah berapa lama hal ini berlangsung, seberapa parahnya, dan gejala lainnya.",
     "medicalEducationBoundary": "Ini adalah informasi medis umum, bukan diagnosis. Jangan memulai, menghentikan, atau mengubah dosis obat resep tanpa dokter atau apoteker.",
     "naruConversationFallback": "Aku di sini bersamamu. Anda dapat berbicara dengan saya seperti biasa, menanyakan pertanyaan pengetahuan medis, atau menjelaskan gejala yang terjadi pada Anda saat ini. Jika saya membutuhkan lebih detail, saya akan menanyakannya selangkah demi selangkah.",
+    "hospitalConsentPrompt": "Saya telah mengatur apa yang baru saja Anda jelaskan dan menyimpannya ke kartu medis Anda. Apakah Anda ingin pergi ke rumah sakit terdekat? Jika Anda setuju, saya dapat menemukan fasilitas terdekat yang mungkin dapat menemui Anda sekarang.",
+    "hospitalOfferDeclined": "Oke, saya tidak akan mencari rumah sakit sekarang. Beri tahu saya segera jika gejalanya semakin parah, tidak kunjung membaik, atau Anda mengalami tanda-tanda peringatan seperti kesulitan bernapas atau nyeri hebat.",
     "inputPlaceholder": "Jelaskan gejala Anda atau apa yang Anda butuhkan…",
     "promptUnwell": "Saya merasa tidak enak badan",
     "promptCard": "Bantu saya membuat kartu medis",
@@ -3237,7 +3288,12 @@
     "orderArrived": "Rekan tiba",
     "orderInService": "Layanan sedang berlangsung",
     "orderCompleted": "Selesai",
-    "orderCancelled": "Dibatalkan"
+    "orderCancelled": "Dibatalkan",
+    "serviceDuration": "Durasi layanan pendamping",
+    "minimumServiceDuration": "Minimum 1 jam · sesuaikan dalam kelipatan 30 menit",
+    "estimatedServiceTotal": "Perkiraan total layanan",
+    "serviceTimeEnded": "Waktu layanan yang dipilih telah berakhir",
+    "serviceTimeEndedDesc": "Pilih apakah akan mengakhiri layanan sekarang atau memperpanjangnya selama 30 menit. Penagihan didasarkan pada durasi layanan aktual akhir, dengan minimum satu jam."
   },
   "vi": {
     "brandSub": "Trợ lý thăm khám y tế AI của Agentic",
@@ -3294,6 +3350,8 @@
     "medicalEducationFallback": "Tôi có thể giải thích thông tin y tế chung, nhưng tôi không thể chẩn đoán cho bạn qua trò chuyện hoặc đề xuất thay đổi thuốc theo toa mà không có bác sĩ lâm sàng. Hãy cho tôi biết tình trạng hoặc loại thuốc mà bạn muốn hiểu. Nếu điều này đang xảy ra với bạn bây giờ, hãy cho tôi biết nó đã kéo dài bao lâu, mức độ nghiêm trọng và bất kỳ triệu chứng nào khác.",
     "medicalEducationBoundary": "Đây là thông tin y tế tổng quát, không phải là chẩn đoán. Không bắt đầu, dừng hoặc thay đổi liều thuốc theo toa mà không có bác sĩ lâm sàng hoặc dược sĩ.",
     "naruConversationFallback": "Tôi ở đây với bạn. Bạn có thể nói chuyện với tôi một cách bình thường, đặt câu hỏi về kiến ​​thức y khoa hoặc mô tả các triệu chứng đang xảy ra với bạn. Nếu tôi cần chi tiết hơn, tôi sẽ hỏi từng bước một.",
+    "hospitalConsentPrompt": "Tôi đã sắp xếp những gì bạn vừa mô tả và lưu nó vào thẻ y tế của bạn. Bạn có muốn đến bệnh viện gần đó không? Nếu bạn đồng ý, tôi có thể tìm các cơ sở gần đó có thể gặp bạn ngay bây giờ.",
+    "hospitalOfferDeclined": "Được rồi, tôi sẽ không tìm bệnh viện lúc này. Hãy cho tôi biết ngay nếu các triệu chứng trở nên tồi tệ hơn, không cải thiện hoặc bạn xuất hiện các dấu hiệu cảnh báo như khó thở hoặc đau dữ dội.",
     "inputPlaceholder": "Mô tả các triệu chứng của bạn hoặc những gì bạn cần…",
     "promptUnwell": "tôi cảm thấy không khỏe",
     "promptCard": "Giúp tôi tạo thẻ y tế",
@@ -3642,7 +3700,12 @@
     "orderArrived": "Người bạn đồng hành đã đến",
     "orderInService": "Dịch vụ đang được tiến hành",
     "orderCompleted": "Đã hoàn thành",
-    "orderCancelled": "Đã hủy"
+    "orderCancelled": "Đã hủy",
+    "serviceDuration": "Thời hạn dịch vụ đồng hành",
+    "minimumServiceDuration": "Tối thiểu 1 giờ · điều chỉnh theo khoảng tăng 30 phút",
+    "estimatedServiceTotal": "Tổng dịch vụ ước tính",
+    "serviceTimeEnded": "Thời gian phục vụ đã chọn đã kết thúc",
+    "serviceTimeEndedDesc": "Chọn kết thúc dịch vụ ngay bây giờ hoặc kéo dài thêm 30 phút. Việc thanh toán được tính dựa trên thời gian sử dụng dịch vụ thực tế cuối cùng, tối thiểu là một giờ."
   },
   "th": {
     "brandSub": "ผู้ช่วยเข้ารับการตรวจทางการแพทย์ Agentic AI",
@@ -3699,6 +3762,8 @@
     "medicalEducationFallback": "ฉันสามารถอธิบายข้อมูลทางการแพทย์ทั่วไปได้ แต่ฉันไม่สามารถวินิจฉัยคุณได้จากการแชทหรือแนะนำให้เปลี่ยนยาตามใบสั่งแพทย์หากไม่มีแพทย์ แจ้งอาการหรือยาที่ต้องการทราบ หากสิ่งนี้เกิดขึ้นกับคุณตอนนี้ โปรดบอกฉันด้วยว่าอาการนี้เกิดขึ้นนานแค่ไหน รุนแรงแค่ไหน และอาการอื่น ๆ",
     "medicalEducationBoundary": "นี่เป็นข้อมูลทางการแพทย์ทั่วไป ไม่ใช่การวินิจฉัย อย่าเริ่ม หยุด หรือเปลี่ยนขนาดยาตามใบสั่งแพทย์โดยไม่มีแพทย์หรือเภสัชกร",
     "naruConversationFallback": "ฉันอยู่ที่นี่กับคุณ คุณสามารถพูดคุยกับฉันได้ตามปกติ ถามคำถามความรู้ทางการแพทย์ หรืออธิบายอาการที่เกิดขึ้นกับคุณในขณะนี้ หากต้องการรายละเอียดเพิ่มเติม ผมจะถามทีละขั้นตอน",
+    "hospitalConsentPrompt": "ฉันได้จัดระเบียบสิ่งที่คุณเพิ่งอธิบายและบันทึกไว้ในบัตรการรักษาพยาบาลของคุณแล้ว คุณต้องการไปโรงพยาบาลใกล้เคียงหรือไม่? หากคุณตกลง ฉันสามารถหาสิ่งอำนวยความสะดวกใกล้เคียงที่อาจพบคุณได้ในตอนนี้",
+    "hospitalOfferDeclined": "โอเค ฉันจะไม่ค้นหาโรงพยาบาลตอนนี้ บอกฉันทันทีหากอาการแย่ลง ไม่ดีขึ้น หรือมีสัญญาณเตือน เช่น หายใจลำบากหรือปวดอย่างรุนแรง",
     "inputPlaceholder": "อธิบายอาการของคุณหรือสิ่งที่คุณต้องการ...",
     "promptUnwell": "ฉันรู้สึกไม่สบาย",
     "promptCard": "ช่วยฉันสร้างบัตรทางการแพทย์",
@@ -4047,7 +4112,12 @@
     "orderArrived": "สหายมาถึงแล้ว",
     "orderInService": "อยู่ระหว่างดำเนินการให้บริการ",
     "orderCompleted": "เสร็จสิ้น",
-    "orderCancelled": "ยกเลิกแล้ว"
+    "orderCancelled": "ยกเลิกแล้ว",
+    "serviceDuration": "ระยะเวลาการให้บริการสหาย",
+    "minimumServiceDuration": "ขั้นต่ำ 1 ชั่วโมง · ปรับเพิ่มครั้งละ 30 นาที",
+    "estimatedServiceTotal": "ยอดรวมบริการโดยประมาณ",
+    "serviceTimeEnded": "เวลาบริการที่เลือกสิ้นสุดลงแล้ว",
+    "serviceTimeEndedDesc": "เลือกว่าจะสิ้นสุดบริการทันทีหรือขยายเวลาอีก 30 นาที การเรียกเก็บเงินจะขึ้นอยู่กับระยะเวลาการให้บริการจริงขั้นสุดท้าย โดยมีขั้นต่ำหนึ่งชั่วโมง"
   },
   "tr": {
     "brandSub": "Ajan AI tıbbi ziyaret asistanı",
@@ -4104,6 +4174,8 @@
     "medicalEducationFallback": "Genel tıbbi bilgileri açıklayabilirim ancak size sohbet yoluyla teşhis koyamam veya bir klinisyen olmadan reçeteli ilacı değiştirmenizi öneremem. Bana anlamak istediğin rahatsızlığı veya ilacı söyle. Eğer bu şimdi başınıza geliyorsa, bana bunun ne kadar sürdüğünü, ne kadar şiddetli olduğunu ve diğer belirtileri de söyleyin.",
     "medicalEducationBoundary": "Bu genel tıbbi bilgidir, teşhis değildir. Reçeteli ilacın dozunu klinisyen veya eczacı olmadan başlatmayın, durdurmayın veya değiştirmeyin.",
     "naruConversationFallback": "Burada seninleyim. Benimle normal şekilde konuşabilir, tıbbi bilgi sorusu sorabilir veya şu anda başınıza gelen belirtileri anlatabilirsiniz. Daha fazla ayrıntıya ihtiyacım olursa, her seferinde bir adım soracağım.",
+    "hospitalConsentPrompt": "Az önce anlattıklarınızı düzenledim ve sağlık kartınıza kaydettim. Yakındaki bir hastaneye gitmek ister misiniz? Kabul ederseniz yakınlarda sizi görebilecek tesisleri bulabilirim.",
+    "hospitalOfferDeclined": "Tamam, şu anda hastane aramayacağım. Semptomlar kötüleşirse, düzelmezse veya nefes almada zorluk veya şiddetli ağrı gibi uyarı işaretleri geliştirirseniz hemen bana bildirin.",
     "inputPlaceholder": "Belirtilerinizi veya neye ihtiyacınız olduğunu açıklayın…",
     "promptUnwell": "kendimi iyi hissetmiyorum",
     "promptCard": "Sağlık kartı oluşturmama yardım et",
@@ -4452,7 +4524,12 @@
     "orderArrived": "Refakatçi geldi",
     "orderInService": "Hizmet devam ediyor",
     "orderCompleted": "Tamamlandı",
-    "orderCancelled": "İptal edildi"
+    "orderCancelled": "İptal edildi",
+    "serviceDuration": "Refakatçi hizmet süresi",
+    "minimumServiceDuration": "Minimum 1 saat · 30 dakikalık artışlarla ayarlayın",
+    "estimatedServiceTotal": "Tahmini hizmet toplamı",
+    "serviceTimeEnded": "Seçilen hizmet süresi sona erdi",
+    "serviceTimeEndedDesc": "Hizmeti şimdi sonlandırmayı veya 30 dakika uzatmayı seçin. Faturalandırma, minimum bir saatlik olmak üzere nihai fiili hizmet süresine göre yapılır."
   },
   "it": {
     "brandSub": "Assistente alla visita medica Agentic AI",
@@ -4509,6 +4586,8 @@
     "medicalEducationFallback": "Posso fornire informazioni mediche generali, ma non posso diagnosticarti dalla chat o consigliarti di cambiare medicinale su prescrizione senza un medico. Dimmi la condizione o la medicina che vuoi capire. Se questo ti sta accadendo adesso, dimmi anche quanto tempo dura, quanto è grave e eventuali altri sintomi.",
     "medicalEducationBoundary": "Queste sono informazioni mediche generali, non una diagnosi. Non avviare, interrompere o modificare la dose del medicinale soggetto a prescrizione senza un medico o un farmacista.",
     "naruConversationFallback": "Sono qui con te. Puoi parlare con me normalmente, porre una domanda di conoscenza medica o descrivere i sintomi che ti stanno accadendo in questo momento. Se ho bisogno di maggiori dettagli, chiederò un passo alla volta.",
+    "hospitalConsentPrompt": "Ho organizzato ciò che hai appena descritto e l'ho salvato nella tua tessera sanitaria. Vorresti andare in un ospedale vicino? Se sei d'accordo, posso trovare strutture vicine che potrebbero vederti adesso.",
+    "hospitalOfferDeclined": "Ok, non cercherò un ospedale adesso. Dimmi immediatamente se i sintomi peggiorano, non migliorano o sviluppi segnali di allarme come difficoltà respiratorie o forte dolore.",
     "inputPlaceholder": "Descrivi i tuoi sintomi o ciò di cui hai bisogno...",
     "promptUnwell": "Non mi sento bene",
     "promptCard": "Aiutami a creare una tessera sanitaria",
@@ -4857,7 +4936,12 @@
     "orderArrived": "Il compagno è arrivato",
     "orderInService": "Servizio in corso",
     "orderCompleted": "Completato",
-    "orderCancelled": "Annullato"
+    "orderCancelled": "Annullato",
+    "serviceDuration": "Durata del servizio di accompagnamento",
+    "minimumServiceDuration": "Minimo 1 ora · regolare con incrementi di 30 minuti",
+    "estimatedServiceTotal": "Totale del servizio stimato",
+    "serviceTimeEnded": "Il tempo di servizio selezionato è terminato",
+    "serviceTimeEndedDesc": "Scegli se terminare adesso il servizio o prolungarlo di 30 minuti. La fatturazione si basa sulla durata effettiva del servizio finale, con un minimo di un'ora."
   },
   "nl": {
     "brandSub": "Agent AI medische bezoekassistent",
@@ -4914,6 +4998,8 @@
     "medicalEducationFallback": "Ik kan algemene medische informatie uitleggen, maar ik kan geen diagnose stellen via de chat of aanbevelen om zonder arts een receptgeneesmiddel te wijzigen. Vertel mij de aandoening of het medicijn dat u wilt begrijpen. Als dit u nu overkomt, vertel mij dan ook hoe lang het heeft geduurd, hoe ernstig het is en eventuele andere symptomen.",
     "medicalEducationBoundary": "Dit is algemene medische informatie, geen diagnose. Begin, stop of verander de dosis voorgeschreven medicijnen niet zonder een arts of apotheker.",
     "naruConversationFallback": "Ik ben hier bij jou. U kunt normaal met mij praten, een medische kennisvraag stellen of symptomen beschrijven die u nu overkomt. Als ik meer details nodig heb, zal ik het stap voor stap vragen.",
+    "hospitalConsentPrompt": "Ik heb georganiseerd wat u zojuist hebt beschreven en het op uw medische kaart opgeslagen. Wilt u naar een ziekenhuis in de buurt? Als u het ermee eens bent, kan ik faciliteiten in de buurt zoeken die u misschien nu kunnen zien.",
+    "hospitalOfferDeclined": "Oké, ik ga nu niet naar een ziekenhuis zoeken. Vertel het mij onmiddellijk als de symptomen verergeren of niet verbeteren, of als u waarschuwingssignalen krijgt zoals moeite met ademhalen of hevige pijn.",
     "inputPlaceholder": "Beschrijf uw symptomen of wat u nodig heeft...",
     "promptUnwell": "Ik voel me onwel",
     "promptCard": "Help mij een medische kaart te maken",
@@ -5262,7 +5348,12 @@
     "orderArrived": "Metgezel arriveerde",
     "orderInService": "Dienst bezig",
     "orderCompleted": "Voltooid",
-    "orderCancelled": "Geannuleerd"
+    "orderCancelled": "Geannuleerd",
+    "serviceDuration": "Duur van de begeleidende dienst",
+    "minimumServiceDuration": "Minimaal 1 uur · aanpassen in stappen van 30 minuten",
+    "estimatedServiceTotal": "Geschat servicetotaal",
+    "serviceTimeEnded": "De geselecteerde servicetijd is afgelopen",
+    "serviceTimeEndedDesc": "Kies of u de service nu wilt beëindigen of met 30 minuten wilt verlengen. Facturering is gebaseerd op de uiteindelijke werkelijke serviceduur, met een minimum van één uur."
   },
   "pl": {
     "brandSub": "Asystent wizyty lekarskiej agenta AI",
@@ -5319,6 +5410,8 @@
     "medicalEducationFallback": "Mogę wyjaśnić ogólne informacje medyczne, ale nie mogę postawić diagnozy na czacie ani zalecić zmiany leku na receptę bez lekarza. Opowiedz mi o chorobie lub leku, który chcesz poznać. Jeśli zdarza się to teraz, powiedz mi również, jak długo to trwało, jak poważne jest i jakie są inne objawy.",
     "medicalEducationBoundary": "To są ogólne informacje medyczne, a nie diagnoza. Nie rozpoczynaj, nie przerywaj ani nie zmieniaj dawki leku na receptę bez lekarza lub farmaceuty.",
     "naruConversationFallback": "Jestem tu z tobą. Możesz ze mną normalnie porozmawiać, zadać pytanie z zakresu wiedzy medycznej, opisać objawy, które obecnie Cię dotyczą. Jeśli będę potrzebował więcej szczegółów, będę pytał krok po kroku.",
+    "hospitalConsentPrompt": "Uporządkowałam to, co właśnie opisałeś i zapisałam to na Twojej karcie medycznej. Czy chciałbyś udać się do pobliskiego szpitala? Jeśli się zgodzisz, znajdę pobliskie placówki, w których być może będę mógł Cię teraz przyjąć.",
+    "hospitalOfferDeclined": "OK, nie będę teraz szukać szpitala. Poinformuj mnie natychmiast, jeśli objawy się nasilą, nie ustąpią lub pojawią się objawy ostrzegawcze, takie jak trudności w oddychaniu lub silny ból.",
     "inputPlaceholder": "Opisz swoje objawy lub czego potrzebujesz…",
     "promptUnwell": "źle się czuję",
     "promptCard": "Pomóż mi stworzyć kartę medyczną",
@@ -5667,7 +5760,12 @@
     "orderArrived": "Przybył towarzysz",
     "orderInService": "Usługa w toku",
     "orderCompleted": "Ukończono",
-    "orderCancelled": "Anulowano"
+    "orderCancelled": "Anulowano",
+    "serviceDuration": "Czas trwania usługi towarzyszącej",
+    "minimumServiceDuration": "Minimum 1 godzina · Dostosuj w odstępach 30-minutowych",
+    "estimatedServiceTotal": "Szacunkowa suma usług",
+    "serviceTimeEnded": "Wybrany czas usługi dobiegł końca",
+    "serviceTimeEndedDesc": "Wybierz, czy zakończyć usługę teraz, czy przedłużyć ją o 30 minut. Rozliczenie jest naliczane na podstawie ostatecznego rzeczywistego czasu trwania usługi, przy czym minimalny czas wynosi jedną godzinę."
   },
   "uk": {
     "brandSub": "Медичний помічник Agentic AI",
@@ -5724,6 +5822,8 @@
     "medicalEducationFallback": "Я можу пояснити загальну медичну інформацію, але я не можу поставити вам діагноз із чату або порекомендувати змінити рецептурні ліки без клініциста. Скажіть мені стан або ліки, які ви хочете зрозуміти. Якщо це відбувається з вами зараз, також скажіть мені, як довго це тривало, наскільки це серйозно, і будь-які інші симптоми.",
     "medicalEducationBoundary": "Це загальна медична інформація, а не діагноз. Не починайте, не припиняйте та не змінюйте дозу рецептурних ліків без клініциста чи фармацевта.",
     "naruConversationFallback": "я тут з тобою Ви можете нормально поговорити зі мною, поставити питання про медичні знання або описати симптоми, які з вами зараз відбуваються. Якщо мені потрібна додаткова інформація, я буду запитувати крок за кроком.",
+    "hospitalConsentPrompt": "Я впорядкував те, що ви щойно описали, і зберіг у вашій медичній картці. Чи хотіли б ви піти до найближчої лікарні? Якщо ви згодні, я зможу знайти найближчі об’єкти, які можуть побачити вас зараз.",
+    "hospitalOfferDeclined": "Гаразд, я не буду зараз шукати лікарню. Негайно повідомте мене, якщо симптоми погіршуються, не покращуються або з’являються такі тривожні ознаки, як утруднене дихання чи сильний біль.",
     "inputPlaceholder": "Опишіть свої симптоми або те, що вам потрібно...",
     "promptUnwell": "Мені погано",
     "promptCard": "Допоможіть мені створити медичну картку",
@@ -6072,7 +6172,12 @@
     "orderArrived": "Приїхав компаньйон",
     "orderInService": "Обслуговування в процесі",
     "orderCompleted": "Виконано",
-    "orderCancelled": "Скасовано"
+    "orderCancelled": "Скасовано",
+    "serviceDuration": "Тривалість послуги компаньйона",
+    "minimumServiceDuration": "Мінімум 1 година · регулюйте з кроком 30 хвилин",
+    "estimatedServiceTotal": "Розрахункова сума послуг",
+    "serviceTimeEnded": "Вибраний час обслуговування закінчився",
+    "serviceTimeEndedDesc": "Виберіть, завершити послугу зараз чи продовжити її на 30 хвилин. Оплата базується на остаточній фактичній тривалості послуги, щонайменше одна година."
   },
   "ms": {
     "brandSub": "Pembantu lawatan perubatan AI ejen",
@@ -6129,6 +6234,8 @@
     "medicalEducationFallback": "Saya boleh menerangkan maklumat perubatan am, tetapi saya tidak boleh mendiagnosis anda daripada sembang atau mengesyorkan menukar ubat preskripsi tanpa doktor. Beritahu saya keadaan atau ubat yang anda ingin fahami. Jika ini berlaku kepada anda sekarang, beritahu saya juga berapa lama ia telah bertahan, betapa teruknya ia dan sebarang gejala lain.",
     "medicalEducationBoundary": "Ini adalah maklumat perubatan am, bukan diagnosis. Jangan mulakan, hentikan, atau tukar dos ubat preskripsi tanpa doktor atau ahli farmasi.",
     "naruConversationFallback": "Saya di sini dengan awak. Anda boleh bercakap dengan saya seperti biasa, bertanya soalan pengetahuan perubatan, atau menerangkan gejala yang berlaku kepada anda sekarang. Jika saya memerlukan butiran lanjut, saya akan bertanya satu demi satu.",
+    "hospitalConsentPrompt": "Saya telah mengatur perkara yang anda nyatakan dan menyimpannya ke kad perubatan anda. Adakah anda ingin pergi ke hospital berdekatan? Jika anda bersetuju, saya boleh mencari kemudahan berdekatan yang mungkin boleh melihat anda sekarang.",
+    "hospitalOfferDeclined": "Baiklah, saya tidak akan mencari hospital sekarang. Beritahu saya dengan segera jika gejala menjadi lebih teruk, tidak bertambah baik, atau anda mengalami tanda amaran seperti kesukaran bernafas atau sakit teruk.",
     "inputPlaceholder": "Terangkan gejala anda atau apa yang anda perlukan…",
     "promptUnwell": "Saya rasa tidak sihat",
     "promptCard": "Bantu saya membuat kad perubatan",
@@ -6477,7 +6584,12 @@
     "orderArrived": "Teman tiba",
     "orderInService": "Perkhidmatan sedang dijalankan",
     "orderCompleted": "Selesai",
-    "orderCancelled": "Dibatalkan"
+    "orderCancelled": "Dibatalkan",
+    "serviceDuration": "Tempoh perkhidmatan pendamping",
+    "minimumServiceDuration": "Minimum 1 jam · laraskan dalam kenaikan 30 minit",
+    "estimatedServiceTotal": "Anggaran jumlah perkhidmatan",
+    "serviceTimeEnded": "Masa perkhidmatan yang dipilih telah tamat",
+    "serviceTimeEndedDesc": "Pilih sama ada untuk menamatkan perkhidmatan sekarang atau melanjutkannya selama 30 minit. Pengebilan adalah berdasarkan tempoh perkhidmatan sebenar terakhir, dengan minimum satu jam."
   },
   "tl": {
     "brandSub": "Agent AI medical visit assistant",
@@ -6534,6 +6646,8 @@
     "medicalEducationFallback": "Maaari kong ipaliwanag ang pangkalahatang impormasyong medikal, ngunit hindi kita ma-diagnose mula sa chat o magrekomenda ng pagpapalit ng iniresetang gamot nang walang clinician. Sabihin sa akin ang kondisyon o gamot na gusto mong maunawaan. Kung ito ay nangyayari sa iyo ngayon, sabihin din sa akin kung gaano ito katagal, gaano ito kalubha, at anumang iba pang sintomas.",
     "medicalEducationBoundary": "Ito ay pangkalahatang medikal na impormasyon, hindi isang diagnosis. Huwag simulan, ihinto, o baguhin ang dosis ng iniresetang gamot nang walang clinician o parmasyutiko.",
     "naruConversationFallback": "Nandito ako kasama mo. Maaari kang makipag-usap sa akin nang normal, magtanong ng medikal na tanong sa kaalaman, o ilarawan ang mga sintomas na nangyayari sa iyo ngayon. Kung kailangan ko ng karagdagang detalye, magtatanong ako nang paisa-isa.",
+    "hospitalConsentPrompt": "Inayos ko ang inilarawan mo at na-save ito sa iyong medical card. Gusto mo bang pumunta sa malapit na ospital? Kung sumasang-ayon ka, makakahanap ako ng mga kalapit na pasilidad na maaaring makita ka ngayon.",
+    "hospitalOfferDeclined": "Okay, hindi ako maghahanap ng ospital ngayon. Sabihin kaagad sa akin kung lumalala ang mga sintomas, hindi bumuti, o nagkakaroon ka ng mga babalang palatandaan tulad ng problema sa paghinga o matinding pananakit.",
     "inputPlaceholder": "Ilarawan ang iyong mga sintomas o kung ano ang kailangan mo...",
     "promptUnwell": "masama ang pakiramdam ko",
     "promptCard": "Tulungan akong gumawa ng medical card",
@@ -6882,7 +6996,12 @@
     "orderArrived": "Dumating ang kasama",
     "orderInService": "Kasalukuyang isinasagawa ang serbisyo",
     "orderCompleted": "Nakumpleto",
-    "orderCancelled": "Kinansela"
+    "orderCancelled": "Kinansela",
+    "serviceDuration": "Tagal ng serbisyo ng kasama",
+    "minimumServiceDuration": "Minimum na 1 oras · ayusin sa loob ng 30 minutong pagdaragdag",
+    "estimatedServiceTotal": "Tinatayang kabuuang serbisyo",
+    "serviceTimeEnded": "Ang napiling oras ng serbisyo ay natapos na",
+    "serviceTimeEndedDesc": "Piliin kung tatapusin ang serbisyo ngayon o palawigin ito ng 30 minuto. Ang pagsingil ay batay sa huling aktwal na tagal ng serbisyo, na may pinakamababang isang oras."
   },
   "mn": {
     "brandSub": "Agentic AI эмнэлгийн үзлэгийн туслах",
@@ -6939,6 +7058,8 @@
     "medicalEducationFallback": "Би эрүүл мэндийн ерөнхий мэдээллийг тайлбарлаж чадна, гэхдээ би таныг чатаар оношлох боломжгүй эсвэл эмчгүйгээр жороор олгодог эмийг өөрчлөхийг зөвлөж чадахгүй. Ойлгохыг хүсч буй нөхцөл байдал эсвэл эмээ надад хэлээрэй. Хэрэв энэ нь танд одоо тохиолдож байгаа бол энэ нь хэр удаан үргэлжилсэн, хэр зэрэг хүндэрсэн болон бусад шинж тэмдгүүдийг хэлээрэй.",
     "medicalEducationBoundary": "Энэ бол онош биш эмнэлгийн ерөнхий мэдээлэл юм. Эмнэлгийн эмч, эм зүйчгүйгээр жороор олгодог эмийг эхлүүлэх, зогсоох, тунг өөрчлөхийг хориглоно.",
     "naruConversationFallback": "Би чамтай хамт байна. Та надтай ердийн байдлаар ярилцаж, эмнэлгийн мэдлэгийн талаар асуулт асууж, эсвэл танд одоо тохиолдож буй шинж тэмдгүүдийн талаар тайлбарлаж болно. Хэрэв надад илүү дэлгэрэнгүй мэдээлэл хэрэгтэй бол би алхам алхмаар асуух болно.",
+    "hospitalConsentPrompt": "Би таны хэлсэн зүйлийг цэгцэлж, эмнэлгийн картанд хадгалсан. Та ойролцоох эмнэлэг рүү явмаар байна уу? Хэрэв та зөвшөөрвөл би таныг одоо харах боломжтой ойролцоох байгууламжуудыг олох боломжтой.",
+    "hospitalOfferDeclined": "За, би одоо эмнэлэг хайхгүй. Шинж тэмдгүүд улам дордож, сайжрахгүй, эсвэл амьсгалахад хүндрэлтэй, хүчтэй өвдөх зэрэг анхааруулах шинж тэмдэг илэрвэл надад яаралтай хэлээрэй.",
     "inputPlaceholder": "Өөрийнхөө шинж тэмдгүүд эсвэл юу хэрэгтэй байгааг тайлбарлана уу...",
     "promptUnwell": "Би таагүй санагдаж байна",
     "promptCard": "Эмнэлгийн карт гаргахад тусална уу",
@@ -7287,7 +7408,12 @@
     "orderArrived": "Хамтрагч ирлээ",
     "orderInService": "Үйлчилгээ явагдаж байна",
     "orderCompleted": "Дууссан",
-    "orderCancelled": "Цуцлагдсан"
+    "orderCancelled": "Цуцлагдсан",
+    "serviceDuration": "Хамтрагчийн үйлчилгээний хугацаа",
+    "minimumServiceDuration": "Хамгийн багадаа 1 цаг · 30 минутын алхмаар тохируулна",
+    "estimatedServiceTotal": "Тооцоолсон үйлчилгээний нийт",
+    "serviceTimeEnded": "Сонгосон үйлчилгээний хугацаа дууссан",
+    "serviceTimeEndedDesc": "Үйлчилгээг одоо дуусгах уу эсвэл 30 минутаар сунгах уу гэдгээ сонгоно уу. Тооцоолол нь хамгийн багадаа нэг цагийн үйлчилгээний эцсийн бодит хугацаа дээр суурилдаг."
   },
   "uz": {
     "brandSub": "Agentlik AI tibbiy tashrif yordamchisi",
@@ -7344,6 +7470,8 @@
     "medicalEducationFallback": "Men umumiy tibbiy ma'lumotni tushuntirib bera olaman, lekin chat orqali sizga tashxis qo'ya olmayman yoki shifokorsiz retsept bo'yicha dori-darmonlarni o'zgartirishni tavsiya eta olmayman. Tushunmoqchi bo'lgan holat yoki dorini ayting. Agar bu siz bilan hozir sodir bo'layotgan bo'lsa, u qancha davom etganini, qanchalik og'irligini va boshqa alomatlarni ayting.",
     "medicalEducationBoundary": "Bu umumiy tibbiy ma'lumot, tashxis emas. Klinisyen yoki farmatsevtsiz retsept bo'yicha dori-darmonlarni boshlamang, to'xtatmang yoki dozasini o'zgartirmang.",
     "naruConversationFallback": "Men siz bilan birgaman. Siz men bilan odatdagidek suhbatlashishingiz, tibbiy bilimga oid savol berishingiz yoki hozir sodir bo'layotgan alomatlarni tasvirlashingiz mumkin. Agar menga batafsil ma'lumot kerak bo'lsa, men bir vaqtning o'zida bir qadam so'rayman.",
+    "hospitalConsentPrompt": "Men siz tasvirlagan narsalarni tartibga solib, tibbiy kartangizga saqladim. Yaqin atrofdagi shifoxonaga borishni xohlaysizmi? Agar rozi bo'lsangiz, men sizni hozir ko'rishi mumkin bo'lgan yaqin atrofdagi ob'ektlarni topa olaman.",
+    "hospitalOfferDeclined": "Mayli, men hozir kasalxona izlamayman. Agar alomatlar kuchaysa, yaxshilanmasa yoki nafas olish qiyinlishuvi yoki kuchli og'riq kabi ogohlantiruvchi belgilar paydo bo'lsa, darhol menga ayting.",
     "inputPlaceholder": "Alomatlaringizni yoki sizga nima kerakligini tasvirlab bering...",
     "promptUnwell": "Men o‘zimni yomon his qilyapman",
     "promptCard": "Tibbiy kartani yaratishga yordam bering",
@@ -7692,7 +7820,12 @@
     "orderArrived": "Hamroh keldi",
     "orderInService": "Xizmat davom etmoqda",
     "orderCompleted": "Bajarildi",
-    "orderCancelled": "Bekor qilingan"
+    "orderCancelled": "Bekor qilingan",
+    "serviceDuration": "Yordamchi xizmat muddati",
+    "minimumServiceDuration": "Minimal 1 soat · 30 daqiqalik qadamlar bilan sozlang",
+    "estimatedServiceTotal": "Xizmatlarning taxminiy jami",
+    "serviceTimeEnded": "Tanlangan xizmat muddati tugadi",
+    "serviceTimeEndedDesc": "Xizmatni hozir tugatishni yoki uni 30 daqiqaga uzaytirishni tanlang. Hisob-kitob kamida bir soatlik xizmat ko'rsatishning yakuniy muddatiga asoslanadi."
   },
   "bn": {
     "brandSub": "এজেন্টিক এআই মেডিকেল ভিজিট সহকারী",
@@ -7749,6 +7882,8 @@
     "medicalEducationFallback": "আমি সাধারণ চিকিৎসা সংক্রান্ত তথ্য ব্যাখ্যা করতে পারি, কিন্তু আমি চ্যাট থেকে আপনাকে নির্ণয় করতে পারি না বা চিকিৎসক ছাড়া প্রেসক্রিপশনের ওষুধ পরিবর্তন করার পরামর্শ দিতে পারি না। আপনি যে অবস্থা বা ওষুধ বুঝতে চান তা আমাকে বলুন। যদি এখন আপনার সাথে এটি ঘটছে, তবে আমাকে বলুন এটি কতক্ষণ স্থায়ী হয়েছে, এটি কতটা গুরুতর এবং অন্য কোন উপসর্গ।",
     "medicalEducationBoundary": "এটি সাধারণ চিকিৎসা তথ্য, রোগ নির্ণয় নয়। চিকিত্সক বা ফার্মাসিস্ট ছাড়া প্রেসক্রিপশনের ওষুধের ডোজ শুরু, বন্ধ বা পরিবর্তন করবেন না।",
     "naruConversationFallback": "আমি এখানে আপনার সাথে আছি. আপনি আমার সাথে স্বাভাবিকভাবে কথা বলতে পারেন, একটি চিকিৎসা জ্ঞান প্রশ্ন জিজ্ঞাসা করতে পারেন, অথবা আপনার সাথে এখন যে লক্ষণগুলি ঘটছে তা বর্ণনা করতে পারেন। যদি আমার আরও বিশদ প্রয়োজন হয়, আমি একবারে এক ধাপ জিজ্ঞাসা করব।",
+    "hospitalConsentPrompt": "আপনি যা বর্ণনা করেছেন তা আমি সাজিয়েছি এবং আপনার মেডিকেল কার্ডে সংরক্ষণ করেছি। আপনি কি কাছাকাছি হাসপাতালে যেতে চান? আপনি যদি সম্মত হন, আমি আশেপাশের সুযোগ-সুবিধাগুলি খুঁজে পেতে পারি যা এখন আপনাকে দেখতে সক্ষম হতে পারে।",
+    "hospitalOfferDeclined": "ঠিক আছে, আমি এখন হাসপাতাল খুঁজব না। লক্ষণগুলি আরও খারাপ হলে, উন্নতি না হলে বা আপনার শ্বাসকষ্ট বা তীব্র ব্যথার মতো সতর্কতা লক্ষণ দেখা দিলে আমাকে অবিলম্বে বলুন।",
     "inputPlaceholder": "আপনার লক্ষণগুলি বা আপনার যা প্রয়োজন তা বর্ণনা করুন...",
     "promptUnwell": "আমি অসুস্থ বোধ করছি",
     "promptCard": "আমাকে একটি মেডিকেল কার্ড তৈরি করতে সাহায্য করুন",
@@ -8049,7 +8184,7 @@
     "exportDelete": "রপ্তানি বা স্থায়ীভাবে যে কোনো সময় মুছে ফেলুন.",
     "noRecords": "কোন ভিজিট রেকর্ড এখনো.",
     "close": "বন্ধ",
-    "back": "ফিরে",
+    "back": "ব্যাক",
     "cancel": "বাতিল করুন",
     "confirm": "নিশ্চিত করুন",
     "save": "সংরক্ষণ করুন",
@@ -8097,7 +8232,12 @@
     "orderArrived": "সঙ্গী এসেছে",
     "orderInService": "পরিষেবা চলছে",
     "orderCompleted": "সম্পন্ন",
-    "orderCancelled": "বাতিল"
+    "orderCancelled": "বাতিল",
+    "serviceDuration": "সহচর পরিষেবার সময়কাল",
+    "minimumServiceDuration": "ন্যূনতম 1 ঘন্টা · 30-মিনিট বৃদ্ধিতে সামঞ্জস্য করুন",
+    "estimatedServiceTotal": "আনুমানিক পরিষেবা মোট",
+    "serviceTimeEnded": "নির্বাচিত পরিষেবার সময় শেষ হয়েছে৷",
+    "serviceTimeEndedDesc": "পরিষেবাটি এখনই শেষ করতে হবে নাকি 30 মিনিটের মধ্যে বাড়ানো হবে তা বেছে নিন। বিলিং ন্যূনতম এক ঘন্টা সহ চূড়ান্ত প্রকৃত পরিষেবার সময়কালের উপর ভিত্তি করে।"
   },
   "ur": {
     "brandSub": "Agentic AI میڈیکل وزٹ اسسٹنٹ",
@@ -8154,6 +8294,8 @@
     "medicalEducationFallback": "میں عام طبی معلومات کی وضاحت کر سکتا ہوں، لیکن میں آپ کو چیٹ سے تشخیص نہیں کر سکتا یا کسی معالج کے بغیر نسخے کی دوائی تبدیل کرنے کی سفارش نہیں کر سکتا۔ مجھے وہ حالت یا دوا بتائیں جو آپ سمجھنا چاہتے ہیں۔ اگر اب آپ کے ساتھ ایسا ہو رہا ہے تو مجھے یہ بھی بتائیں کہ یہ کتنی دیر تک ہے، یہ کتنا شدید ہے، اور کوئی دوسری علامات۔",
     "medicalEducationBoundary": "یہ عام طبی معلومات ہے، تشخیص نہیں۔ ڈاکٹر یا فارماسسٹ کے بغیر نسخے کی دوا کی خوراک شروع، بند یا تبدیل نہ کریں۔",
     "naruConversationFallback": "میں یہاں تمہارے ساتھ ہوں۔ آپ مجھ سے عام طور پر بات کر سکتے ہیں، طبی علم سے متعلق سوال پوچھ سکتے ہیں، یا ان علامات کی وضاحت کر سکتے ہیں جو آپ کے ساتھ ہو رہی ہیں۔ اگر مجھے مزید تفصیل کی ضرورت ہو تو میں ایک وقت میں ایک قدم پوچھوں گا۔",
+    "hospitalConsentPrompt": "میں نے اسے ترتیب دیا ہے جو آپ نے ابھی بیان کیا ہے اور اسے آپ کے میڈیکل کارڈ میں محفوظ کر لیا ہے۔ کیا آپ قریبی ہسپتال جانا پسند کریں گے؟ اگر آپ اتفاق کرتے ہیں، تو میں قریبی سہولیات تلاش کر سکتا ہوں جو شاید آپ کو ابھی دیکھ سکیں۔",
+    "hospitalOfferDeclined": "ٹھیک ہے، میں ابھی ہسپتال نہیں ڈھونڈوں گا۔ مجھے فوری طور پر بتائیں کہ اگر علامات خراب ہو جائیں، بہتر نہ ہوں، یا آپ کو انتباہی علامات پیدا ہوں جیسے سانس لینے میں تکلیف یا شدید درد۔",
     "inputPlaceholder": "اپنی علامات کی وضاحت کریں یا آپ کو کیا ضرورت ہے…",
     "promptUnwell": "میری طبیعت ناساز ہے۔",
     "promptCard": "میڈیکل کارڈ بنانے میں میری مدد کریں۔",
@@ -8502,7 +8644,12 @@
     "orderArrived": "ساتھی آگیا",
     "orderInService": "سروس جاری ہے۔",
     "orderCompleted": "مکمل",
-    "orderCancelled": "منسوخ"
+    "orderCancelled": "منسوخ",
+    "serviceDuration": "ساتھی سروس کا دورانیہ",
+    "minimumServiceDuration": "کم از کم 1 گھنٹہ · 30 منٹ کے اضافے میں ایڈجسٹ کریں۔",
+    "estimatedServiceTotal": "تخمینی سروس کل",
+    "serviceTimeEnded": "منتخب سروس کا وقت ختم ہو گیا ہے۔",
+    "serviceTimeEndedDesc": "منتخب کریں کہ آیا سروس کو ابھی ختم کرنا ہے یا اسے 30 منٹ تک بڑھانا ہے۔ بلنگ آخری حقیقی سروس کی مدت پر مبنی ہے، کم از کم ایک گھنٹے کے ساتھ۔"
   },
   "fa": {
     "brandSub": "دستیار ویزیت پزشکی عامل هوش مصنوعی",
@@ -8559,6 +8706,8 @@
     "medicalEducationFallback": "من می توانم اطلاعات عمومی پزشکی را توضیح دهم، اما نمی توانم شما را از طریق چت تشخیص دهم یا تغییر داروی تجویزی را بدون پزشک توصیه کنم. شرایط یا دارویی را که می خواهید بفهمید به من بگویید. اگر در حال حاضر این اتفاق برای شما افتاده است، همچنین به من بگویید که چقدر طول کشیده است، چقدر شدید است و علائم دیگر.",
     "medicalEducationBoundary": "این اطلاعات پزشکی عمومی است، نه یک تشخیص. بدون پزشک یا داروساز، داروی تجویزی را شروع، قطع یا تغییر ندهید.",
     "naruConversationFallback": "من اینجا با شما هستم. شما می توانید به طور معمول با من صحبت کنید، یک سوال دانش پزشکی بپرسید، یا علائمی را که اکنون برای شما اتفاق می افتد توضیح دهید. اگر به جزئیات بیشتری نیاز داشته باشم، مرحله به مرحله می پرسم.",
+    "hospitalConsentPrompt": "من آنچه را که شما توضیح دادید سازماندهی کردم و در کارت پزشکی شما ذخیره کردم. آیا می خواهید به یک بیمارستان نزدیک بروید؟ اگر موافق باشید، من می توانم امکاناتی در نزدیکی پیدا کنم که ممکن است اکنون بتوانم شما را ببینم.",
+    "hospitalOfferDeclined": "خوب، فعلاً دنبال بیمارستان نمی‌گردم. اگر علائم بدتر شدند، بهبود نیافتند یا علائم هشداردهنده ای مانند مشکل تنفسی یا درد شدید ایجاد کردید، فوراً به من بگویید.",
     "inputPlaceholder": "علائم خود یا آنچه را که نیاز دارید را شرح دهید…",
     "promptUnwell": "احساس بدی دارم",
     "promptCard": "به من کمک کنید یک کارت پزشکی ایجاد کنم",
@@ -8907,7 +9056,12 @@
     "orderArrived": "همراه رسید",
     "orderInService": "سرویس در حال انجام است",
     "orderCompleted": "تکمیل شد",
-    "orderCancelled": "لغو شد"
+    "orderCancelled": "لغو شد",
+    "serviceDuration": "مدت زمان خدمات همراه",
+    "minimumServiceDuration": "حداقل 1 ساعت · با افزایش 30 دقیقه تنظیم کنید",
+    "estimatedServiceTotal": "کل خدمات تخمینی",
+    "serviceTimeEnded": "زمان سرویس انتخابی به پایان رسیده است",
+    "serviceTimeEndedDesc": "انتخاب کنید که آیا خدمات را اکنون پایان دهید یا آن را 30 دقیقه تمدید کنید. صورت‌حساب بر اساس مدت زمان خدمات واقعی نهایی، با حداقل یک ساعت است."
   },
   "ne": {
     "brandSub": "एजेन्टिक एआई मेडिकल भ्रमण सहायक",
@@ -8964,6 +9118,8 @@
     "medicalEducationFallback": "म सामान्य चिकित्सा जानकारीको व्याख्या गर्न सक्छु, तर म तपाईंलाई च्याटबाट निदान गर्न सक्दिन वा चिकित्सकबिना प्रिस्क्रिप्शन औषधि परिवर्तन गर्न सिफारिस गर्न सक्दिन। तपाईले बुझ्न चाहनु भएको अवस्था वा औषधि मलाई भन्नुहोस्। यदि तपाईलाई अहिले यो भइरहेको छ भने, यो कति समयसम्म रह्यो, कति गम्भीर छ, र अन्य कुनै लक्षणहरू पनि बताउनुहोस्।",
     "medicalEducationBoundary": "यो सामान्य चिकित्सा जानकारी हो, निदान होइन। चिकित्सक वा फार्मासिस्ट बिना प्रिस्क्रिप्शन औषधिको खुराक सुरु, बन्द वा परिवर्तन नगर्नुहोस्।",
     "naruConversationFallback": "म यहाँ तपाईं संग छु। तपाईं मसँग सामान्य रूपमा कुरा गर्न सक्नुहुन्छ, चिकित्सा ज्ञान प्रश्न सोध्न सक्नुहुन्छ, वा तपाईलाई अहिले भइरहेको लक्षणहरू वर्णन गर्न सक्नुहुन्छ। यदि मलाई थप विवरण चाहिन्छ भने, म एक पटकमा एक कदम सोध्नेछु।",
+    "hospitalConsentPrompt": "तपाईंले भर्खरै वर्णन गर्नुभएको कुरा मैले व्यवस्थित गरेको छु र यसलाई तपाईंको मेडिकल कार्डमा सुरक्षित गरेको छु। के तपाई नजिकैको अस्पताल जान चाहनुहुन्छ? यदि तपाईं सहमत हुनुहुन्छ भने, म नजिकैका सुविधाहरू फेला पार्न सक्छु जुन तपाईंलाई अहिले देख्न सक्षम हुन सक्छ।",
+    "hospitalOfferDeclined": "ठीक छ, म अहिले अस्पताल खोज्ने छैन। मलाई तुरुन्त भन्नुहोस् यदि लक्षणहरू खराब भएमा, सुधार भएन, वा तपाईंले सास फेर्न समस्या वा कडा दुखाइ जस्ता चेतावनी संकेतहरू विकास गर्नुहुन्छ।",
     "inputPlaceholder": "तपाईका लक्षणहरू वा तपाईलाई के चाहिन्छ वर्णन गर्नुहोस्...",
     "promptUnwell": "म अस्वस्थ महसुस गर्छु",
     "promptCard": "मलाई मेडिकल कार्ड बनाउन मद्दत गर्नुहोस्",
@@ -9312,7 +9468,12 @@
     "orderArrived": "सहयात्री आइपुगे",
     "orderInService": "सेवा जारी छ",
     "orderCompleted": "पूरा भयो",
-    "orderCancelled": "रद्द गरियो"
+    "orderCancelled": "रद्द गरियो",
+    "serviceDuration": "सहयात्री सेवा अवधि",
+    "minimumServiceDuration": "न्यूनतम १ घण्टा · ३० मिनेटको वृद्धिमा समायोजन गर्नुहोस्",
+    "estimatedServiceTotal": "अनुमानित सेवा कुल",
+    "serviceTimeEnded": "चयन गरिएको सेवा समय समाप्त भएको छ",
+    "serviceTimeEndedDesc": "अहिले नै सेवा अन्त्य गर्ने वा ३० मिनेटसम्म विस्तार गर्ने छनौट गर्नुहोस्। बिलिङ अन्तिम वास्तविक सेवा अवधिमा आधारित छ, न्यूनतम एक घण्टाको साथ।"
   },
   "my": {
     "brandSub": "Agent AI ဆေးဘက်ဆိုင်ရာအလည်အပတ်လက်ထောက်",
@@ -9369,6 +9530,8 @@
     "medicalEducationFallback": "ယေဘူယျဆေးဘက်ဆိုင်ရာအချက်အလက်များကို ကျွန်ုပ်ရှင်းပြနိုင်သော်လည်း ချက်တင်မှ သင့်အား ရောဂါရှာဖွေနိုင်သည် သို့မဟုတ် ဆေးခန်းဆရာမရှိဘဲ ဆေးညွှန်းဆေးပြောင်းရန် အကြံပြုလိုပါသည်။ သင်နားလည်လိုသော အခြေအနေ သို့မဟုတ် ဆေးကို ပြောပြပါ။ အကယ်၍ သင်ယခုဖြစ်ပျက်နေပါက၊ ၎င်းသည်မည်မျှကြာကြာခံသည်၊ မည်မျှပြင်းထန်သည်နှင့်အခြားရောဂါလက္ခဏာများကိုပြောပြပါ။",
     "medicalEducationBoundary": "ဤသည်မှာ ရောဂါရှာဖွေခြင်းမဟုတ်ဘဲ ယေဘူယျဆေးဘက်ဆိုင်ရာအချက်အလက်များဖြစ်သည်။ ဆေးဆရာ သို့မဟုတ် ဆေးဝါးပညာရှင်မပါဘဲ ဆေးညွှန်းဆေးကို စတင်ခြင်း၊ ရပ်တန့်ခြင်း သို့မဟုတ် ပြောင်းလဲခြင်းမပြုပါနှင့်။",
     "naruConversationFallback": "ငါ မင်းနဲ့ အတူရှိနေတယ် ။ သင်သည် ကျွန်ုပ်နှင့် ပုံမှန်စကားပြောနိုင်သည်၊ ဆေးဘက်ဆိုင်ရာ ဗဟုသုတမေးခွန်းကို မေးနိုင်သည်၊ သို့မဟုတ် ယခု သင်ဖြစ်ပျက်နေသည့် လက္ခဏာများကို ဖော်ပြနိုင်သည်။ အသေးစိတ်သိလိုတာရှိရင် တစ်ချက်လှမ်းမေးပေးပါ့မယ်။",
+    "hospitalConsentPrompt": "မင်းခုနက ဖော်ပြခဲ့တာတွေကို ငါစီစဉ်ပြီး မင်းရဲ့ဆေးကတ်မှာ သိမ်းထားတယ်။ နီးစပ်ရာဆေးရုံကို သွားချင်ပါသလား။ သင်သဘောတူပါက၊ ယခု သင့်အားတွေ့နိုင်သည့် အနီးနားရှိ အဆောက်အဦများကို ကျွန်ုပ်ရှာနိုင်သည်။",
+    "hospitalOfferDeclined": "ကောင်းပြီ၊ ငါ အခု ဆေးရုံကို မရှာတော့ဘူး။ ရောဂါလက္ခဏာများ ပိုဆိုးလာခြင်း၊ မကောင်းမွန်ခြင်း သို့မဟုတ် အသက်ရှူရခက်ခဲခြင်း သို့မဟုတ် ပြင်းထန်စွာ နာကျင်ခြင်းကဲ့သို့သော သတိပေးလက္ခဏာများ ဖြစ်ပေါ်လာပါက ကျွန်ုပ်အား ချက်ချင်းပြောပြပါ။",
     "inputPlaceholder": "သင့်ရောဂါလက္ခဏာများ သို့မဟုတ် သင်လိုအပ်သောအရာများကို ဖော်ပြပါ...",
     "promptUnwell": "နေမကောင်းဖြစ်ရတယ်။",
     "promptCard": "ဆေးကတ်တစ်ခုဖန်တီးပါ။",
@@ -9717,7 +9880,12 @@
     "orderArrived": "အဖော်ရောက်လာတယ်။",
     "orderInService": "ဝန်ဆောင်မှုကို လုပ်ဆောင်နေသည်။",
     "orderCompleted": "ပြီးသွားပြီ",
-    "orderCancelled": "ဖျက်သိမ်းလိုက်သည်။"
+    "orderCancelled": "ဖျက်သိမ်းလိုက်သည်။",
+    "serviceDuration": "အဖော်ဝန်ဆောင်မှုကြာချိန်",
+    "minimumServiceDuration": "အနည်းဆုံး 1 နာရီ · မိနစ် 30 တိုး၍ ချိန်ညှိပါ။",
+    "estimatedServiceTotal": "ဝန်ဆောင်မှုစုစုပေါင်း ခန့်မှန်းခြေ",
+    "serviceTimeEnded": "ရွေးချယ်ထားသော ဝန်ဆောင်မှုအချိန် ကုန်ဆုံးသွားပါပြီ။",
+    "serviceTimeEndedDesc": "ဝန်ဆောင်မှုကို ယခုအဆုံးသတ်ရန် သို့မဟုတ် ၎င်းကို မိနစ် 30 တွင် သက်တမ်းတိုးရန် ရွေးချယ်ပါ။ အနည်းဆုံး တစ်နာရီ အနည်းဆုံးဖြင့် ငွေတောင်းခံခြင်းမှာ နောက်ဆုံး အမှန်တကယ် ဝန်ဆောင်မှုကြာချိန်အပေါ် အခြေခံပါသည်။"
   },
   "ko": {
     "brandSub": "Agentic AI 의료방문 도우미",
@@ -9774,6 +9942,8 @@
     "medicalEducationFallback": "일반적인 의료 정보를 설명할 수는 있지만, 채팅으로 진단하거나 임상의 없이 처방약 변경을 권장할 수는 없습니다. 알고 싶은 질환이나 약을 알려주세요. 지금 이런 일이 일어나고 있다면 얼마나 오래 지속되었는지, 얼마나 심각한지, 기타 증상이 있는지 알려주세요.",
     "medicalEducationBoundary": "이는 진단이 아닌 일반적인 의료 정보입니다. 임상의나 약사 없이 처방약의 복용량을 시작하거나 중단하거나 변경하지 마십시오.",
     "naruConversationFallback": "나는 당신과 함께 여기 있습니다. 평소에 저와 대화하실 수도 있고, 의학지식에 관한 질문을 하실 수도 있고, 지금 자신에게 일어나고 있는 증상을 설명하실 수도 있습니다. 더 자세한 내용이 필요하면 한 번에 한 단계씩 질문하겠습니다.",
+    "hospitalConsentPrompt": "방금 말씀하신 내용을 정리해서 진료카드에 저장해 두었습니다. 근처 병원으로 가볼까? 동의하시면 지금 귀하를 만나실 수 있는 인근 시설을 찾아드릴 수 있습니다.",
+    "hospitalOfferDeclined": "알겠습니다. 지금은 병원을 검색하지 않겠습니다. 증상이 악화되거나 호전되지 않거나 호흡 곤란이나 심한 통증과 같은 경고 징후가 나타나면 즉시 알려주십시오.",
     "inputPlaceholder": "증상이나 필요한 사항을 설명하십시오.",
     "promptUnwell": "몸이 안 좋아",
     "promptCard": "의료 카드를 만드는 데 도움을 주세요",
@@ -10122,7 +10292,12 @@
     "orderArrived": "동반자 도착",
     "orderInService": "서비스 진행 중",
     "orderCompleted": "완료됨",
-    "orderCancelled": "취소됨"
+    "orderCancelled": "취소됨",
+    "serviceDuration": "동반 서비스 기간",
+    "minimumServiceDuration": "최소 1시간 · 30분 단위로 조정",
+    "estimatedServiceTotal": "예상 서비스 총액",
+    "serviceTimeEnded": "선택한 서비스 시간이 종료되었습니다",
+    "serviceTimeEndedDesc": "서비스를 지금 종료할지, 30분 연장할지 선택하세요. 청구는 최종 실제 서비스 기간을 기준으로 하며 최소 1시간입니다."
   },
   "ja": {
     "brandSub": "Agent AI 訪問アシスタント",
@@ -10179,6 +10354,8 @@
     "medicalEducationFallback": "一般的な医療情報の説明はできますが、医師でなければチャットで診断したり、処方薬の変更を勧めたりすることはできません。知りたい症状や薬について教えてください。これが現在起こっている場合は、それがどれくらい続いているか、どれくらい深刻か、その他の症状も教えてください。",
     "medicalEducationBoundary": "これは一般的な医療情報であり、診断ではありません。医師または薬剤師なしに処方薬の投与を開始、中止、または変更しないでください。",
     "naruConversationFallback": "私はあなたと一緒にここにいます。普通に私と話したり、医学的な知識について質問したり、現在起こっている症状について説明したりすることができます。さらに詳細が必要な場合は、一度に 1 つずつ質問します。",
+    "hospitalConsentPrompt": "あなたが今説明した内容を整理し、医療カードに保存しました。近くの病院に行ってみませんか？ご了承いただけましたら、今すぐお会いできそうな近くの施設を探します。",
+    "hospitalOfferDeclined": "わかりました、今は病院を探しません。症状が悪化した場合、改善しない場合、または呼吸困難や激しい痛みなどの危険信号が現れた場合は、すぐに連絡してください。",
     "inputPlaceholder": "症状や必要なものについて説明してください...",
     "promptUnwell": "気分が悪い",
     "promptCard": "医療カードの作成を手伝ってください",
@@ -10527,6 +10704,11 @@
     "orderArrived": "同行者が到着しました",
     "orderInService": "サービス中",
     "orderCompleted": "完了",
-    "orderCancelled": "キャンセルされました"
+    "orderCancelled": "キャンセルされました",
+    "serviceDuration": "コンパニオンサービス期間",
+    "minimumServiceDuration": "最短1時間・30分単位で調整可能",
+    "estimatedServiceTotal": "推定サービス総額",
+    "serviceTimeEnded": "選択したサービス時間は終了しました",
+    "serviceTimeEndedDesc": "サービスを今すぐ終了するか、30 分延長するかを選択します。料金は、実際の最終サービス時間に基づいて、最低 1 時間から請求されます。"
   }
 }

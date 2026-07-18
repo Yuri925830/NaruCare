@@ -20,11 +20,11 @@ for (const language of targets) if (!allTargets.includes(language)) throw new Er
 const googleCodes = { "pt-BR": "pt", tl: "tl", mn: "mn", my: "my" };
 const entries = Object.entries(messages);
 
-function batches(maxCharacters = 3_500) {
+function batches(sourceEntries = entries, maxCharacters = 3_500) {
   const result = [];
   let current = [];
   let size = 0;
-  for (const entry of entries) {
+  for (const entry of sourceEntries) {
     if (current.length && size + entry[1].length > maxCharacters) { result.push(current); current = []; size = 0; }
     current.push(entry); size += entry[1].length + 30;
   }
@@ -85,12 +85,14 @@ for (const messagesForLocale of Object.values(output)) {
   }
 }
 for (const language of targets) {
-  if (!force && Object.keys(output[language] || {}).length === entries.length) {
+  if (force) output[language] = {};
+  else output[language] ||= {};
+  const missingEntries = entries.filter(([key]) => !output[language][key]?.trim());
+  if (!missingEntries.length && Object.keys(output[language] || {}).length === entries.length) {
     process.stdout.write(`${language}: already complete (${entries.length} messages)\n`);
     continue;
   }
-  output[language] = {};
-  for (const batch of batches()) {
+  for (const batch of batches(force ? entries : missingEntries)) {
     Object.assign(output[language], await translateBatch(language, batch));
     await new Promise((resolve) => setTimeout(resolve, 120));
   }

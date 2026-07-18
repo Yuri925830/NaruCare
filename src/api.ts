@@ -126,7 +126,7 @@ export const api = {
   async hospitals(lat: number, lng: number, symptom: string, locale = "en"): Promise<Hospital[]> {
     try {
       const params = new URLSearchParams({ lat: String(lat), lng: String(lng), symptom, locale });
-      const data = await request<{ hospitals: Hospital[] }>(`/api/hospitals?${params}`);
+      const data = await request<{ hospitals: Hospital[] }>(`/api/hospitals?${params}`, {}, 8_000);
       return data.hospitals;
     } catch {
       const nearSeoul = Math.abs(lat - 37.5665) < 0.45 && Math.abs(lng - 126.978) < 0.55;
@@ -136,7 +136,7 @@ export const api = {
   async reverseGeocode(lat: number, lng: number): Promise<string> {
     try {
       const params = new URLSearchParams({ lat: String(lat), lng: String(lng) });
-      const data = await request<{ address: string }>(`/api/location/reverse?${params}`);
+      const data = await request<{ address: string }>(`/api/location/reverse?${params}`, {}, 7_000);
       return data.address;
     } catch {
       return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
@@ -217,6 +217,9 @@ export const api = {
         ...(extra.balancePaid === true ? { balancePaid: true } : {}),
         ...(typeof extra.rating === "number" ? { rating: extra.rating } : {}),
         ...(typeof extra.review === "string" ? { review: extra.review } : {}),
+        ...(typeof extra.durationMinutes === "number" ? { durationMinutes: extra.durationMinutes } : {}),
+        ...(typeof extra.actualDurationMinutes === "number" ? { actualDurationMinutes: extra.actualDurationMinutes } : {}),
+        ...(typeof extra.serviceStartedAt === "string" ? { serviceStartedAt: extra.serviceStartedAt } : {}),
         updatedAt: new Date().toISOString(),
       } : order);
       localStorage.setItem(key, JSON.stringify(updated));

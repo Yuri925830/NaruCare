@@ -321,6 +321,15 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(143, 106,
   .profile-panel { padding: 10px 0 !important; border: 0; background: transparent; box-shadow: none; }.profile-hero { padding: 16px; gap: 14px; }.profile-hero > span { width: 62px; height: 62px; }.profile-hero > .button { display: none; }.profile-grid { grid-template-columns: 1fr; gap: 8px; }.profile-grid button { min-height: 83px; }.profile-footer { display: grid; margin-top: 25px; }.profile-footer .info-banner, .profile-footer .button { width: 100%; }.records-panel { padding: 10px 0 !important; border: 0; background: transparent; box-shadow: none; }.records-list article { padding: 18px; }.records-list article > div { display: grid; grid-template-columns: 1fr 1fr; }.records-list article > div .button { margin-left: 0; grid-column: 1 / -1; }.empty-records { min-height: 400px; }
 }
 
+/* Companion duration is a real order field, not a display-only estimate. */
+.duration-selector { display: grid; gap: 8px; margin: 0 0 28px; padding: 18px; border: 1px solid rgba(215,193,176,.82); border-radius: 18px; background: linear-gradient(145deg, rgba(255,255,255,.9), rgba(239,225,214,.82)); box-shadow: inset 0 2px 2px white, 0 10px 22px rgba(91,64,51,.08); }
+.duration-selector label { font-weight: 700; }
+.duration-selector select { width: 100%; min-height: 50px; padding: 0 15px; border: 1px solid var(--line); border-radius: 13px; color: var(--brown-dark); background: rgba(255,255,255,.9); }
+.duration-selector small { color: var(--muted); }
+.duration-selector strong { color: #608b70; }
+.service-main > [role="alert"] { width: 100%; margin-top: 20px; }
+.service-main > [role="alert"] .info-banner { width: 100%; }
+
 @media (max-width: 390px) {
   .app-main { padding-inline: 12px; }.page-header h1 { font-size: 21px; }.language-button { padding: 0 10px; }.language-button span { max-width: 58px !important; }.hospital-actions .button { font-size: 9px; }.call-actions { grid-template-columns: 1fr; }.travel-tabs button { font-size: 11px; }.waiting-contact { grid-template-columns: 1fr; }
 }
@@ -517,6 +526,12 @@ body {
 .status-mint { background: linear-gradient(145deg, #edf7f0, #cfe3d6); }
 .status-peach { background: linear-gradient(145deg, #fff0e8, #ead3c5); }
 .status-red { background: linear-gradient(145deg, #e97c74, #bd4b48); }
+.chat-person .status-navy {
+  color: #493c36;
+  border-color: rgba(151,181,161,.72);
+  background: linear-gradient(145deg, #f4fbf6, #cfe4d6);
+  box-shadow: inset 0 2px 2px rgba(255,255,255,.98), 0 7px 16px rgba(73,106,84,.12);
+}
 .info-banner {
   border-color: rgba(255,255,255,.88);
   box-shadow: inset 0 2px 2px rgba(255,255,255,.72), inset 0 -3px 5px rgba(112,78,59,.07), 0 13px 28px rgba(95,68,54,.11);

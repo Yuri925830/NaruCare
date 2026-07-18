@@ -4,7 +4,7 @@ import { api } from "../api";
 import { Button, InfoBanner, InteractiveMap, NaruPose, Panel, StatusPill } from "../components";
 import { evaluateOpeningHours, formatRestDays } from "../hospitalHours";
 import { localeOptions, useI18n } from "../i18n";
-import { assessMedicalIntent, isNaruCapabilityQuestion, isNaruIdentityQuestion } from "../triage";
+import { assessMedicalIntent, isAffirmativeResponse, isNaruCapabilityQuestion, isNaruIdentityQuestion, isNegativeResponse } from "../triage";
 import type { ChatHistoryEntry, Hospital, LocationState, MedicalCard, TranslationRecordEntry } from "../types";
 
 interface Message { id: string; role: "naru" | "user" | "status"; text: string }
@@ -13,8 +13,8 @@ export function AgentPage({ card, onCard, onEmergency, onHospitals, onSymptoms, 
   card: MedicalCard | null;
   onCard: () => void;
   onEmergency: (symptoms: string) => void;
-  onHospitals: (symptoms: string) => void;
-  onSymptoms?: (symptoms: string) => void;
+  onHospitals: (symptoms: string) => void | Promise<void>;
+  onSymptoms?: (symptoms: string) => void | Promise<void>;
   onCompanion: () => void;
   onFlow?: () => void;
   onTranslation?: () => void;
@@ -25,6 +25,7 @@ export function AgentPage({ card, onCard, onEmergency, onHospitals, onSymptoms, 
   const [input, setInput] = useState("");
   const [gate, setGate] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [pendingHospitalSymptoms, setPendingHospitalSymptoms] = useState("");
   const messagesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -58,31 +59,64 @@ export function AgentPage({ card, onCard, onEmergency, onHospitals, onSymptoms, 
       setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: t("naruCapabilitiesAnswer") }]);
       return;
     }
+    if (pendingHospitalSymptoms && isAffirmativeResponse(clean)) {
+      const confirmedSymptoms = pendingHospitalSymptoms;
+      setPendingHospitalSymptoms("");
+      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "status", text: t("analyzing") }]);
+      setBusy(true);
+      try { await onHospitals(confirmedSymptoms); }
+      finally { setBusy(false); }
+      return;
+    }
+    if (pendingHospitalSymptoms && isNegativeResponse(clean)) {
+      setPendingHospitalSymptoms("");
+      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: t("hospitalOfferDeclined") }]);
+      return;
+    }
     const history: ChatHistoryEntry[] = messages
       .filter((message) => message.role !== "status" && message.id !== "welcome")
       .map((message) => ({ role: message.role === "user" ? "user" : "assistant", content: message.text }));
     const previousUserMessages = history.filter((message) => message.role === "user").map((message) => message.content);
     const localTriage = assessMedicalIntent(clean, previousUserMessages, true);
     const effectiveSymptoms = localTriage.symptoms || card.symptoms?.trim() || clean;
-    if (localTriage.symptoms) onSymptoms?.(localTriage.symptoms);
-    if (localTriage.intent === "emergency") { onEmergency(effectiveSymptoms); return; }
+    if (localTriage.intent === "emergency") {
+      if (localTriage.symptoms) await onSymptoms?.(localTriage.symptoms);
+      setPendingHospitalSymptoms("");
+      onEmergency(effectiveSymptoms);
+      return;
+    }
     if (localTriage.intent === "card") { onCard(); return; }
     if (localTriage.intent === "flow") { onFlow?.(); return; }
     if (localTriage.intent === "translation") { onTranslation?.(); return; }
     if (localTriage.intent === "companion") { onCompanion(); return; }
     if (localTriage.intent === "hospital") {
-      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "status", text: t("analyzing") }]);
-      setBusy(true);
-      window.setTimeout(() => { setBusy(false); onHospitals(effectiveSymptoms); }, 650);
+      if (localTriage.symptoms) await onSymptoms?.(localTriage.symptoms);
+      if (localTriage.reason === "hospital_request") {
+        setPendingHospitalSymptoms("");
+        setMessages((current) => [...current, { id: crypto.randomUUID(), role: "status", text: t("analyzing") }]);
+        setBusy(true);
+        try { await onHospitals(effectiveSymptoms); }
+        finally { setBusy(false); }
+        return;
+      }
+      setPendingHospitalSymptoms(effectiveSymptoms);
+      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: t("hospitalConsentPrompt") }]);
       return;
     }
     setBusy(true);
     try {
       const response = await api.chat(clean, locale, true, history);
       const responseSymptoms = response.symptoms?.trim() || effectiveSymptoms;
-      if (response.symptoms) onSymptoms?.(response.symptoms);
-      if (response.intent === "emergency") return onEmergency(responseSymptoms);
-      if (response.intent === "hospital") return onHospitals(responseSymptoms);
+      if (response.symptoms) await onSymptoms?.(response.symptoms);
+      if (response.intent === "emergency") {
+        setPendingHospitalSymptoms("");
+        return onEmergency(responseSymptoms);
+      }
+      if (response.intent === "hospital") {
+        setPendingHospitalSymptoms(responseSymptoms);
+        setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: t("hospitalConsentPrompt") }]);
+        return;
+      }
       if (response.intent === "card") return onCard();
       if (response.intent === "flow") return onFlow?.();
       if (response.intent === "translation") return onTranslation?.();

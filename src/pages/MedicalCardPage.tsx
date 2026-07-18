@@ -4,7 +4,7 @@ import { api } from "../api";
 import { Button, InfoBanner, NaruPose, Panel } from "../components";
 import { countryKoreanName, countryOptions, findCountry } from "../countries";
 import { localeOptions, useI18n } from "../i18n";
-import { formatAccuracy, requestPreciseLocation } from "../location";
+import { formatAccuracy, requestFastAccurateLocation, type PreciseLocationFix } from "../location";
 import type { MedicalCard } from "../types";
 
 type CardField = "name" | "nationality" | "address" | "age" | "gender" | "documentType" | "documentNumber" | "insurance" | "conditions" | "medications" | "surgeries" | "symptoms" | "notes" | "language";
@@ -36,6 +36,8 @@ export function MedicalCardPage({ card, onSaved }: { card: MedicalCard | null; o
   const [saved, setSaved] = useState(Boolean(card));
   const [error, setError] = useState("");
   const addressEdited = useRef(Boolean(card?.address));
+  const locationRequest = useRef(0);
+  const bestLocationAccuracy = useRef(Number.POSITIVE_INFINITY);
 
   useEffect(() => {
     if (card) { setForm({ ...emptyCard(card.language || locale), ...card }); setSaved(true); }
@@ -61,17 +63,31 @@ export function MedicalCardPage({ card, onSaved }: { card: MedicalCard | null; o
   const locateAddress = useCallback(async (forceAddressUpdate = false) => {
     setLocationError("");
     if (!navigator.geolocation) { setLocationError(t("locationDenied")); return; }
+    const requestId = ++locationRequest.current;
+    bestLocationAccuracy.current = Number.POSITIVE_INFINITY;
     setLocating(true);
-    try {
-      const point = await requestPreciseLocation(navigator.geolocation, { targetAccuracyMeters: 8, hardTimeoutMs: 35_000, minimumObservationMs: 5_000, minimumAccurateSamples: 2 });
+    const applyFix = async (point: PreciseLocationFix, refined = false) => {
       const address = await api.reverseGeocode(point.lat, point.lng);
+      if (locationRequest.current !== requestId) return;
+      if (point.accuracy >= bestLocationAccuracy.current) return;
+      bestLocationAccuracy.current = point.accuracy;
       setForm((current) => ({
         ...current,
-        address: forceAddressUpdate || !addressEdited.current ? address : current.address,
+        address: (forceAddressUpdate && !refined) || !addressEdited.current ? address : current.address,
         latitude: point.lat,
         longitude: point.lng,
         locationAccuracy: point.accuracy,
       }));
+    };
+    try {
+      const point = await requestFastAccurateLocation(navigator.geolocation, {
+        usableAccuracyMeters: 25,
+        precisionTargetMeters: 8,
+        firstFixTimeoutMs: 7_000,
+        refinementTimeoutMs: 10_000,
+        onRefined: (refined) => applyFix(refined, true),
+      });
+      await applyFix(point);
     } catch { setLocationError(t("locationDenied")); }
     finally { setLocating(false); }
   }, [t]);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatAccuracy, requestPreciseLocation } from "./location";
+import { formatAccuracy, requestFastAccurateLocation, requestPreciseLocation } from "./location";
 
 function position(accuracy: number, lat = 37.5665, lng = 126.978): GeolocationPosition {
   return {
@@ -56,5 +56,28 @@ describe("requestPreciseLocation", () => {
     } as Geolocation;
     const result = await requestPreciseLocation(geolocation, { targetAccuracyMeters: 8, hardTimeoutMs: 100, minimumObservationMs: 0, minimumAccurateSamples: 2 });
     expect(result.accuracy).toBe(5);
+  });
+
+  it("returns a usable fix immediately and reports a later precision improvement", async () => {
+    let watchCount = 0;
+    let refinedAccuracy = 0;
+    const geolocation = {
+      watchPosition(success: PositionCallback) {
+        watchCount += 1;
+        if (watchCount === 1) setTimeout(() => success(position(18)), 0);
+        else setTimeout(() => success(position(5, 37.56652, 126.97802)), 0);
+        return watchCount;
+      },
+      clearWatch() { /* no-op */ },
+      getCurrentPosition() { /* unused */ },
+    } as Geolocation;
+    const first = await requestFastAccurateLocation(geolocation, {
+      firstFixTimeoutMs: 100,
+      refinementTimeoutMs: 100,
+      onRefined: (fix) => { refinedAccuracy = fix.accuracy; },
+    });
+    expect(first.accuracy).toBe(18);
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    expect(refinedAccuracy).toBe(5);
   });
 });

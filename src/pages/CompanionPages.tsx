@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { BadgeCheck, Check, Clock3, MessageCircleMore, Mic, Phone, ShieldCheck, Star, UserRound, WalletCards } from "lucide-react";
 import { api } from "../api";
+import { actualBillableMinutes, companionServiceTotal } from "../companionBilling";
 import { Button, formatWon, InfoBanner, NaruPose, NaruStandard, Panel, StatusPill } from "../components";
 import { localeOptions, useI18n } from "../i18n";
 import type { Companion, CompanionFilters, CompanionOrder } from "../types";
@@ -46,7 +47,8 @@ export function CompanionListPage({ people, onFilters, onDetail, onChoose }: { p
     if (choosingId) return;
     setChoosingId(person.id); setChooseError("");
     try { await onChoose(person); }
-    catch { setChooseError(t("errorGeneric")); setChoosingId(""); }
+    catch { setChooseError(t("errorGeneric")); }
+    finally { setChoosingId(""); }
   }
   return <Panel className="companion-list-panel">
     <InfoBanner title={t("matchedForYou")} action={<div className="match-banner-action"><NaruPose pose={11} className="companion-list-naru" /><Button variant="ghost" onClick={onFilters}>{t("changeFilters")}</Button></div>}>{t("matchingBasis")}</InfoBanner>
@@ -60,7 +62,7 @@ export function CompanionListPage({ people, onFilters, onDetail, onChoose }: { p
   </Panel>;
 }
 
-export function CompanionDetailPage({ person, onChat, onApply }: { person: Companion; onChat: () => void; onApply: () => void | Promise<void> }) {
+export function CompanionDetailPage({ person, durationMinutes, onDurationChange, onChat, onApply }: { person: Companion; durationMinutes: number; onDurationChange: (minutes: number) => void; onChat: () => void; onApply: () => void | Promise<void> }) {
   const { locale, t } = useI18n();
   const [experience, setExperience] = useState(person.experience);
   const [applying, setApplying] = useState(false);
@@ -75,23 +77,23 @@ export function CompanionDetailPage({ person, onChat, onApply }: { person: Compa
     }
     return () => { active = false; };
   }, [locale, person.experience]);
-  async function apply() { if (applying) return; setApplying(true); setApplyError(""); try { await onApply(); } catch { setApplyError(t("errorGeneric")); setApplying(false); } }
+  async function apply() { if (applying) return; setApplying(true); setApplyError(""); try { await onApply(); } catch { setApplyError(t("errorGeneric")); } finally { setApplying(false); } }
   return <Panel className="companion-detail-panel">
     <div className="detail-profile"><NaruPose pose={17} className="companion-detail-naru" /><span className="person-avatar xl">{person.nativeName.slice(0, 1)}</span><h2>{person.name}</h2><p>{person.languages.map((code) => localeOptions.find((item) => item.code === code)?.nativeName || code).join(" · ")} · {t("fluent")}</p><StatusPill>{person.hospitals[0]} {t("hospitalFamiliar")}</StatusPill><div className="detail-stats"><span><strong>{person.rating}</strong><small>{t("ratingLabel")}</small></span><span><strong>{person.match || 96}%</strong><small>{t("onTime")}</small></span><span><strong>{person.reviewCount}+</strong><small>{t("completedOrders")}</small></span></div><div className="detail-buttons"><Button variant="secondary" onClick={onChat}><MessageCircleMore />{t("startChat")}</Button><Button onClick={() => void apply()} disabled={applying}><UserRound />{applying ? t("loading") : t("applyCompanion")}</Button></div>{applyError && <p className="form-error" role="alert">{applyError}</p>}</div>
-    <div className="detail-info"><h3>{t("experience")}</h3><p className="detail-copy">{experience}</p><h3>{t("userReview")}</h3><div className="review-card"><strong>“{t("sampleCompanionReview")}”</strong><small>— {t("completedOrders")}</small><em>★★★★★ {person.rating}</em></div><div className="detail-price"><small>{t("servicePrice")}</small><strong>₩{formatWon(person.price)} {t("perHour")}</strong></div><InfoBanner tone="navy" icon="shield" title={t("serviceSafety")}>{t("serviceSafetyDesc")}</InfoBanner></div>
+    <div className="detail-info"><div className="duration-selector"><label htmlFor="companion-duration">{t("serviceDuration")}</label><select id="companion-duration" value={durationMinutes} onChange={(event) => onDurationChange(Number(event.target.value))}>{Array.from({ length: 23 }, (_, index) => 60 + index * 30).map((minutes) => <option key={minutes} value={minutes}>{t("hours", { count: minutes / 60 })}</option>)}</select><small>{t("minimumServiceDuration")}</small><strong>{t("estimatedServiceTotal")}: ₩{formatWon(companionServiceTotal(person.price, durationMinutes))}</strong></div><h3>{t("experience")}</h3><p className="detail-copy">{experience}</p><h3>{t("userReview")}</h3><div className="review-card"><strong>“{t("sampleCompanionReview")}”</strong><small>— {t("completedOrders")}</small><em>★★★★★ {person.rating}</em></div><div className="detail-price"><small>{t("servicePrice")}</small><strong>₩{formatWon(person.price)} {t("perHour")}</strong></div><InfoBanner tone="navy" icon="shield" title={t("serviceSafety")}>{t("serviceSafetyDesc")}</InfoBanner></div>
   </Panel>;
 }
 
-export function CompanionChatPage({ person, hospitalName, onApply }: { person: Companion; hospitalName: string; onApply: () => void | Promise<void> }) {
+export function CompanionChatPage({ person, hospitalName, durationMinutes, onApply }: { person: Companion; hospitalName: string; durationMinutes: number; onApply: () => void | Promise<void> }) {
   const { t } = useI18n();
   const [messages, setMessages] = useState([t("companionGreeting", { hospital: person.hospitals[0], minutes: person.eta })]);
   const [input, setInput] = useState("");
   const [applying, setApplying] = useState(false);
   const [applyError, setApplyError] = useState("");
   function send(event: FormEvent) { event.preventDefault(); if (!input.trim()) return; setMessages([...messages, input]); setInput(""); }
-  async function apply() { if (applying) return; setApplying(true); setApplyError(""); try { await onApply(); } catch { setApplyError(t("errorGeneric")); setApplying(false); } }
+  async function apply() { if (applying) return; setApplying(true); setApplyError(""); try { await onApply(); } catch { setApplyError(t("errorGeneric")); } finally { setApplying(false); } }
   return <div className="companion-chat-layout"><Panel className="companion-chat-panel"><div className="chat-person"><span className="person-avatar">{person.nativeName.slice(0, 1)}</span><strong>{person.name}<small>{t("onlineEta", { minutes: person.eta })}</small></strong><StatusPill tone="navy"><ShieldCheck size={14} />{t("safetyRecordingOn")}</StatusPill></div><div className="messages"><div className="message message-naru"><p>{messages[0]}</p></div><div className="message message-user"><p>{t("userAtHospital", { hospital: hospitalName })}</p></div>{messages.slice(1).map((message, i) => <div key={i} className="message message-user"><p>{message}</p></div>)}</div><form className="chat-composer" onSubmit={send}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder={t("sendMessage")} /><button aria-label={t("sendMessage")}>→</button></form></Panel>
-    <Panel className="application-card"><h3>{t("application")}</h3><dl><div><dt>{t("hospital")}</dt><dd>{hospitalName}</dd></div><div><dt>{t("startTime")}</dt><dd>{t("todayAt", { time: "16:00" })}</dd></div><div><dt>{t("estimatedDuration")}</dt><dd>{t("hours", { count: 2 })}</dd></div><div><dt>{t("price")}</dt><dd>₩{formatWon(person.price)} {t("perHour")}</dd></div></dl><InfoBanner tone="mint" icon="shield" title={t("serviceSafety")}>{t("recordSavedDesc")}</InfoBanner>{applyError && <p className="form-error" role="alert">{applyError}</p>}<Button onClick={() => void apply()} disabled={applying}>{applying ? t("loading") : t("requestNamed", { name: person.name })}</Button></Panel></div>;
+    <Panel className="application-card"><h3>{t("application")}</h3><dl><div><dt>{t("hospital")}</dt><dd>{hospitalName}</dd></div><div><dt>{t("startTime")}</dt><dd>{t("todayAt", { time: "16:00" })}</dd></div><div><dt>{t("estimatedDuration")}</dt><dd>{t("hours", { count: durationMinutes / 60 })}</dd></div><div><dt>{t("price")}</dt><dd>₩{formatWon(person.price)} {t("perHour")}</dd></div></dl><InfoBanner tone="mint" icon="shield" title={t("serviceSafety")}>{t("recordSavedDesc")}</InfoBanner>{applyError && <p className="form-error" role="alert">{applyError}</p>}<Button onClick={() => void apply()} disabled={applying}>{applying ? t("loading") : t("requestNamed", { name: person.name })}</Button></Panel></div>;
 }
 
 export function CompanionWaitingPage({ person, onAccepted, onMessage, onCancel }: { person: Companion; onAccepted: () => void; onMessage: () => void; onCancel: () => void }) {
@@ -108,8 +110,8 @@ export function CompanionWaitingPage({ person, onAccepted, onMessage, onCancel }
 export function CompanionPaymentPage({ order, onPay }: { order: CompanionOrder; onPay: (method: string) => void }) {
   const { t } = useI18n();
   const [method, setMethod] = useState("kakao");
-  const total = order.companion.price * 2;
-  return <Panel className="payment-panel"><InfoBanner title={t("acceptedRequest", { name: order.companion.name })}>{t("depositDesc")}</InfoBanner><div className="payment-grid"><article><h3>{t("feeDetails")}</h3><dl><div><dt>{t("companionService", { hours: 2 })}</dt><dd>₩{formatWon(total)}</dd></div><div><dt>{t("deposit")}</dt><dd>₩{formatWon(order.deposit)}</dd></div><div><dt>{t("balanceAfter")}</dt><dd>₩{formatWon(total - order.deposit)}</dd></div></dl><div className="payment-total"><span>{t("thisPayment")}</span><strong>₩{formatWon(order.deposit)}</strong></div></article><article><h3>{t("paymentMethod")}</h3>{[["kakao", t("kakaoPay")], ["card", t("bankCard")], ["onsite", t("payOnSite")]].map(([value, label]) => <button key={value} className={method === value ? "selected" : ""} onClick={() => setMethod(value)}>{label}<i>{method === value ? "✓" : ""}</i></button>)}</article></div><div className="payment-actions"><InfoBanner tone="navy" icon="shield" title={t("paymentProtection")}>{t("paymentProtectionDesc")}</InfoBanner><Button onClick={() => onPay(method)}><WalletCards />{t("payAmount", { amount: formatWon(order.deposit) })}</Button></div></Panel>;
+  const total = companionServiceTotal(order.companion.price, order.durationMinutes);
+  return <Panel className="payment-panel"><InfoBanner title={t("acceptedRequest", { name: order.companion.name })}>{t("depositDesc")}</InfoBanner><div className="payment-grid"><article><h3>{t("feeDetails")}</h3><dl><div><dt>{t("companionService", { hours: order.durationMinutes / 60 })}</dt><dd>₩{formatWon(total)}</dd></div><div><dt>{t("deposit")}</dt><dd>₩{formatWon(order.deposit)}</dd></div><div><dt>{t("balanceAfter")}</dt><dd>₩{formatWon(total - order.deposit)}</dd></div></dl><div className="payment-total"><span>{t("thisPayment")}</span><strong>₩{formatWon(order.deposit)}</strong></div></article><article><h3>{t("paymentMethod")}</h3>{[["kakao", t("kakaoPay")], ["card", t("bankCard")], ["onsite", t("payOnSite")]].map(([value, label]) => <button key={value} className={method === value ? "selected" : ""} onClick={() => setMethod(value)}>{label}<i>{method === value ? "✓" : ""}</i></button>)}</article></div><div className="payment-actions"><InfoBanner tone="navy" icon="shield" title={t("paymentProtection")}>{t("paymentProtectionDesc")}</InfoBanner><Button onClick={() => onPay(method)}><WalletCards />{t("payAmount", { amount: formatWon(order.deposit) })}</Button></div></Panel>;
 }
 
 export function CompanionArrivedPage({ order, onMet, onProblem }: { order: CompanionOrder; onMet: (stream: MediaStream | null) => void; onProblem: () => void }) {
@@ -143,15 +145,21 @@ function formatDuration(totalSeconds: number) {
   return [hours, minutes, seconds].map((value) => String(value).padStart(2, "0")).join(":");
 }
 
-export function CompanionServicePage({ order, stream, onEnd }: { order: CompanionOrder; stream: MediaStream | null; onEnd: () => void }) {
+export function CompanionServicePage({ order, stream, onExtend, onEnd }: { order: CompanionOrder; stream: MediaStream | null; onExtend: () => void; onEnd: (actualDurationMinutes: number) => void }) {
   const { t } = useI18n();
-  const [remaining, setRemaining] = useState(order.durationMinutes * 60);
+  const initialElapsed = Math.min(order.durationMinutes * 60, order.serviceStartedAt ? Math.max(0, Math.floor((Date.now() - new Date(order.serviceStartedAt).getTime()) / 1000)) : 0);
+  const [remaining, setRemaining] = useState(Math.max(0, order.durationMinutes * 60 - initialElapsed));
+  const [elapsed, setElapsed] = useState(initialElapsed);
   const [recording, setRecording] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const chunkIndex = useRef(0);
   useEffect(() => {
-    const timer = window.setInterval(() => setRemaining((value) => Math.max(0, value - 1)), 1000);
+    const timer = window.setInterval(() => setRemaining((value) => {
+      if (value <= 0) return 0;
+      setElapsed((current) => current + 1);
+      return value - 1;
+    }), 1000);
     if (stream && typeof MediaRecorder !== "undefined") {
       try {
         const recorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm" });
@@ -167,8 +175,17 @@ export function CompanionServicePage({ order, stream, onEnd }: { order: Companio
     }
     return () => { clearInterval(timer); if (recorderRef.current?.state === "recording") recorderRef.current.stop(); stream?.getTracks().forEach((track) => track.stop()); };
   }, [stream, order.id]);
-  function end() { if (recorderRef.current?.state === "recording") recorderRef.current.stop(); setRecording(false); onEnd(); }
-  return <Panel className="service-panel"><div className="service-person"><NaruPose pose={19} className="companion-service-naru" /><span className="person-avatar xl">{order.companion.nativeName.slice(0, 1)}</span><h2>{order.companion.name}</h2><div><MapPinIcon />{order.hospital?.name}</div></div><div className="service-main"><span>{t("timeRemaining")}</span><strong className="service-time">{formatDuration(remaining)}</strong><StatusPill tone={recording ? "red" : "peach"}><Mic size={15} />{recording ? t("recordingProtected") : t("browserCallNote")}</StatusPill><div className="record-info"><ShieldCheck /><div><h3>{t("recordSaved")}</h3><p>{t("recordSavedDesc")}</p><p>{t("emergencyStill")}</p></div></div><div className="service-actions"><Button variant="secondary" onClick={() => setRemaining((value) => value + 1800)}>{t("extend30")}</Button><Button variant="danger" onClick={end}>{t("endService")}</Button></div></div></Panel>;
+  useEffect(() => {
+    if (remaining !== 0) return;
+    navigator.vibrate?.([180, 100, 180]);
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      try { new Notification(t("serviceTimeEnded"), { body: t("serviceTimeEndedDesc") }); }
+      catch { /* The in-page assertive alert remains available on restricted browsers. */ }
+    }
+  }, [remaining, t]);
+  function extend() { setRemaining((value) => value + 1800); onExtend(); }
+  function end() { if (recorderRef.current?.state === "recording") recorderRef.current.stop(); setRecording(false); onEnd(actualBillableMinutes(elapsed)); }
+  return <Panel className="service-panel"><div className="service-person"><NaruPose pose={19} className="companion-service-naru" /><span className="person-avatar xl">{order.companion.nativeName.slice(0, 1)}</span><h2>{order.companion.name}</h2><div><MapPinIcon />{order.hospital?.name}</div></div><div className="service-main"><span>{t("timeRemaining")}</span><strong className="service-time">{formatDuration(remaining)}</strong><StatusPill tone={recording ? "red" : "peach"}><Mic size={15} />{recording ? t("recordingProtected") : t("browserCallNote")}</StatusPill>{remaining === 0 && <div role="alert" aria-live="assertive"><InfoBanner tone="peach" title={t("serviceTimeEnded")}>{t("serviceTimeEndedDesc")}</InfoBanner></div>}<div className="record-info"><ShieldCheck /><div><h3>{t("recordSaved")}</h3><p>{t("recordSavedDesc")}</p><p>{t("emergencyStill")}</p></div></div><div className="service-actions"><Button variant="secondary" onClick={extend}>{t("extend30")}</Button><Button variant="danger" onClick={end}>{t("endService")}</Button></div></div></Panel>;
 }
 
 function MapPinIcon() { return <span aria-hidden="true">✚</span>; }
@@ -178,7 +195,8 @@ export function CompanionFinishedPage({ order, onPayBalance, onReview }: { order
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState("");
   const [balancePaid, setBalancePaid] = useState(false);
-  const total = order.companion.price * 2;
+  const finalMinutes = order.actualDurationMinutes || order.durationMinutes;
+  const total = companionServiceTotal(order.companion.price, finalMinutes);
   function payBalance() { if (balancePaid) return; setBalancePaid(true); onPayBalance(); }
-  return <Panel className="finished-panel"><div className="finished-success"><span>✓</span><h2>{t("serviceFinished")}</h2><p>{t("totalDuration", { hours: 2 })}</p></div><div className="finished-details"><article><h3>{t("settlement")}</h3><dl><div><dt>{t("serviceTotal")}</dt><dd>₩{formatWon(total)}</dd></div><div><dt>{t("depositPaid")}</dt><dd>-₩{formatWon(order.deposit)}</dd></div><div><dt>{t("balanceDue")}</dt><dd>₩{formatWon(total - order.deposit)}</dd></div></dl><Button onClick={payBalance} disabled={balancePaid}>{balancePaid ? t("confirm") : t("payBalance", { amount: formatWon(total - order.deposit) })}</Button></article><article className="rating-card"><h3>{t("rateCompanion", { name: order.companion.name })}</h3><div className="stars">{[1, 2, 3, 4, 5].map((value) => <button key={value} onClick={() => setRating(value)}><Star fill={value <= rating ? "currentColor" : "none"} /></button>)}</div><textarea value={review} onChange={(event) => setReview(event.target.value)} placeholder={t("reviewPlaceholder")} /><Button variant="mint" onClick={() => onReview(rating, review)}>{t("submitReview")}</Button></article></div></Panel>;
+  return <Panel className="finished-panel"><div className="finished-success"><span>✓</span><h2>{t("serviceFinished")}</h2><p>{t("totalDuration", { hours: finalMinutes / 60 })}</p></div><div className="finished-details"><article><h3>{t("settlement")}</h3><dl><div><dt>{t("serviceTotal")}</dt><dd>₩{formatWon(total)}</dd></div><div><dt>{t("depositPaid")}</dt><dd>-₩{formatWon(order.deposit)}</dd></div><div><dt>{t("balanceDue")}</dt><dd>₩{formatWon(Math.max(0, total - order.deposit))}</dd></div></dl><Button onClick={payBalance} disabled={balancePaid}>{balancePaid ? t("confirm") : t("payBalance", { amount: formatWon(Math.max(0, total - order.deposit)) })}</Button></article><article className="rating-card"><h3>{t("rateCompanion", { name: order.companion.name })}</h3><div className="stars">{[1, 2, 3, 4, 5].map((value) => <button key={value} onClick={() => setRating(value)}><Star fill={value <= rating ? "currentColor" : "none"} /></button>)}</div><textarea value={review} onChange={(event) => setReview(event.target.value)} placeholder={t("reviewPlaceholder")} /><Button variant="mint" onClick={() => onReview(rating, review)}>{t("submitReview")}</Button></article></div></Panel>;
 }

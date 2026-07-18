@@ -1,5 +1,10 @@
 import { Buffer } from "node:buffer";
 import { assessMedicalIntent, type MedicalIntent } from "../../src/triage";
+import {
+  hospitalCategory,
+  matchesHospitalCategory,
+  type HospitalCategory,
+} from "../../src/hospitalMatching";
 
 const SESSION_DAYS = 30;
 // Cloudflare Workers currently caps PBKDF2 at 100,000 iterations.
@@ -69,6 +74,8 @@ interface CompanionOrderRow extends CompanionRow {
   hospital_json: string | null;
   status: string;
   duration_minutes: number;
+  actual_duration_minutes: number | null;
+  service_started_at: string | null;
   deposit: number;
   payment_method: string;
   balance_paid: number;
@@ -324,7 +331,7 @@ function reservationStatus(tags: Record<string, string>): HospitalPayload["reser
   return "unknown";
 }
 
-async function nominatimHospitalSearch(lat: number, lng: number, localeCode: string, baseLanguage: string) {
+async function nominatimHospitalSearch(lat: number, lng: number, localeCode: string, baseLanguage: string, category: HospitalCategory) {
   const endpoint = new URL("https://nominatim.openstreetmap.org/search");
   endpoint.search = new URLSearchParams({
     format: "jsonv2", q: "[hospital]", limit: "20", bounded: "1",
@@ -332,24 +339,20 @@ async function nominatimHospitalSearch(lat: number, lng: number, localeCode: str
     extratags: "1", addressdetails: "1", namedetails: "1", countrycodes: "kr",
     "accept-language": `${localeCode},ko,en`,
   }).toString();
-  const init: RequestInit = { headers: { "user-agent": "NaruCare/1.0 (medical navigation prototype)", accept: "application/json" }, signal: AbortSignal.timeout(12_000) };
-  let response = await fetch(endpoint, init);
-  if (response.status === 429 || response.status >= 500) {
-    const retryAfter = Math.min(3_000, Math.max(1_100, Number(response.headers.get("retry-after") || 0) * 1_000 || 1_100));
-    await new Promise((resolve) => setTimeout(resolve, retryAfter));
-    response = await fetch(endpoint, { ...init, signal: AbortSignal.timeout(12_000) });
-  }
+  const init: RequestInit = { headers: { "user-agent": "NaruCare/1.0 (medical navigation prototype)", accept: "application/json" }, signal: AbortSignal.timeout(6_500) };
+  const response = await fetch(endpoint, init);
   if (!response.ok) throw new ApiException(502, "hospital_provider_error", "Hospital map provider unavailable");
   const payload: unknown = await response.json();
   if (!Array.isArray(payload)) return [];
   const typePath: Record<string, string> = { node: "node", way: "way", relation: "relation", N: "node", W: "way", R: "relation" };
-  return (payload as NominatimPlace[]).flatMap<HospitalPayload>((place) => {
+  const hospitals = (payload as NominatimPlace[]).flatMap<HospitalPayload>((place) => {
     const pointLat = Number(place.lat); const pointLng = Number(place.lon); const tags = place.extratags || {}; const names = place.namedetails || {};
     if (!Number.isFinite(pointLat) || !Number.isFinite(pointLng)) return [];
     const distance = Math.round(haversine(lat, lng, pointLat, pointLng));
     if (distance > 7_500) return [];
     const name = names[`name:${localeCode}`] || names[`name:${baseLanguage}`] || names["name:ko"] || names["name:en"] || names.name || place.display_name?.split(",")[0];
     if (!name) return [];
+    if (!matchesHospitalCategory(name, tags, category)) return [];
     const osmPath = typePath[place.osm_type || ""];
     const sourceUrl = osmPath && place.osm_id ? `https://www.openstreetmap.org/${osmPath}/${place.osm_id}` : `https://www.openstreetmap.org/search?query=${encodeURIComponent(name)}`;
     return [{
@@ -359,52 +362,75 @@ async function nominatimHospitalSearch(lat: number, lng: number, localeCode: str
       reservation: reservationStatus(tags), phone: tags.phone || tags["contact:phone"], website: tags.website || tags["contact:website"],
       dataSource: "OpenStreetMap Nominatim", sourceUrl, lastVerified: new Date().toISOString().slice(0, 10),
     }];
-  }).sort((left, right) => left.distance - right.distance).slice(0, 10);
+  }).sort((left, right) => left.distance - right.distance);
+  const seenNames = new Set<string>();
+  return hospitals.filter((hospital) => {
+    const key = hospital.name.normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+    if (seenNames.has(key)) return false;
+    seenNames.add(key);
+    return true;
+  }).slice(0, 10);
 }
 
-async function nearbyHospitals(url: URL) {
-  const { lat, lng } = coordinates(url);
-  const requestedLocale = (url.searchParams.get("locale") || "en").toLowerCase();
-  const localeCode = /^[a-z]{2,3}(?:-[a-z]{2})?$/.test(requestedLocale) ? requestedLocale : "en";
-  const baseLanguage = localeCode.split("-")[0];
-  const cache = caches.default;
-  const cacheKey = new Request(`https://narucare.internal/hospitals?lat=${lat.toFixed(3)}&lng=${lng.toFixed(3)}&locale=${localeCode}`);
-  const cached = await cache.match(cacheKey);
-  if (cached) return cached;
-  const query = `[out:json][timeout:12];(nwr(around:5000,${lat},${lng})["amenity"~"^(hospital|clinic|doctors)$"];);out center tags 50;`;
-  const providers = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter"];
-  let response: Response | null = null;
-  for (const provider of providers) {
-    try {
-      const candidate = await fetch(provider, {
-        method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": "NaruCare/1.0" },
-        body: new URLSearchParams({ data: query }),
-        signal: AbortSignal.timeout(15_000),
-      });
-      if (candidate.ok) { response = candidate; break; }
-    } catch { /* Try the next documented public Overpass instance. */ }
-  }
-  const payload: unknown = response ? await response.json() : { elements: [] };
-  const elements = payload && typeof payload === "object" && "elements" in payload && Array.isArray(payload.elements) ? payload.elements as OverpassElement[] : [];
-  let hospitals = elements.flatMap<HospitalPayload>((element) => {
+function overpassHospitals(elements: OverpassElement[], lat: number, lng: number, localeCode: string, baseLanguage: string, category: HospitalCategory) {
+  return elements.flatMap<HospitalPayload>((element) => {
     const pointLat = element.lat ?? element.center?.lat; const pointLng = element.lon ?? element.center?.lon; const tags = element.tags || {};
     if (pointLat === undefined || pointLng === undefined) return [];
     const name = tags[`name:${localeCode}`] || tags[`name:${baseLanguage}`] || tags["name:ko"] || tags["name:en"] || tags.name;
     if (!name) return [];
+    if (!matchesHospitalCategory(name, tags, category)) return [];
     const amenity = tags.amenity || "hospital";
     const address = [tags["addr:city"], tags["addr:district"], tags["addr:street"], tags["addr:housenumber"]].filter(Boolean).join(" ");
     const sourceUrl = `https://www.openstreetmap.org/${element.type}/${element.id}`;
     return [{ id: `${element.type}-${element.id}`, name, lat: pointLat, lng: pointLng, distance: Math.round(haversine(lat, lng, pointLat, pointLng)), type: amenity === "hospital" ? "Hospital" : amenity === "clinic" ? "Clinic" : "Medical clinic", address, openingHours: tags.opening_hours, emergency: tags.emergency === "yes" || tags["emergency:yes"] === "yes", reservation: reservationStatus(tags), phone: tags.phone || tags["contact:phone"], website: tags.website || tags["contact:website"], dataSource: "OpenStreetMap", sourceUrl, lastVerified: tags["opening_hours:lastcheck"] || tags.check_date || tags["survey:date"] }];
   }).sort((left, right) => left.distance - right.distance).slice(0, 10);
-  if (!hospitals.length) hospitals = await nominatimHospitalSearch(lat, lng, localeCode, baseLanguage);
+}
+
+async function overpassHospitalSearch(provider: string, query: string, lat: number, lng: number, localeCode: string, baseLanguage: string, category: HospitalCategory) {
+  const response = await fetch(provider, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": "NaruCare/1.0" },
+    body: new URLSearchParams({ data: query }),
+    signal: AbortSignal.timeout(6_500),
+  });
+  if (!response.ok) throw new Error(`Overpass ${response.status}`);
+  const payload: unknown = await response.json();
+  const elements = payload && typeof payload === "object" && "elements" in payload && Array.isArray(payload.elements) ? payload.elements as OverpassElement[] : [];
+  const hospitals = overpassHospitals(elements, lat, lng, localeCode, baseLanguage, category);
+  if (!hospitals.length) throw new Error("Overpass returned no named medical facilities");
+  return hospitals;
+}
+
+async function nearbyHospitals(url: URL, ctx: ExecutionContext) {
+  const { lat, lng } = coordinates(url);
+  const requestedLocale = (url.searchParams.get("locale") || "en").toLowerCase();
+  const localeCode = /^[a-z]{2,3}(?:-[a-z]{2})?$/.test(requestedLocale) ? requestedLocale : "en";
+  const baseLanguage = localeCode.split("-")[0];
+  const category = hospitalCategory((url.searchParams.get("symptom") || "").slice(0, 1_000));
+  const cache = caches.default;
+  const cacheKey = new Request(`https://narucare.internal/hospitals?lat=${lat.toFixed(3)}&lng=${lng.toFixed(3)}&locale=${localeCode}&category=${category}`);
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached;
+  const query = `[out:json][timeout:6];(nwr(around:5000,${lat},${lng})["amenity"~"^(hospital|clinic|doctors)$"];);out center tags 50;`;
+  const providers = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter"];
+  const preferredSearch = Promise.any(providers.map((provider) => overpassHospitalSearch(provider, query, lat, lng, localeCode, baseLanguage, category)));
+  const fallbackSearch = nominatimHospitalSearch(lat, lng, localeCode, baseLanguage, category).then((hospitals) => {
+      if (!hospitals.length) throw new Error("Nominatim returned no named medical facilities");
+      return hospitals;
+    });
+  const delayedFallback = new Promise<void>((resolve) => setTimeout(resolve, 2_200)).then(() => fallbackSearch);
+  let hospitals: HospitalPayload[] = [];
+  try { hospitals = await Promise.any([preferredSearch, delayedFallback]); }
+  catch { /* The frontend has a clearly-labelled Seoul fallback if every provider is unavailable. */ }
   const result = json({ hospitals });
-  result.headers.set("cache-control", "public, max-age=300");
-  await cache.put(cacheKey, result.clone());
+  if (hospitals.length) {
+    result.headers.set("cache-control", "public, max-age=900");
+    ctx.waitUntil(cache.put(cacheKey, result.clone()));
+  } else result.headers.set("cache-control", "no-store");
   return result;
 }
 
-async function reverseGeocode(url: URL) {
+async function reverseGeocode(url: URL, ctx: ExecutionContext) {
   const { lat, lng } = coordinates(url);
   const cache = caches.default;
   const cacheKey = new Request(`https://narucare.internal/location/reverse?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}`);
@@ -412,7 +438,7 @@ async function reverseGeocode(url: URL) {
   if (cached) return cached;
   const endpoint = new URL("https://nominatim.openstreetmap.org/reverse");
   endpoint.search = new URLSearchParams({ lat: String(lat), lon: String(lng), format: "jsonv2", "accept-language": "ko,en", zoom: "18", addressdetails: "1", namedetails: "1" }).toString();
-  const response = await fetch(endpoint, { headers: { "user-agent": "NaruCare/1.0 (medical navigation prototype)", accept: "application/json" }, signal: AbortSignal.timeout(10_000) });
+  const response = await fetch(endpoint, { headers: { "user-agent": "NaruCare/1.0 (medical navigation prototype)", accept: "application/json" }, signal: AbortSignal.timeout(6_000) });
   if (!response.ok) throw new ApiException(502, "geocode_provider_error", "Geocoding unavailable");
   const value: unknown = await response.json();
   const valueObject = value && typeof value === "object" ? value as Record<string, unknown> : {};
@@ -438,7 +464,7 @@ async function reverseGeocode(url: URL) {
   const address = detailedRoadAddress || displayName || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
   const result = json({ address, coordinates: { lat, lng }, components: { road, houseNumber, building, postcode } });
   result.headers.set("cache-control", "public, max-age=300");
-  await cache.put(cacheKey, result.clone());
+  ctx.waitUntil(cache.put(cacheKey, result.clone()));
   return result;
 }
 
@@ -649,7 +675,7 @@ async function createOrder(request: Request, env: Env) {
   const companion = toCompanion(companionRow);
   const id = crypto.randomUUID();
   const durationValue = Number(body.durationMinutes || 120);
-  const duration = Number.isFinite(durationValue) ? Math.max(30, Math.min(720, Math.round(durationValue))) : 120;
+  const duration = Number.isFinite(durationValue) ? Math.max(60, Math.min(720, Math.round(durationValue / 30) * 30)) : 120;
   const deposit = Math.round(companion.price * (duration / 60) * 0.1);
   const hospitalJson = body.hospital && typeof body.hospital === "object" ? JSON.stringify(body.hospital).slice(0, 20_000) : null;
   await env.DB.prepare("INSERT INTO companion_orders (id,user_id,companion_id,hospital_json,status,duration_minutes,deposit,payment_method) VALUES (?,?,?,?,?,?,?,?)").bind(id, userId, companionId, hospitalJson, "requested", duration, deposit, "").run();
@@ -675,7 +701,12 @@ async function updateOrder(request: Request, env: Env, orderId: string) {
   if (rating !== null && !Number.isFinite(rating)) throw new ApiException(400, "invalid_rating", "Rating must be between 1 and 5");
   const review = typeof body.review === "string" ? body.review.trim().slice(0, 2_000) : "";
   const balancePaid = body.balancePaid === true ? 1 : 0;
-  const result = await env.DB.prepare("UPDATE companion_orders SET status=?,payment_method=CASE WHEN ?='' THEN payment_method ELSE ? END,rating=CASE WHEN ? IS NULL THEN rating ELSE ? END,review=CASE WHEN ?='' THEN review ELSE ? END,balance_paid=CASE WHEN ?=1 THEN 1 ELSE balance_paid END,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?").bind(status, paymentMethod, paymentMethod, rating, rating, review, review, balancePaid, orderId, userId).run();
+  const durationValue = body.durationMinutes === undefined ? null : Number(body.durationMinutes);
+  const durationMinutes = durationValue === null || !Number.isFinite(durationValue) ? null : Math.max(60, Math.min(1_440, Math.round(durationValue / 30) * 30));
+  const actualValue = body.actualDurationMinutes === undefined ? null : Number(body.actualDurationMinutes);
+  const actualDurationMinutes = actualValue === null || !Number.isFinite(actualValue) ? null : Math.max(60, Math.min(1_440, Math.ceil(actualValue)));
+  const serviceStartedAt = typeof body.serviceStartedAt === "string" && !Number.isNaN(Date.parse(body.serviceStartedAt)) ? body.serviceStartedAt : "";
+  const result = await env.DB.prepare("UPDATE companion_orders SET status=?,payment_method=CASE WHEN ?='' THEN payment_method ELSE ? END,rating=CASE WHEN ? IS NULL THEN rating ELSE ? END,review=CASE WHEN ?='' THEN review ELSE ? END,balance_paid=CASE WHEN ?=1 THEN 1 ELSE balance_paid END,duration_minutes=CASE WHEN ? IS NULL THEN duration_minutes ELSE ? END,actual_duration_minutes=CASE WHEN ? IS NULL THEN actual_duration_minutes ELSE ? END,service_started_at=CASE WHEN ?='' THEN service_started_at ELSE ? END,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?").bind(status, paymentMethod, paymentMethod, rating, rating, review, review, balancePaid, durationMinutes, durationMinutes, actualDurationMinutes, actualDurationMinutes, serviceStartedAt, serviceStartedAt, orderId, userId).run();
   if (!result.meta.changes) throw new ApiException(404, "order_not_found", "Order not found");
   return json({ ok: true });
 }
@@ -695,6 +726,8 @@ function toCompanionOrder(row: CompanionOrderRow) {
     hospital: parseJsonObject(row.hospital_json),
     status: row.status,
     durationMinutes: row.duration_minutes,
+    actualDurationMinutes: row.actual_duration_minutes || undefined,
+    serviceStartedAt: row.service_started_at || undefined,
     deposit: row.deposit,
     paymentMethod: row.payment_method,
     balancePaid: row.balance_paid === 1,
@@ -709,7 +742,7 @@ async function listOrders(request: Request, env: Env) {
   const userId = await requireUser(request, env);
   const result = await env.DB.prepare(`
     SELECT
-      o.id AS order_id,o.hospital_json,o.status,o.duration_minutes,o.deposit,o.payment_method,
+      o.id AS order_id,o.hospital_json,o.status,o.duration_minutes,o.actual_duration_minutes,o.service_started_at,o.deposit,o.payment_method,
       o.balance_paid,o.rating AS order_rating,o.review AS order_review,o.created_at AS order_created_at,o.updated_at AS order_updated_at,
       c.id,c.name,c.native_name,c.gender,c.nationality,c.age,c.languages_json,c.rating,c.review_count,c.price,c.eta,c.hospitals_json,c.experience
     FROM companion_orders o
@@ -821,15 +854,15 @@ async function deleteRecord(request: Request, env: Env, recordId: string) {
   return json({ ok: true, recordingsDeleted: Boolean(orderId) });
 }
 
-async function routeRequest(request: Request, env: Env) {
+async function routeRequest(request: Request, env: Env, ctx: ExecutionContext) {
   const url = new URL(request.url); const path = url.pathname;
   if (request.method === "POST" && path === "/api/auth/register") return authRegister(request, env);
   if (request.method === "POST" && path === "/api/auth/login") return authLogin(request, env);
   if (request.method === "POST" && path === "/api/auth/logout") return authLogout(request, env);
   if (request.method === "GET" && path === "/api/me") return me(request, env);
   if (request.method === "PUT" && path === "/api/card") return saveCard(request, env);
-  if (request.method === "GET" && path === "/api/hospitals") return nearbyHospitals(url);
-  if (request.method === "GET" && path === "/api/location/reverse") return reverseGeocode(url);
+  if (request.method === "GET" && path === "/api/hospitals") return nearbyHospitals(url, ctx);
+  if (request.method === "GET" && path === "/api/location/reverse") return reverseGeocode(url, ctx);
   if (request.method === "GET" && path === "/api/route") return route(url);
   if (request.method === "POST" && path === "/api/translate") return translate(request, env);
   if (request.method === "POST" && path === "/api/transcribe") return transcribe(request, env, url);
@@ -856,7 +889,7 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
     let response: Response;
     try {
-      response = await routeRequest(request, env);
+      response = await routeRequest(request, env, ctx);
     } catch (error) {
       if (error instanceof ApiException) response = json({ error: error.code, message: error.message }, error.status);
       else {

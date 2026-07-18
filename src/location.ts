@@ -12,6 +12,14 @@ export interface PreciseLocationOptions {
   minimumAccurateSamples?: number;
 }
 
+export interface FastAccurateLocationOptions {
+  usableAccuracyMeters?: number;
+  precisionTargetMeters?: number;
+  firstFixTimeoutMs?: number;
+  refinementTimeoutMs?: number;
+  onRefined?: (fix: PreciseLocationFix) => void | Promise<void>;
+}
+
 export function requestPreciseLocation(
   geolocation: Geolocation = navigator.geolocation,
   options: PreciseLocationOptions = {},
@@ -74,6 +82,37 @@ export function requestPreciseLocation(
       { enableHighAccuracy: true, timeout: hardTimeout, maximumAge: 0 },
     );
   });
+}
+
+/**
+ * Return the first trustworthy high-accuracy browser fix quickly, then keep a
+ * second short-lived watch running only when it can materially improve that
+ * fix. The refinement never blocks the page or hospital search.
+ */
+export async function requestFastAccurateLocation(
+  geolocation: Geolocation = navigator.geolocation,
+  options: FastAccurateLocationOptions = {},
+) {
+  const usableAccuracy = options.usableAccuracyMeters ?? 25;
+  const precisionTarget = options.precisionTargetMeters ?? 8;
+  const first = await requestPreciseLocation(geolocation, {
+    targetAccuracyMeters: usableAccuracy,
+    hardTimeoutMs: options.firstFixTimeoutMs ?? 7_000,
+    minimumObservationMs: 350,
+    minimumAccurateSamples: 1,
+  });
+
+  if (first.accuracy > precisionTarget && options.onRefined) {
+    void requestPreciseLocation(geolocation, {
+      targetAccuracyMeters: precisionTarget,
+      hardTimeoutMs: options.refinementTimeoutMs ?? 10_000,
+      minimumObservationMs: 700,
+      minimumAccurateSamples: 1,
+    }).then((refined) => {
+      if (refined.accuracy + 1 < first.accuracy) return options.onRefined?.(refined);
+    }).catch(() => undefined);
+  }
+  return first;
 }
 
 export function formatAccuracy(accuracy: number | undefined) {

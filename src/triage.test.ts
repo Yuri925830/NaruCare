@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assessMedicalIntent, hasMedicalSymptoms, isMedicalKnowledgeQuestion, isNaruCapabilityQuestion, isNaruIdentityQuestion } from "./triage";
+import { assessMedicalIntent, hasMedicalSymptoms, isAffirmativeResponse, isMedicalKnowledgeQuestion, isNaruCapabilityQuestion, isNaruIdentityQuestion, isNegativeResponse } from "./triage";
 
 describe("medical triage", () => {
   it.each([
@@ -35,6 +35,25 @@ describe("medical triage", () => {
     const result = assessMedicalIntent("帮我找附近医院", ["昨天开始咳嗽发烧"]);
     expect(result.intent).toBe("hospital");
     expect(result.symptoms).toBe("昨天开始咳嗽发烧");
+  });
+
+  it("marks a symptom report as requiring consent rather than an explicit hospital request", () => {
+    const result = assessMedicalIntent("我刚刚吃了个蛋糕，肚子有点疼");
+    expect(result.intent).toBe("hospital");
+    expect(result.reason).toBe("symptoms");
+    expect(result.symptoms).toContain("蛋糕");
+  });
+
+  it.each(["好的", "可以", "ok", "OK!", "yes", "네", "はい", "sí", "oui", "نعم"])("recognizes a short multilingual hospital-search confirmation: %s", (message) => {
+    expect(isAffirmativeResponse(message)).toBe(true);
+  });
+
+  it.each(["暂时不用", "先不用", "no thanks", "아니요", "いいえ", "non", "لا"])("recognizes a short multilingual hospital-search decline: %s", (message) => {
+    expect(isNegativeResponse(message)).toBe(true);
+  });
+
+  it.each(["可以根治吗", "好的睡眠有什么作用", "okay but what is insomnia?"])("does not mistake a longer question for hospital-search consent: %s", (message) => {
+    expect(isAffirmativeResponse(message)).toBe(false);
   });
 
   it("does not turn an explicitly negated chest pain statement into an emergency", () => {
