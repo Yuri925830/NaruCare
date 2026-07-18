@@ -1,4 +1,5 @@
 import { companions, fallbackHospitals, matchCompanions } from "./data";
+import { assessMedicalIntent } from "./triage";
 import type { Companion, CompanionFilters, CompanionOrder, Hospital, MedicalCard, SessionUser, TranslationRecordEntry, VisitRecord } from "./types";
 
 const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
@@ -177,13 +178,15 @@ export const api = {
     }, 45_000);
     return data.text.trim();
   },
-  async chat(message: string, locale: string, hasCard: boolean) {
+  async chat(message: string, locale: string, hasCard: boolean, previousUserMessages: string[] = []) {
+    const local = assessMedicalIntent(message, previousUserMessages, hasCard);
+    if (local.intent !== "general") return { reply: "", intent: local.intent, symptoms: local.symptoms };
     try {
-      return await request<{ reply: string; intent: "emergency" | "hospital" | "card" | "general" }>("/api/chat", {
-        method: "POST", body: JSON.stringify({ message, locale, hasCard }),
+      return await request<{ reply: string; intent: "emergency" | "hospital" | "card" | "flow" | "translation" | "companion" | "general"; symptoms?: string }>("/api/chat", {
+        method: "POST", body: JSON.stringify({ message, locale, hasCard, history: previousUserMessages.slice(-6) }),
       });
     } catch {
-      return { reply: "", intent: "general" as const };
+      return { reply: "", intent: local.intent, symptoms: local.symptoms };
     }
   },
   async getCompanions(filters: CompanionFilters): Promise<Companion[]> {

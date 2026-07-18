@@ -67,6 +67,7 @@ function AppInner() {
   const [ordersCount, setOrdersCount] = useState(0);
   const [ordersVersion, setOrdersVersion] = useState(0);
   const [currentRecordId, setCurrentRecordId] = useState<string | null>(null);
+  const [visitSessionVersion, setVisitSessionVersion] = useState(0);
 
   useEffect(() => { void api.me().then((current) => { if (current) setUser(current); }).finally(() => setChecking(false)); }, []);
   useEffect(() => {
@@ -122,7 +123,7 @@ function AppInner() {
     setSymptoms(clean);
     const card = user?.card;
     if (!card || card.symptoms === clean) return;
-    const nextCard: MedicalCard = { ...card, symptoms: clean, korean: { ...(card.korean || {}), symptoms: card.korean?.symptoms || clean } };
+    const nextCard: MedicalCard = { ...card, symptoms: clean, korean: { ...(card.korean || {}), symptoms: clean } };
     setUser((current) => current ? { ...current, card: nextCard } : current);
     try {
       const koreanSymptoms = await api.translate(clean, card.language || locale, "ko");
@@ -259,8 +260,7 @@ function AppInner() {
   async function submitCompanionReview(rating: number, review: string) {
     if (order) await api.updateOrder(order.id, "completed", { rating, review });
     setOrdersVersion((value) => value + 1);
-    setCurrentRecordId(null);
-    goTo("records");
+    await resetVisitSession("records");
   }
 
   function payCompanionBalance() {
@@ -287,12 +287,34 @@ function AppInner() {
     goTo(destination);
   }
 
+  const resetVisitSession = useCallback(async (destination: "agent" | "records" | "card") => {
+    recordingStream?.getTracks().forEach((track) => track.stop());
+    setRecordingStream(null);
+    setSymptoms("");
+    setHospitals([]);
+    setHospitalsLoading(false);
+    setSelectedHospital(null);
+    setFilters(getDefaultFilters(locale));
+    setPeople(api.allCompanions);
+    setSelectedCompanion(api.allCompanions[0]);
+    setOrder(null);
+    setCurrentRecordId(null);
+    setVisitSessionVersion((value) => value + 1);
+    setViewHistory(destination === "agent" ? [] : ["agent"]);
+    setVisitedViews(destination === "agent" ? ["agent"] : ["agent", destination]);
+    setView(destination);
+
+    const card = user?.card;
+    if (card && (card.symptoms || card.korean?.symptoms)) {
+      const clearedCard: MedicalCard = { ...card, symptoms: "", korean: { ...(card.korean || {}), symptoms: "" } };
+      setUser((current) => current ? { ...current, card: clearedCard } : current);
+      await api.saveCard(clearedCard).catch(() => undefined);
+    }
+  }, [locale, recordingStream, user?.card]);
+
   async function finishVisitAssistance() {
     await updateCurrentRecord({ status: "completed" });
-    setCurrentRecordId(null);
-    setViewHistory([]);
-    setVisitedViews(["agent"]);
-    setView("agent");
+    await resetVisitSession("agent");
   }
 
   const titles: Record<View, string> = {
@@ -308,7 +330,7 @@ function AppInner() {
   const renderView = (target: View): ReactNode => {
     switch (target) {
       case "card": return <MedicalCardPage card={user.card} onSaved={(card) => { setUser({ ...user, card }); goBack(); }} />;
-      case "agent": return <AgentPage card={user.card} onCard={() => goTo("card")} onEmergency={(value) => { void captureSymptoms(value); void beginEmergencyRecord(value); setSymptoms(value); goTo("emergency-confirm"); }} onHospitals={openHospitals} onSymptoms={(value) => void captureSymptoms(value)} onFlow={() => goTo("visit-flow")} onTranslation={() => goTo("translation")} onCompanion={() => goTo("companions-notice")} gateSignal={gateSignal} />;
+      case "agent": return <AgentPage key={`visit-${visitSessionVersion}`} card={user.card} onCard={() => goTo("card")} onEmergency={(value) => { void captureSymptoms(value); void beginEmergencyRecord(value); setSymptoms(value); goTo("emergency-confirm"); }} onHospitals={openHospitals} onSymptoms={(value) => void captureSymptoms(value)} onFlow={() => goTo("visit-flow")} onTranslation={() => goTo("translation")} onCompanion={() => goTo("companions-notice")} gateSignal={gateSignal} />;
       case "hospitals": return <HospitalsPage location={location} hospitals={hospitals} loading={hospitalsLoading} selected={selectedHospital} onSelect={(hospital) => { setSelectedHospital(hospital); void updateCurrentRecord({ hospital: hospital.name, status: "hospital_selected" }); }} onFlow={() => goTo("visit-flow")} onCompanion={() => goTo("companions-notice")} onRoute={() => { void updateCurrentRecord({ hospital: selectedHospital?.name || t("hospital"), status: "navigating" }); goTo("navigation"); }} onRefresh={async () => { setHospitalsLoading(true); try { const next = await refreshLocation(); const results = next.verified ? await api.hospitals(next.lat, next.lng, symptoms, locale) : []; setHospitals(results); setSelectedHospital(results[0] || null); } finally { setHospitalsLoading(false); } }} />;
       case "visit-flow": return <VisitFlowPage onStart={() => selectedHospital ? goTo("navigation") : void openHospitals(symptoms)} onReturn={() => goBack()} />;
       case "navigation": return selectedHospital ? <NavigationPage location={location} hospital={selectedHospital} onArrived={() => { void updateCurrentRecord({ status: "arrived" }); goTo("translation"); }} onTranslation={() => goTo("translation")} /> : <Panel><p>{t("noHospitalsFound")}</p></Panel>;
@@ -325,7 +347,7 @@ function AppInner() {
       case "companion-finished": return order ? <CompanionFinishedPage order={order} onPayBalance={payCompanionBalance} onReview={(rating, review) => void submitCompanionReview(rating, review)} /> : <Panel />;
       case "companion-orders": return <CompanionOrdersPage version={ordersVersion} onResume={resumeOrder} />;
       case "emergency-confirm": return <EmergencyConfirmPage hasCard={Boolean(user.card)} onCall={() => { void refreshLocation(); goTo("emergency-calling"); }} onDecline={() => user.card ? void openHospitals(symptoms || user.card.symptoms || "") : goTo("card")} />;
-      case "emergency-calling": return <EmergencyCallingPage user={user} location={location} symptoms={symptoms || user.card?.symptoms || ""} active={view === "emergency-calling"} onTranslation={() => goTo("translation")} onEnd={() => { void updateCurrentRecord({ status: "completed" }); setCurrentRecordId(null); goTo(user.card ? "agent" : "card"); }} />;
+      case "emergency-calling": return <EmergencyCallingPage user={user} location={location} symptoms={symptoms || user.card?.symptoms || ""} active={view === "emergency-calling"} onTranslation={() => goTo("translation")} onEnd={() => { void (async () => { await updateCurrentRecord({ status: "completed" }); await resetVisitSession(user.card ? "agent" : "card"); })(); }} />;
       case "profile": return <ProfilePage user={user} recordsCount={recordsCount} ordersCount={ordersCount} onCard={() => goTo("card")} onRecords={() => goTo("records")} onOrders={() => goTo("companion-orders")} onLanguage={openLanguage} onLogout={() => { void api.logout(); setUser(null); setViewHistory([]); setVisitedViews(["agent"]); }} />;
       case "records": return <RecordsPage version={recordsVersion} onCountChange={setRecordsCount} />;
       case "language": return <Panel className="in-app-language"><h2>{t("chooseLanguage")}</h2><p>{t("languageSubtitle")}</p><LanguageSelector compact onDone={goBack} /></Panel>;

@@ -70,6 +70,19 @@ await context.addInitScript(() => {
 });
 const page = await context.newPage();
 const errors = [];
+async function assertChatDocked(label) {
+  const panel = await page.locator(".chat-panel").boundingBox();
+  const composer = await page.locator(".chat-composer").boundingBox();
+  const viewport = page.viewportSize();
+  const overflowY = await page.locator(".messages").evaluate((element) => getComputedStyle(element).overflowY);
+  if (!panel || !composer || !viewport) throw new Error(`${label}: chat geometry is unavailable`);
+  if (composer.y + composer.height > panel.y + panel.height + 1 || panel.y + panel.height > viewport.height + 1) throw new Error(`${label}: composer is not docked inside the fixed chat panel`);
+  if (!/auto|scroll/.test(overflowY)) throw new Error(`${label}: messages are not independently scrollable`);
+  if (viewport.width <= 760) {
+    const nav = await page.locator(".bottom-nav").boundingBox();
+    if (!nav || composer.y + composer.height > nav.y - 4) throw new Error(`${label}: composer overlaps the mobile bottom navigation`);
+  }
+}
 page.on("pageerror", (error) => errors.push(error.stack || error.message));
 page.on("console", (message) => { if (message.type() === "error" && !message.text().includes("ERR_FAILED")) errors.push(message.text()); });
 await page.route("**/api/**", (route) => route.abort());
@@ -92,6 +105,7 @@ await page.locator('input[autocomplete="new-password"]').nth(1).fill("12345678")
 await page.locator('button[type="submit"]').click();
 await page.locator(".agent-grid").waitFor();
 await page.screenshot({ path: shot("03-agent-desktop.png") });
+await assertChatDocked("desktop");
 
 // In-app mobile language switching: the action must be visible immediately,
 // RTL languages must not mirror the application shell, and returning must
@@ -108,6 +122,7 @@ await page.locator(".language-list button").filter({ hasText: "中文（简体�
 await page.locator(".in-app-language .language-continue").click();
 await page.locator(".agent-grid").waitFor();
 if (await page.locator(".chat-composer input").inputValue() !== "保留这段未发送的内容") throw new Error("Language return did not preserve the previous page state");
+await assertChatDocked("mobile");
 await page.locator(".chat-composer input").fill("");
 await page.setViewportSize({ width: 1440, height: 900 });
 
@@ -127,6 +142,16 @@ await page.locator('[data-field="documentNumber"] input').fill("90******123");
 await page.locator('[data-field="symptoms"] textarea').fill("暂时没有症状");
 await page.screenshot({ path: shot("05-card-desktop.png") });
 await page.locator(".medical-card-form > .button").click();
+await page.locator(".agent-grid").waitFor();
+await page.locator(".chat-composer input").fill("就发高烧，看不见东西");
+await page.locator(".chat-composer").evaluate((form) => form.requestSubmit());
+await page.locator(".emergency-confirm-panel").waitFor({ timeout: 3000 });
+await page.screenshot({ path: shot("06-triage-emergency-desktop.png") });
+await page.locator(".page-back").click();
+await page.locator(".agent-grid").waitFor();
+// An unresolved red flag intentionally remains active within the same chat.
+// Reload here to start an independent visit scenario for the hospital path.
+await page.reload({ waitUntil: "networkidle" });
 await page.locator(".agent-grid").waitFor();
 await page.locator(".chat-composer input").fill("肚子疼，一直拉肚子，还吐了，今天吃了海鲜");
 await page.locator(".chat-composer").evaluate((form) => form.requestSubmit());
@@ -169,6 +194,18 @@ await page.waitForTimeout(100);
 const voiceLanguage = await page.evaluate(() => window.__voiceRecognitionStarted || "");
 if (!voiceLanguage) throw new Error("Browser speech recognition did not start");
 await page.screenshot({ path: shot("10-translation-desktop.png") });
+await page.locator(".translation-finish .button").click();
+await page.locator(".agent-grid").waitFor();
+if (await page.locator(".messages .message").count() !== 1) throw new Error("Completed visit did not reset the Naru conversation");
+await page.locator(".side-nav button").first().click();
+await page.locator(".medical-card-form").waitFor();
+if (await page.locator('[data-field="symptoms"] textarea').inputValue() !== "") throw new Error("Completed visit symptoms were not cleared from temporary medical-card state");
+await page.locator(".page-back").click();
+await page.locator(".agent-grid").waitFor();
+await page.locator(".chat-composer input").fill("肚子疼，一直拉肚子，还吐了，今天吃了海鲜");
+await page.locator(".chat-composer").evaluate((form) => form.requestSubmit());
+await page.locator(".hospital-panel").waitFor({ timeout: 5000 });
+await page.locator(".hospital-item").first().waitFor({ timeout: 12_000 });
 
 await page.locator(".side-nav button").nth(3).click();
 await page.locator(".emergency-confirm-panel").waitFor();

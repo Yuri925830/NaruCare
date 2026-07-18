@@ -4,7 +4,7 @@ import { api } from "../api";
 import { Button, InfoBanner, InteractiveMap, NaruPose, Panel, StatusPill } from "../components";
 import { evaluateOpeningHours, formatRestDays } from "../hospitalHours";
 import { localeOptions, useI18n } from "../i18n";
-import { isLikelySymptomDescription } from "../symptoms";
+import { assessMedicalIntent } from "../triage";
 import type { Hospital, LocationState, MedicalCard, TranslationRecordEntry } from "../types";
 
 interface Message { id: string; role: "naru" | "user" | "status"; text: string }
@@ -25,6 +25,7 @@ export function AgentPage({ card, onCard, onEmergency, onHospitals, onSymptoms, 
   const [input, setInput] = useState("");
   const [gate, setGate] = useState(false);
   const [busy, setBusy] = useState(false);
+  const messagesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMessages((current) => current.length === 1 ? [{ id: "welcome", role: "naru", text: card ? t("naruReady", { name: card.name }) : t("naruGreeting") }] : current);
@@ -32,6 +33,10 @@ export function AgentPage({ card, onCard, onEmergency, onHospitals, onSymptoms, 
 
   useEffect(() => { if (!card && gateSignal) setGate(true); }, [card, gateSignal]);
   useEffect(() => { if (card) setGate(false); }, [card]);
+  useEffect(() => {
+    const container = messagesRef.current;
+    if (container) container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+  }, [messages, busy]);
 
   const send = async (text = input) => {
     const clean = text.trim();
@@ -45,29 +50,42 @@ export function AgentPage({ card, onCard, onEmergency, onHospitals, onSymptoms, 
       setGate(true);
       return;
     }
-    const emergency = /(无法呼吸|不能呼吸|呼吸困难|胸口.*痛|胸痛|昏迷|失去意识|大出血|抽搐|can't breathe|cannot breathe|chest pain|unconscious|severe bleeding|숨.*못|호흡.*곤란|가슴.*통증|意識.*ない|息.*でき)/i.test(clean);
-    if (emergency) { onEmergency(clean); return; }
-    const hospital = /(肚子|腹痛|腹泻|拉肚子|呕吐|吐了|海鲜|stomach|abdominal|diarrhea|vomit|seafood|배.*아|설사|구토|복통)/i.test(clean);
-    if (hospital) {
+    const previousUserMessages = messages.filter((message) => message.role === "user").map((message) => message.text);
+    const localTriage = assessMedicalIntent(clean, previousUserMessages, true);
+    const effectiveSymptoms = localTriage.symptoms || card.symptoms?.trim() || clean;
+    if (localTriage.symptoms) onSymptoms?.(localTriage.symptoms);
+    if (localTriage.intent === "emergency") { onEmergency(effectiveSymptoms); return; }
+    if (localTriage.intent === "card") { onCard(); return; }
+    if (localTriage.intent === "flow") { onFlow?.(); return; }
+    if (localTriage.intent === "translation") { onTranslation?.(); return; }
+    if (localTriage.intent === "companion") { onCompanion(); return; }
+    if (localTriage.intent === "hospital") {
       setMessages((current) => [...current, { id: crypto.randomUUID(), role: "status", text: t("analyzing") }]);
       setBusy(true);
-      window.setTimeout(() => { setBusy(false); onHospitals(clean); }, 1100);
+      window.setTimeout(() => { setBusy(false); onHospitals(effectiveSymptoms); }, 650);
       return;
     }
-    if (/(陪诊|companion|동행|付き添)/i.test(clean)) { onCompanion(); return; }
-    if (isLikelySymptomDescription(clean)) onSymptoms?.(clean);
     setBusy(true);
-    const response = await api.chat(clean, locale, true);
-    setBusy(false);
-    if (response.intent === "emergency") return onEmergency(clean);
-    if (response.intent === "hospital") return onHospitals(clean);
-    setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: response.reply || t("naruReady", { name: card.name }) }]);
+    try {
+      const response = await api.chat(clean, locale, true, previousUserMessages);
+      const responseSymptoms = response.symptoms?.trim() || effectiveSymptoms;
+      if (response.symptoms) onSymptoms?.(response.symptoms);
+      if (response.intent === "emergency") return onEmergency(responseSymptoms);
+      if (response.intent === "hospital") return onHospitals(responseSymptoms);
+      if (response.intent === "card") return onCard();
+      if (response.intent === "flow") return onFlow?.();
+      if (response.intent === "translation") return onTranslation?.();
+      if (response.intent === "companion") return onCompanion();
+      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: response.reply || t("naruReady", { name: card.name }) }]);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return <div className="agent-grid">
     <Panel className="chat-panel">
       <div className="agent-online"><NaruPose pose={2} className="chat-naru-pose" /><strong>Naru<small>{t("brandSub")}</small></strong><StatusPill><ShieldCheck size={14} />{t("privateConversation")}</StatusPill></div>
-      <div className="messages">
+      <div className="messages" ref={messagesRef}>
         {messages.map((message) => message.role === "status" ? <InfoBanner key={message.id} tone="mint" title={message.text}>{t("analyzingText")}</InfoBanner> : <div key={message.id} className={`message message-${message.role}`}>
           {message.role === "naru" && <div className="message-author"><NaruPose pose={2} className="chat-naru-pose" /><strong>Naru<small>{t("brandSub")}</small></strong></div>}
           <p dir="auto">{message.text}</p>

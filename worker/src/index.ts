@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer";
+import { assessMedicalIntent, type MedicalIntent } from "../../src/triage";
 
 const SESSION_DAYS = 30;
 // Cloudflare Workers currently caps PBKDF2 at 100,000 iterations.
@@ -526,24 +527,40 @@ async function transcribe(request: Request, env: Env, url: URL) {
   return json({ text });
 }
 
-function classifyIntent(message: string, hasCard: boolean) {
-  if (!hasCard && /(card|就诊卡|診療カード|진료카드|建卡)/i.test(message)) return "card";
-  if (/(无法呼吸|不能呼吸|呼吸困难|胸痛|昏迷|大出血|抽搐|can't breathe|cannot breathe|chest pain|unconscious|severe bleeding|숨.*못|호흡.*곤란|가슴.*통증)/i.test(message)) return "emergency";
-  if (/(肚子|腹痛|腹泻|呕吐|海鲜|stomach|abdominal|diarrhea|vomit|seafood|복통|설사|구토)/i.test(message)) return "hospital";
-  return "general";
+function parseTriageModelOutput(value: string) {
+  const cleaned = value.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  try {
+    const parsed: unknown = JSON.parse(cleaned);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const record = parsed as Record<string, unknown>;
+    const intent = record.intent;
+    if (intent !== "emergency" && intent !== "hospital" && intent !== "card" && intent !== "flow" && intent !== "translation" && intent !== "companion" && intent !== "general") return null;
+    return {
+      intent: intent as MedicalIntent,
+      reply: typeof record.reply === "string" ? record.reply.trim().slice(0, 4_000) : "",
+      symptoms: typeof record.symptoms === "string" ? record.symptoms.trim().slice(0, 1_000) : "",
+    };
+  } catch { return null; }
 }
 
 async function chat(request: Request, env: Env) {
   await requireUser(request, env);
   const body = await readJson(request);
   const message = assertString(body.message, "message", 1, 2_000); const locale = assertString(body.locale, "locale", 2, 20); const hasCard = body.hasCard === true;
-  const intent = classifyIntent(message, hasCard);
-  if (intent !== "general") return json({ reply: "", intent });
-  const reply = await runTextModel(env, [
-      { role: "system", content: `You are Naru, a calm medical navigation assistant for foreigners in Korea. Reply in ${locale}. Do not diagnose, prescribe, or claim certainty. Ask one useful follow-up question and advise urgent care for red flags. Be concise and supportive.` },
-      { role: "user", content: message },
-    ], 350, 0.25);
-  return json({ reply, intent: "general" });
+  const history = Array.isArray(body.history)
+    ? body.history.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0).slice(-6).map((entry) => entry.trim().slice(0, 1_000))
+    : [];
+  const deterministic = assessMedicalIntent(message, history, hasCard);
+  if (deterministic.intent !== "general") return json({ reply: "", intent: deterministic.intent, symptoms: deterministic.symptoms, source: "safety_rules" });
+
+  const transcript = [...history.map((entry) => `User: ${entry}`), `User: ${message}`].join("\n");
+  const output = await runTextModel(env, [
+      { role: "system", content: `You are Naru's medical navigation and service-intent router for foreigners in Korea. Analyze the complete conversation, not only the last sentence. Return ONLY one JSON object with this exact shape: {"intent":"emergency|hospital|card|flow|translation|companion|general","symptoms":"concise symptom summary in the user's language","reply":"reply in ${locale}"}. Choose emergency for possible life-threatening red flags, including breathing difficulty, severe chest pain, loss of consciousness, uncontrolled bleeding, seizure, stroke signs, sudden vision loss, self-harm, or high fever combined with neurological/vision symptoms. Choose hospital whenever the user describes a health symptom or asks to find a hospital. Choose card for creating or editing the medical card, flow for hospital process/documents, translation for live translation, and companion for a human medical companion. Choose general only when no symptom, risk, or service request exists. Do not diagnose or prescribe. For any non-general intent, reply may be empty because the UI opens the corresponding action screen.` },
+      { role: "user", content: `Conversation data:\n${transcript}` },
+    ], 420, 0.1);
+  const classified = parseTriageModelOutput(output);
+  if (classified) return json({ ...classified, source: "ai_triage" });
+  return json({ reply: output, intent: "general", symptoms: "", source: "ai_reply" });
 }
 
 function toCompanion(row: CompanionRow): CompanionPayload {
