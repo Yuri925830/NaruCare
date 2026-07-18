@@ -103,3 +103,21 @@ export function formatRestDays(indexes: number[] | null, locale: string) {
   const formatter = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
   return indexes.map((index) => formatter.format(new Date(sunday.getTime() + index * 86_400_000))).join(" / ");
 }
+
+export function formatOpeningSchedule(raw: string | undefined, locale: string) {
+  if (!raw?.trim()) return null;
+  if (/^24\s*\/\s*7$/i.test(raw.trim())) return "24/7";
+  const sunday = new Date(Date.UTC(2024, 0, 7));
+  const formatter = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
+  const codeIndex: Record<string, number> = { Su: 0, Mo: 1, Tu: 2, We: 3, Th: 4, Fr: 5, Sa: 6 };
+  const values = raw.split(";").flatMap((rule) => {
+    const match = rule.trim().match(/^(Su|Mo|Tu|We|Th|Fr|Sa)\s+(.+)$/i);
+    if (!match || /\boff\b|\bclosed\b/i.test(match[2])) return [];
+    const normalizedCode = `${match[1][0].toUpperCase()}${match[1][1].toLowerCase()}`;
+    const index = codeIndex[normalizedCode];
+    if (index === undefined) return [];
+    const day = formatter.format(new Date(sunday.getTime() + index * 86_400_000));
+    return [`${day} ${match[2].replace(/-/g, "–").replace(/,/g, " / ")}`];
+  });
+  return values.length ? values.join(" · ") : null;
+}

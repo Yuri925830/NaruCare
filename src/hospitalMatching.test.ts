@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { hospitalCategory, matchesHospitalCategory } from "./hospitalMatching";
+import { hospitalCategory, hospitalSearchQueries, matchesHospitalCategory } from "./hospitalMatching";
 
 describe("hospital symptom relevance", () => {
   it("classifies the user's cake-related abdominal pain as gastrointestinal", () => {
     expect(hospitalCategory("我刚刚吃了个蛋糕，肚子有点疼")).toBe("gastro");
+    expect(hospitalSearchQueries("gastro")).toEqual(["소화기내과", "내과"]);
   });
 
   it("keeps general hospitals but excludes clearly unrelated specialties", () => {
@@ -23,5 +24,6 @@ describe("hospital symptom relevance", () => {
     expect(matchesHospitalCategory("거북이한의원2F", { amenity: "hospital" }, "gastro")).toBe(false);
     expect(matchesHospitalCategory("연세 바로 척 병원", { amenity: "hospital" }, "gastro")).toBe(false);
     expect(matchesHospitalCategory("린여성병원", { amenity: "hospital" }, "gastro")).toBe(false);
+    expect(matchesHospitalCategory("위풍당당신경외과의원", { amenity: "clinic", "healthcare:speciality": "신경외과" }, "gastro")).toBe(false);
   });
 });

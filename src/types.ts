@@ -62,6 +62,7 @@ export interface Hospital {
   type: string;
   address?: string;
   openingHours?: string;
+  openNow?: boolean;
   emergency?: boolean;
   reservation?: "required" | "recommended" | "not_required" | "unknown";
   phone?: string;

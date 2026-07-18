@@ -1,7 +1,9 @@
 import { Buffer } from "node:buffer";
 import { assessMedicalIntent, type MedicalIntent } from "../../src/triage";
+import { parseKakaoHospitalDetail } from "../../src/kakaoHospitalDetail";
 import {
   hospitalCategory,
+  hospitalSearchQueries,
   matchesHospitalCategory,
   type HospitalCategory,
 } from "../../src/hospitalMatching";
@@ -104,6 +106,7 @@ interface HospitalPayload {
   type: string;
   address?: string;
   openingHours?: string;
+  openNow?: boolean;
   emergency?: boolean;
   reservation?: "required" | "recommended" | "not_required" | "unknown";
   phone?: string;
@@ -331,6 +334,242 @@ function reservationStatus(tags: Record<string, string>): HospitalPayload["reser
   return "unknown";
 }
 
+interface KakaoPlace {
+  id: string;
+  place_name: string;
+  category_name: string;
+  phone: string;
+  address_name: string;
+  road_address_name: string;
+  x: string;
+  y: string;
+  place_url: string;
+  distance: string;
+}
+
+interface GooglePoint { day?: number; hour?: number; minute?: number }
+interface GooglePeriod { open?: GooglePoint; close?: GooglePoint }
+interface GoogleOpeningHours { openNow?: boolean; periods?: GooglePeriod[]; weekdayDescriptions?: string[] }
+interface GooglePlace {
+  id?: string;
+  displayName?: { text?: string };
+  formattedAddress?: string;
+  location?: { latitude?: number; longitude?: number };
+  primaryTypeDisplayName?: { text?: string };
+  types?: string[];
+  nationalPhoneNumber?: string;
+  googleMapsUri?: string;
+  websiteUri?: string;
+  businessStatus?: string;
+  currentOpeningHours?: GoogleOpeningHours;
+  regularOpeningHours?: GoogleOpeningHours;
+  reservable?: boolean;
+}
+
+function envSecret(env: Env, name: "KAKAO_REST_API_KEY" | "GOOGLE_PLACES_API_KEY") {
+  const value = (env as unknown as Record<string, unknown>)[name];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizedFacilityName(value: string) {
+  return value.normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
+function deduplicateHospitals(hospitals: HospitalPayload[]) {
+  const seen = new Set<string>();
+  return hospitals.filter((hospital) => {
+    const name = normalizedFacilityName(hospital.name);
+    const key = `${name}:${hospital.lat.toFixed(4)}:${hospital.lng.toFixed(4)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+async function kakaoHospitalSearch(env: Env, lat: number, lng: number, category: HospitalCategory) {
+  const apiKey = envSecret(env, "KAKAO_REST_API_KEY");
+  if (!apiKey) return [];
+  const searches = hospitalSearchQueries(category).map(async (query) => {
+    const endpoint = new URL("https://dapi.kakao.com/v2/local/search/keyword.json");
+    endpoint.search = new URLSearchParams({
+      query,
+      category_group_code: "HP8",
+      x: String(lng),
+      y: String(lat),
+      radius: "3500",
+      sort: "distance",
+      size: "15",
+      page: "1",
+    }).toString();
+    const response = await fetch(endpoint, {
+      headers: { authorization: `KakaoAK ${apiKey}`, accept: "application/json" },
+      signal: AbortSignal.timeout(3_500),
+    });
+    if (!response.ok) throw new Error(`Kakao Local ${response.status}`);
+    const payload: unknown = await response.json();
+    if (!payload || typeof payload !== "object" || !("documents" in payload) || !Array.isArray(payload.documents)) return [];
+    return (payload.documents as KakaoPlace[]).flatMap<HospitalPayload>((place) => {
+      const pointLat = Number(place.y); const pointLng = Number(place.x);
+      if (!Number.isFinite(pointLat) || !Number.isFinite(pointLng) || !place.place_name) return [];
+      const distance = Number(place.distance) || Math.round(haversine(lat, lng, pointLat, pointLng));
+      if (distance > 3_500 || !matchesHospitalCategory(place.place_name, { amenity: "clinic", "healthcare:speciality": place.category_name }, category)) return [];
+      return [{
+        id: `kakao-${place.id}`,
+        name: place.place_name,
+        lat: pointLat,
+        lng: pointLng,
+        distance,
+        type: place.category_name || "Hospital / Clinic",
+        address: place.road_address_name || place.address_name,
+        reservation: "unknown",
+        phone: place.phone || undefined,
+        dataSource: "Kakao Local",
+        sourceUrl: place.place_url,
+        lastVerified: new Date().toISOString().slice(0, 10),
+      }];
+    });
+  });
+  const settled = await Promise.allSettled(searches);
+  const nearby = deduplicateHospitals(settled.flatMap((result) => result.status === "fulfilled" ? result.value : []))
+    .sort((left, right) => left.distance - right.distance)
+    .slice(0, 8);
+  const detailed = await Promise.all(nearby.map(async (hospital): Promise<HospitalPayload | null> => {
+    const placeId = hospital.id.replace(/^kakao-/, "");
+    try {
+      const response = await fetch(`https://place-api.map.kakao.com/places/panel3/${encodeURIComponent(placeId)}`, {
+        headers: {
+          accept: "application/json, text/plain, */*",
+          "accept-language": "ko-KR",
+          appversion: "6.6.0",
+          origin: "https://place.map.kakao.com",
+          pf: "PC",
+          referer: "https://place.map.kakao.com/",
+          "user-agent": "Mozilla/5.0 (compatible; NaruCare/1.0; +https://yuri925830.github.io/NaruCare/)",
+        },
+        signal: AbortSignal.timeout(2_200),
+      });
+      if (!response.ok) return hospital;
+      const detail = parseKakaoHospitalDetail(await response.json());
+      if (detail.subjects.length && !matchesHospitalCategory(hospital.name, { amenity: "clinic", "healthcare:speciality": detail.subjects.join(" ") }, category)) return null;
+      return {
+        ...hospital,
+        type: detail.subjects.length ? detail.subjects.join(" · ") : hospital.type,
+        address: detail.address || hospital.address,
+        openingHours: detail.openingHours,
+        emergency: detail.emergency,
+        reservation: detail.bookingAvailable ? "recommended" : "unknown",
+        phone: detail.phone || hospital.phone,
+        dataSource: detail.openingHours || detail.subjects.length ? "Kakao Maps · HIRA/e-gen" : hospital.dataSource,
+        lastVerified: detail.lastVerified || hospital.lastVerified,
+      };
+    } catch {
+      return hospital;
+    }
+  }));
+  const relevant = detailed.filter((hospital): hospital is HospitalPayload => Boolean(hospital));
+  const scheduleVerified = relevant.filter((hospital) => Boolean(hospital.openingHours));
+  return (scheduleVerified.length >= 3 ? scheduleVerified : relevant).slice(0, 10);
+}
+
+function googleOpeningHours(periods: GooglePeriod[] | undefined) {
+  if (!periods?.length) return undefined;
+  const codes = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+  if (periods.length === 1 && periods[0].open?.day === 0 && periods[0].open.hour === 0 && periods[0].open.minute === 0 && !periods[0].close) return "24/7";
+  const byDay = new Map<number, string[]>();
+  for (const period of periods) {
+    const open = period.open; const close = period.close;
+    if (open?.day === undefined || open.hour === undefined || !close || close.hour === undefined) continue;
+    const format = (point: GooglePoint) => `${String(point.hour ?? 0).padStart(2, "0")}:${String(point.minute ?? 0).padStart(2, "0")}`;
+    const values = byDay.get(open.day) || [];
+    values.push(`${format(open)}-${format(close)}`);
+    byDay.set(open.day, values);
+  }
+  if (!byDay.size) return undefined;
+  return codes.map((code, day) => `${code} ${byDay.get(day)?.join(",") || "off"}`).join("; ");
+}
+
+async function googleHospitalSearch(env: Env, lat: number, lng: number, category: HospitalCategory) {
+  const apiKey = envSecret(env, "GOOGLE_PLACES_API_KEY");
+  if (!apiKey) return [];
+  const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-goog-api-key": apiKey,
+      "x-goog-fieldmask": "places.id,places.displayName,places.formattedAddress,places.location,places.primaryTypeDisplayName,places.types,places.nationalPhoneNumber,places.googleMapsUri,places.websiteUri,places.businessStatus,places.currentOpeningHours,places.regularOpeningHours,places.reservable",
+    },
+    body: JSON.stringify({
+      textQuery: hospitalSearchQueries(category)[0],
+      languageCode: "ko",
+      regionCode: "KR",
+      maxResultCount: 15,
+      rankPreference: "DISTANCE",
+      locationBias: { circle: { center: { latitude: lat, longitude: lng }, radius: 3_500 } },
+    }),
+    signal: AbortSignal.timeout(4_500),
+  });
+  if (!response.ok) throw new Error(`Google Places ${response.status}`);
+  const payload: unknown = await response.json();
+  if (!payload || typeof payload !== "object" || !("places" in payload) || !Array.isArray(payload.places)) return [];
+  return (payload.places as GooglePlace[]).flatMap<HospitalPayload>((place) => {
+    const pointLat = Number(place.location?.latitude); const pointLng = Number(place.location?.longitude);
+    const name = place.displayName?.text?.trim() || "";
+    if (!name || !Number.isFinite(pointLat) || !Number.isFinite(pointLng) || place.businessStatus === "CLOSED_PERMANENTLY") return [];
+    const distance = Math.round(haversine(lat, lng, pointLat, pointLng));
+    const speciality = place.primaryTypeDisplayName?.text || place.types?.join(" ") || "";
+    if (distance > 3_500 || !matchesHospitalCategory(name, { amenity: "clinic", "healthcare:speciality": speciality }, category)) return [];
+    // `reservable: false` only means the provider does not expose booking through
+    // Google; it does not prove that the clinic accepts walk-ins.
+    const reservation = place.reservable === true ? "recommended" : "unknown";
+    return [{
+      id: `google-${place.id || normalizedFacilityName(name)}`,
+      name,
+      lat: pointLat,
+      lng: pointLng,
+      distance,
+      type: speciality || "Hospital / Clinic",
+      address: place.formattedAddress,
+      openingHours: googleOpeningHours(place.regularOpeningHours?.periods),
+      openNow: typeof place.currentOpeningHours?.openNow === "boolean" ? place.currentOpeningHours.openNow : undefined,
+      emergency: place.types?.includes("emergency_room"),
+      reservation,
+      phone: place.nationalPhoneNumber,
+      website: place.websiteUri,
+      dataSource: "Google Places",
+      sourceUrl: place.googleMapsUri,
+      lastVerified: new Date().toISOString().slice(0, 10),
+    }];
+  }).sort((left, right) => left.distance - right.distance);
+}
+
+function mergeHospitalProviders(kakao: HospitalPayload[], google: HospitalPayload[]) {
+  const usedGoogle = new Set<string>();
+  const merged = kakao.map((hospital) => {
+    const kakaoName = normalizedFacilityName(hospital.name);
+    const match = google.find((candidate) => {
+      if (usedGoogle.has(candidate.id)) return false;
+      const googleName = normalizedFacilityName(candidate.name);
+      return kakaoName === googleName || (Math.min(kakaoName.length, googleName.length) >= 4 && (kakaoName.includes(googleName) || googleName.includes(kakaoName)));
+    });
+    if (!match) return hospital;
+    usedGoogle.add(match.id);
+    return {
+      ...hospital,
+      openingHours: match.openingHours,
+      openNow: match.openNow,
+      emergency: match.emergency ?? hospital.emergency,
+      reservation: match.reservation,
+      phone: match.phone || hospital.phone,
+      website: match.website,
+      dataSource: "Kakao Local + Google Places",
+      lastVerified: match.lastVerified,
+    };
+  });
+  return deduplicateHospitals([...merged, ...google.filter((hospital) => !usedGoogle.has(hospital.id))])
+    .sort((left, right) => left.distance - right.distance)
+    .slice(0, 10);
+}
+
 async function nominatimHospitalSearch(lat: number, lng: number, localeCode: string, baseLanguage: string, category: HospitalCategory) {
   const endpoint = new URL("https://nominatim.openstreetmap.org/search");
   endpoint.search = new URLSearchParams({
@@ -401,30 +640,41 @@ async function overpassHospitalSearch(provider: string, query: string, lat: numb
   return hospitals;
 }
 
-async function nearbyHospitals(url: URL, ctx: ExecutionContext) {
+async function nearbyHospitals(url: URL, env: Env, ctx: ExecutionContext) {
   const { lat, lng } = coordinates(url);
   const requestedLocale = (url.searchParams.get("locale") || "en").toLowerCase();
   const localeCode = /^[a-z]{2,3}(?:-[a-z]{2})?$/.test(requestedLocale) ? requestedLocale : "en";
   const baseLanguage = localeCode.split("-")[0];
   const category = hospitalCategory((url.searchParams.get("symptom") || "").slice(0, 1_000));
   const cache = caches.default;
-  const cacheKey = new Request(`https://narucare.internal/hospitals?lat=${lat.toFixed(3)}&lng=${lng.toFixed(3)}&locale=${localeCode}&category=${category}`);
+  const hasScheduleProvider = Boolean(envSecret(env, "GOOGLE_PLACES_API_KEY"));
+  const cacheKey = new Request(`https://narucare.internal/hospitals?v=6&lat=${lat.toFixed(3)}&lng=${lng.toFixed(3)}&locale=${localeCode}&category=${category}&schedule=${hasScheduleProvider ? "google" : "none"}`);
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
-  const query = `[out:json][timeout:6];(nwr(around:5000,${lat},${lng})["amenity"~"^(hospital|clinic|doctors)$"];);out center tags 50;`;
-  const providers = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter"];
-  const preferredSearch = Promise.any(providers.map((provider) => overpassHospitalSearch(provider, query, lat, lng, localeCode, baseLanguage, category)));
-  const fallbackSearch = nominatimHospitalSearch(lat, lng, localeCode, baseLanguage, category).then((hospitals) => {
-      if (!hospitals.length) throw new Error("Nominatim returned no named medical facilities");
-      return hospitals;
-    });
-  const delayedFallback = new Promise<void>((resolve) => setTimeout(resolve, 2_200)).then(() => fallbackSearch);
   let hospitals: HospitalPayload[] = [];
-  try { hospitals = await Promise.any([preferredSearch, delayedFallback]); }
-  catch { /* The frontend has a clearly-labelled Seoul fallback if every provider is unavailable. */ }
+  const [kakaoResult, googleResult] = await Promise.allSettled([
+    kakaoHospitalSearch(env, lat, lng, category),
+    googleHospitalSearch(env, lat, lng, category),
+  ]);
+  const kakaoHospitals = kakaoResult.status === "fulfilled" ? kakaoResult.value : [];
+  const googleHospitals = googleResult.status === "fulfilled" ? googleResult.value : [];
+  hospitals = mergeHospitalProviders(kakaoHospitals, googleHospitals);
+  if (!hospitals.length) {
+    const query = `[out:json][timeout:6];(nwr(around:3500,${lat},${lng})["amenity"~"^(hospital|clinic|doctors)$"];);out center tags 50;`;
+    const providers = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter"];
+    const preferredSearch = Promise.any(providers.map((provider) => overpassHospitalSearch(provider, query, lat, lng, localeCode, baseLanguage, category)));
+    const fallbackSearch = nominatimHospitalSearch(lat, lng, localeCode, baseLanguage, category).then((items) => {
+      if (!items.length) throw new Error("Nominatim returned no named medical facilities");
+      return items;
+    });
+    const delayedFallback = new Promise<void>((resolve) => setTimeout(resolve, 2_200)).then(() => fallbackSearch);
+    try { hospitals = await Promise.any([preferredSearch, delayedFallback]); }
+    catch { /* The frontend has a clearly-labelled Seoul fallback if every provider is unavailable. */ }
+  }
   const result = json({ hospitals });
-  if (hospitals.length) {
-    result.headers.set("cache-control", "public, max-age=900");
+  const verifiedScheduleCount = hospitals.filter((hospital) => Boolean(hospital.openingHours)).length;
+  if (hospitals.length && (verifiedScheduleCount >= 3 || !kakaoHospitals.length)) {
+    result.headers.set("cache-control", "public, max-age=300");
     ctx.waitUntil(cache.put(cacheKey, result.clone()));
   } else result.headers.set("cache-control", "no-store");
   return result;
@@ -861,7 +1111,7 @@ async function routeRequest(request: Request, env: Env, ctx: ExecutionContext) {
   if (request.method === "POST" && path === "/api/auth/logout") return authLogout(request, env);
   if (request.method === "GET" && path === "/api/me") return me(request, env);
   if (request.method === "PUT" && path === "/api/card") return saveCard(request, env);
-  if (request.method === "GET" && path === "/api/hospitals") return nearbyHospitals(url, ctx);
+  if (request.method === "GET" && path === "/api/hospitals") return nearbyHospitals(url, env, ctx);
   if (request.method === "GET" && path === "/api/location/reverse") return reverseGeocode(url, ctx);
   if (request.method === "GET" && path === "/api/route") return route(url);
   if (request.method === "POST" && path === "/api/translate") return translate(request, env);

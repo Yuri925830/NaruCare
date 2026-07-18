@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { AlertTriangle, ArrowRight, CalendarCheck2, CalendarOff, Check, Clock3, Languages, LocateFixed, MapPin, Mic, Navigation, Send, ShieldCheck, Square, Stethoscope, Volume2 } from "lucide-react";
 import { api } from "../api";
 import { Button, InfoBanner, InteractiveMap, NaruPose, Panel, StatusPill } from "../components";
-import { evaluateOpeningHours, formatRestDays } from "../hospitalHours";
+import { evaluateOpeningHours, formatOpeningSchedule, formatRestDays } from "../hospitalHours";
 import { localeOptions, useI18n } from "../i18n";
 import { assessMedicalIntent, isAffirmativeResponse, isNaruCapabilityQuestion, isNaruIdentityQuestion, isNegativeResponse } from "../triage";
 import type { ChatHistoryEntry, Hospital, LocationState, MedicalCard, TranslationRecordEntry } from "../types";
@@ -179,12 +179,14 @@ export function HospitalsPage({ location, hospitals, loading, selected, onSelect
         {loading ? <div className="empty-hospitals"><LocateFixed /><strong>{t("locating")}</strong><p>{t("loading")}</p></div> : !hospitals.length && <div className="empty-hospitals"><AlertTriangle /><strong>{t("noHospitalsFound")}</strong><p>{t("hospitalSearchFailed")}</p></div>}
         {hospitals.map((hospital) => {
           const schedule = evaluateOpeningHours(hospital.openingHours, now);
+          const isOpen = typeof hospital.openNow === "boolean" ? hospital.openNow : schedule.isOpen;
           const restDays = formatRestDays(schedule.restDayIndexes, locale);
+          const openingSchedule = formatOpeningSchedule(hospital.openingHours, locale);
           const reservationKey = hospital.reservation === "required" ? "reservationRequired" : hospital.reservation === "recommended" ? "reservationRecommended" : hospital.reservation === "not_required" ? "reservationNotRequired" : "reservationUnverified";
-          const statusKey = schedule.isOpen === true ? "openNow" : schedule.isOpen === false ? "closedNow" : "openStatusUnverified";
+          const statusKey = isOpen === true ? "openNow" : isOpen === false ? "closedNow" : "openStatusUnverified";
           return <button className={`hospital-item ${selected?.id === hospital.id ? "selected" : ""}`} key={hospital.id} onClick={() => onSelect(hospital)}>
-            <span className="hospital-icon">✚</span><strong className="hospital-main">{hospital.name}<small>{hospital.emergency ? t("emergencyDept") : t("hospital")}</small><em className={`open-state ${schedule.isOpen === true ? "is-open" : schedule.isOpen === false ? "is-closed" : "is-unknown"}`}>{t(statusKey)}</em>
-              <span className="hospital-facts"><span><Clock3 /> <b>{t("openingHoursLabel")}</b>{hospital.openingHours || t("hoursUnverified")}</span><span><CalendarOff /><b>{t("restDaysLabel")}</b>{restDays === "" ? t("noFixedRestDay") : restDays || t("restDaysUnverified")}</span><span><CalendarCheck2 /><b>{t("reservationLabel")}</b>{t(reservationKey)}</span></span>
+            <span className="hospital-icon">✚</span><strong className="hospital-main">{hospital.name}<small>{hospital.type || (hospital.emergency ? t("emergencyDept") : t("hospital"))}</small><em className={`open-state ${isOpen === true ? "is-open" : isOpen === false ? "is-closed" : "is-unknown"}`}>{t(statusKey)}</em>
+              <span className="hospital-facts"><span><Clock3 /> <b>{t("openingHoursLabel")}</b>{openingSchedule || t("hoursUnverified")}</span><span><CalendarOff /><b>{t("restDaysLabel")}</b>{restDays === "" ? t("noFixedRestDay") : restDays || t("restDaysUnverified")}</span><span><CalendarCheck2 /><b>{t("reservationLabel")}</b>{t(reservationKey)}{hospital.reservation === "unknown" && hospital.phone ? ` · ${hospital.phone}` : ""}</span></span>
               <small className="hospital-source" title={hospital.sourceUrl}>{t("hospitalDataSource", { source: hospital.dataSource || "OpenStreetMap" })}{hospital.lastVerified ? ` · ${t("verifiedDate", { date: hospital.lastVerified })}` : ""}</small>
             </strong><b className="hospital-distance">{hospital.distance < 1000 ? `${Math.round(hospital.distance)}m` : `${(hospital.distance / 1000).toFixed(1)}km`}</b>
           </button>;
