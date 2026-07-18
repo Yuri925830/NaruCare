@@ -2,6 +2,13 @@ import { Buffer } from "node:buffer";
 import { assessMedicalIntent, type MedicalIntent } from "../../src/triage";
 import { parseKakaoHospitalDetail } from "../../src/kakaoHospitalDetail";
 import {
+  matchHiraFacility,
+  parseHiraCapabilities,
+  parseHiraHospitalXml,
+  type HiraCapabilities,
+  type HiraFacility,
+} from "../../src/hiraHospital";
+import {
   hospitalCategory,
   hospitalSearchQueries,
   matchesHospitalCategory,
@@ -114,6 +121,12 @@ interface HospitalPayload {
   dataSource?: string;
   sourceUrl?: string;
   lastVerified?: string;
+  officialInstitutionType?: string;
+  officialDoctorCount?: number;
+  officialSpecialties?: string[];
+  officialSpecialistCount?: number;
+  officialEquipment?: string[];
+  officialSpecialCare?: string[];
 }
 
 function corsHeaders(request: Request, env: Env) {
@@ -366,9 +379,131 @@ interface GooglePlace {
   reservable?: boolean;
 }
 
-function envSecret(env: Env, name: "KAKAO_REST_API_KEY" | "GOOGLE_PLACES_API_KEY") {
+function envSecret(env: Env, name: "KAKAO_REST_API_KEY" | "GOOGLE_PLACES_API_KEY" | "HIRA_SERVICE_KEY") {
   const value = (env as unknown as Record<string, unknown>)[name];
   return typeof value === "string" ? value.trim() : "";
+}
+
+function hiraServiceKey(env: Env) {
+  const value = envSecret(env, "HIRA_SERVICE_KEY");
+  // data.go.kr's legacy GW endpoints require the per-application
+  // "일반 인증키 (Decoding)". A 64-character hexadecimal personal/project
+  // key belongs to the newer multi-API gateway and hangs or returns 401 here.
+  return /^[a-f0-9]{64}$/i.test(value) ? "" : value;
+}
+
+function appendDataSource(current: string | undefined, source: string) {
+  if (!current) return source;
+  return current.toLowerCase().includes(source.toLowerCase()) ? current : `${current} + ${source}`;
+}
+
+async function hiraFacilityLookup(env: Env, hospitalName: string, ctx: ExecutionContext) {
+  const serviceKey = hiraServiceKey(env);
+  if (!serviceKey) return [];
+  const cache = caches.default;
+  const normalized = normalizedFacilityName(hospitalName);
+  const cacheKey = new Request(`https://narucare.internal/hira/facility-by-name?v=1&name=${encodeURIComponent(normalized)}`);
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached.json<HiraFacility[]>();
+  const endpoint = new URL("https://apis.data.go.kr/B551182/hospInfoServicev2/getHospBasisList");
+  endpoint.search = new URLSearchParams({
+    serviceKey,
+    pageNo: "1",
+    numOfRows: "10",
+    yadmNm: hospitalName,
+  }).toString();
+  const fetchAndCache = (async () => {
+    const response = await fetch(endpoint, {
+      headers: { accept: "application/xml,text/xml", "user-agent": "NaruCare/1.0" },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok) throw new Error(`HIRA hospital information ${response.status}`);
+    const facilities = parseHiraHospitalXml(await response.text());
+    if (facilities.length) {
+      const stored = new Response(JSON.stringify(facilities), { headers: { "content-type": "application/json", "cache-control": "public, max-age=43200" } });
+      await cache.put(cacheKey, stored);
+    }
+    return facilities;
+  })();
+  // HIRA remains an enrichment layer: exact-name lookups warm the edge cache
+  // in the background instead of holding the nearby-hospital screen open.
+  ctx.waitUntil(fetchAndCache.then(
+    () => undefined,
+    (error) => console.warn("HIRA exact-name cache warm failed", error instanceof Error ? error.message : "unknown error"),
+  ));
+  return Promise.race([
+    fetchAndCache,
+    new Promise<HiraFacility[]>((resolve) => setTimeout(() => resolve([]), 1_000)),
+  ]);
+}
+
+async function hiraFacilitiesForHospitals(env: Env, hospitals: HospitalPayload[], ctx: ExecutionContext) {
+  const names = [...new Set(hospitals.slice(0, 5).map((hospital) => hospital.name).filter(Boolean))];
+  const settled = await Promise.allSettled(names.map((name) => hiraFacilityLookup(env, name, ctx)));
+  return settled.flatMap((result) => result.status === "fulfilled" ? result.value : []);
+}
+
+async function hiraDetailJson(serviceKey: string, operation: string, ykiho: string) {
+  const endpoint = new URL(`https://apis.data.go.kr/B551182/MadmDtlInfoService2.8/${operation}`);
+  endpoint.search = new URLSearchParams({ serviceKey, ykiho, pageNo: "1", numOfRows: "100", _type: "json" }).toString();
+  const response = await fetch(endpoint, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(8_000) });
+  if (!response.ok) throw new Error(`HIRA institution detail ${response.status}`);
+  return response.json<unknown>();
+}
+
+async function hiraCapabilities(env: Env, facility: HiraFacility, ctx: ExecutionContext): Promise<HiraCapabilities> {
+  const serviceKey = hiraServiceKey(env);
+  if (!serviceKey) return { specialties: [], specialists: [], equipment: [], specialCare: [] };
+  const cache = caches.default;
+  const cacheKey = new Request(`https://narucare.internal/hira/capabilities?v=1&ykiho=${encodeURIComponent(facility.ykiho)}`);
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached.json<HiraCapabilities>();
+  const operations = ["getDgsbjtInfo2.8", "getSpcSbjtSdrInfo2.8", "getMedOftInfo2.8", "getSpclDiagInfo2.8"] as const;
+  const settled = await Promise.allSettled(operations.map((operation) => hiraDetailJson(serviceKey, operation, facility.ykiho)));
+  if (settled.every((result) => result.status === "rejected")) throw new Error("HIRA institution details unavailable");
+  const value = (index: number) => settled[index]?.status === "fulfilled" ? settled[index].value : undefined;
+  const capabilities = parseHiraCapabilities({ specialties: value(0), specialists: value(1), equipment: value(2), specialCare: value(3) });
+  const stored = new Response(JSON.stringify(capabilities), { headers: { "content-type": "application/json", "cache-control": "public, max-age=86400" } });
+  ctx.waitUntil(cache.put(cacheKey, stored));
+  return capabilities;
+}
+
+async function enrichHospitalsWithHira(env: Env, hospitals: HospitalPayload[], facilities: HiraFacility[], ctx: ExecutionContext) {
+  if (!hospitals.length || !facilities.length) return hospitals;
+  const matched = hospitals.map((hospital) => ({ hospital, facility: matchHiraFacility(hospital, facilities) }));
+  const baseVerified = matched.map(({ hospital, facility }) => facility ? {
+    ...hospital,
+    officialInstitutionType: facility.institutionType,
+    officialDoctorCount: facility.totalDoctors,
+    phone: hospital.phone || facility.phone,
+    address: hospital.address || facility.address,
+    dataSource: appendDataSource(hospital.dataSource, "HIRA official"),
+  } : hospital);
+  const detailTargets = matched.flatMap(({ hospital, facility }) => facility ? [{ hospitalId: hospital.id, facility }] : []).slice(0, 4);
+  if (!detailTargets.length) return baseVerified;
+  const detailsPromise = Promise.all(detailTargets.map(async ({ hospitalId, facility }) => ({
+    hospitalId,
+    capabilities: await hiraCapabilities(env, facility, ctx),
+  })));
+  ctx.waitUntil(detailsPromise.then(() => undefined, () => undefined));
+  const details = await Promise.race([
+    detailsPromise.catch(() => []),
+    new Promise<never[]>((resolve) => setTimeout(() => resolve([]), 900)),
+  ]);
+  const byHospital = new Map(details.map((detail) => [detail.hospitalId, detail.capabilities]));
+  return baseVerified.map((hospital) => {
+    const capabilities = byHospital.get(hospital.id);
+    if (!capabilities) return hospital;
+    const specialistCount = capabilities.specialists.reduce((total, item) => total + item.count, 0);
+    return {
+      ...hospital,
+      type: capabilities.specialties.length ? capabilities.specialties.join(" · ") : hospital.type,
+      officialSpecialties: capabilities.specialties,
+      officialSpecialistCount: specialistCount || undefined,
+      officialEquipment: capabilities.equipment,
+      officialSpecialCare: capabilities.specialCare,
+    };
+  });
 }
 
 function normalizedFacilityName(value: string) {
@@ -665,7 +800,8 @@ async function nearbyHospitals(url: URL, env: Env, ctx: ExecutionContext) {
   const category = hospitalCategory((url.searchParams.get("symptom") || "").slice(0, 1_000));
   const cache = caches.default;
   const hasScheduleProvider = Boolean(envSecret(env, "GOOGLE_PLACES_API_KEY"));
-  const cacheKey = new Request(`https://narucare.internal/hospitals?v=7&lat=${lat.toFixed(3)}&lng=${lng.toFixed(3)}&locale=${localeCode}&category=${category}&schedule=${hasScheduleProvider ? "google" : "none"}`);
+  const hasHiraProvider = Boolean(hiraServiceKey(env));
+  const cacheKey = new Request(`https://narucare.internal/hospitals?v=8&lat=${lat.toFixed(3)}&lng=${lng.toFixed(3)}&locale=${localeCode}&category=${category}&schedule=${hasScheduleProvider ? "google" : "none"}&official=${hasHiraProvider ? "hira" : "none"}`);
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
   let hospitals: HospitalPayload[] = [];
@@ -692,25 +828,51 @@ async function nearbyHospitals(url: URL, env: Env, ctx: ExecutionContext) {
     try { hospitals = await Promise.any([preferredSearch, delayedFallback]); }
     catch { /* The frontend has a clearly-labelled Seoul fallback if every provider is unavailable. */ }
   }
+  const hiraFacilities = hasHiraProvider ? await hiraFacilitiesForHospitals(env, hospitals, ctx) : [];
+  if (hiraFacilities.length) hospitals = await enrichHospitalsWithHira(env, hospitals, hiraFacilities, ctx);
   const result = json({ hospitals });
   const verifiedScheduleCount = hospitals.filter((hospital) => Boolean(hospital.openingHours)).length;
-  if (hospitals.length && (verifiedScheduleCount >= 3 || !kakaoHospitals.length)) {
+  const officialProviderReady = !hasHiraProvider || hiraFacilities.length > 0;
+  if (hospitals.length && officialProviderReady && (verifiedScheduleCount >= 3 || !kakaoHospitals.length)) {
     result.headers.set("cache-control", "public, max-age=300");
     ctx.waitUntil(cache.put(cacheKey, result.clone()));
   } else result.headers.set("cache-control", "no-store");
   return result;
 }
 
-async function reverseGeocode(url: URL, ctx: ExecutionContext) {
-  const { lat, lng } = coordinates(url);
-  const cache = caches.default;
-  const cacheKey = new Request(`https://narucare.internal/location/reverse?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}`);
-  const cached = await cache.match(cacheKey);
-  if (cached) return cached;
+interface ReverseAddress {
+  address: string;
+  components: { road?: string; houseNumber?: string; building?: string; postcode?: string };
+}
+
+async function kakaoReverseAddress(env: Env, lat: number, lng: number): Promise<ReverseAddress> {
+  const apiKey = envSecret(env, "KAKAO_REST_API_KEY");
+  if (!apiKey) throw new Error("Kakao Local is not configured");
+  const endpoint = new URL("https://dapi.kakao.com/v2/local/geo/coord2address.json");
+  endpoint.search = new URLSearchParams({ x: String(lng), y: String(lat), input_coord: "WGS84" }).toString();
+  const response = await fetch(endpoint, { headers: { authorization: `KakaoAK ${apiKey}`, accept: "application/json" }, signal: AbortSignal.timeout(1_800) });
+  if (!response.ok) throw new Error(`Kakao reverse geocoding ${response.status}`);
+  const payload = await response.json() as { documents?: Array<{ road_address?: { address_name?: string; building_name?: string; zone_no?: string }; address?: { address_name?: string; main_address_no?: string; sub_address_no?: string } }> };
+  const document = payload.documents?.[0];
+  if (!document) throw new Error("Kakao returned no address");
+  const road = document.road_address?.address_name?.trim() || "";
+  const building = document.road_address?.building_name?.trim() || "";
+  const postcode = document.road_address?.zone_no?.trim() || "";
+  const parcel = document.address?.address_name?.trim() || "";
+  const parts = [road || parcel, building, postcode ? `우편번호 ${postcode}` : ""].filter(Boolean);
+  if (!parts.length) throw new Error("Kakao returned an empty address");
+  const roadTokens = road.split(/\s+/);
+  return {
+    address: [...new Set(parts)].join(" · "),
+    components: { road, houseNumber: roadTokens.at(-1), building, postcode },
+  };
+}
+
+async function nominatimReverseAddress(lat: number, lng: number): Promise<ReverseAddress> {
   const endpoint = new URL("https://nominatim.openstreetmap.org/reverse");
   endpoint.search = new URLSearchParams({ lat: String(lat), lon: String(lng), format: "jsonv2", "accept-language": "ko,en", zoom: "18", addressdetails: "1", namedetails: "1" }).toString();
   const response = await fetch(endpoint, { headers: { "user-agent": "NaruCare/1.0 (medical navigation prototype)", accept: "application/json" }, signal: AbortSignal.timeout(6_000) });
-  if (!response.ok) throw new ApiException(502, "geocode_provider_error", "Geocoding unavailable");
+  if (!response.ok) throw new Error(`Nominatim reverse geocoding ${response.status}`);
   const value: unknown = await response.json();
   const valueObject = value && typeof value === "object" ? value as Record<string, unknown> : {};
   const addressObject = valueObject.address && typeof valueObject.address === "object" ? valueObject.address as Record<string, unknown> : {};
@@ -732,8 +894,23 @@ async function reverseGeocode(url: URL, ctx: ExecutionContext) {
     postcode ? `우편번호 ${postcode}` : "",
   ].filter(Boolean).filter((part, index, parts) => parts.indexOf(part) === index).join(" ");
   const displayName = typeof valueObject.display_name === "string" ? valueObject.display_name : "";
-  const address = detailedRoadAddress || displayName || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-  const result = json({ address, coordinates: { lat, lng }, components: { road, houseNumber, building, postcode } });
+  const address = detailedRoadAddress || displayName;
+  if (!address) throw new Error("Nominatim returned an empty address");
+  return { address, components: { road, houseNumber, building, postcode } };
+}
+
+async function reverseGeocode(url: URL, env: Env, ctx: ExecutionContext) {
+  const { lat, lng } = coordinates(url);
+  const cache = caches.default;
+  const cacheKey = new Request(`https://narucare.internal/location/reverse?v=2&lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}`);
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached;
+  const kakao = kakaoReverseAddress(env, lat, lng);
+  const delayedFallback = new Promise<void>((resolve) => setTimeout(resolve, 320)).then(() => nominatimReverseAddress(lat, lng));
+  let resolved: ReverseAddress;
+  try { resolved = await Promise.any([kakao, delayedFallback]); }
+  catch { throw new ApiException(502, "geocode_provider_error", "Geocoding unavailable"); }
+  const result = json({ address: resolved.address, coordinates: { lat, lng }, components: resolved.components });
   result.headers.set("cache-control", "public, max-age=300");
   ctx.waitUntil(cache.put(cacheKey, result.clone()));
   return result;
@@ -1133,7 +1310,7 @@ async function routeRequest(request: Request, env: Env, ctx: ExecutionContext) {
   if (request.method === "GET" && path === "/api/me") return me(request, env);
   if (request.method === "PUT" && path === "/api/card") return saveCard(request, env);
   if (request.method === "GET" && path === "/api/hospitals") return nearbyHospitals(url, env, ctx);
-  if (request.method === "GET" && path === "/api/location/reverse") return reverseGeocode(url, ctx);
+  if (request.method === "GET" && path === "/api/location/reverse") return reverseGeocode(url, env, ctx);
   if (request.method === "GET" && path === "/api/route") return route(url);
   if (request.method === "POST" && path === "/api/translate") return translate(request, env);
   if (request.method === "POST" && path === "/api/transcribe") return transcribe(request, env, url);

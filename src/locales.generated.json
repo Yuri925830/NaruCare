@@ -409,7 +409,10 @@
     "minimumServiceDuration": "Mínimo 1 hora · ajustar en incrementos de 30 minutos",
     "estimatedServiceTotal": "Total estimado del servicio",
     "serviceTimeEnded": "El tiempo de servicio seleccionado ha finalizado",
-    "serviceTimeEndedDesc": "Elige si deseas finalizar el servicio ahora o extenderlo 30 minutos. La facturación se basa en la duración real final del servicio, con un mínimo de una hora."
+    "serviceTimeEndedDesc": "Elige si deseas finalizar el servicio ahora o extenderlo 30 minutos. La facturación se basa en la duración real final del servicio, con un mínimo de una hora.",
+    "mapPickerHelp": "Arrastre o amplíe el mapa para colocar el marcador central en la entrada exacta. La dirección anterior se actualiza automáticamente; Aún puedes agregar un piso o unidad manualmente.",
+    "hiraOfficialLabel": "oficial de HIRA",
+    "hiraSpecialists": "{count} especialistas"
   },
   "fr": {
     "brandSub": "Assistant de visite médicale IA agentique",
@@ -821,7 +824,10 @@
     "minimumServiceDuration": "Minimum 1 heure · ajuster par incréments de 30 minutes",
     "estimatedServiceTotal": "Total estimé du service",
     "serviceTimeEnded": "La durée de service sélectionnée est terminée",
-    "serviceTimeEndedDesc": "Choisissez si vous souhaitez mettre fin au service maintenant ou le prolonger de 30 minutes. La facturation est basée sur la durée finale réelle de la prestation, avec un minimum d'une heure."
+    "serviceTimeEndedDesc": "Choisissez si vous souhaitez mettre fin au service maintenant ou le prolonger de 30 minutes. La facturation est basée sur la durée finale réelle de la prestation, avec un minimum d'une heure.",
+    "mapPickerHelp": "Faites glisser ou zoomez sur la carte pour placer l'épingle centrale sur l'entrée exacte. L'adresse ci-dessus est mise à jour automatiquement ; vous pouvez toujours ajouter un étage ou une unité manuellement.",
+    "hiraOfficialLabel": "Officiel HIRA",
+    "hiraSpecialists": "{count} spécialistes"
   },
   "de": {
     "brandSub": "Agentischer KI-Assistent für medizinische Besuche",
@@ -1233,7 +1239,10 @@
     "minimumServiceDuration": "Mindestens 1 Stunde · Anpassung in 30-Minuten-Schritten",
     "estimatedServiceTotal": "Geschätzte Servicesumme",
     "serviceTimeEnded": "Die ausgewählte Servicezeit ist abgelaufen",
-    "serviceTimeEndedDesc": "Wählen Sie, ob Sie den Dienst jetzt beenden oder um 30 Minuten verlängern möchten. Die Abrechnung basiert auf der endgültigen tatsächlichen Leistungsdauer, mit einem Minimum von einer Stunde."
+    "serviceTimeEndedDesc": "Wählen Sie, ob Sie den Dienst jetzt beenden oder um 30 Minuten verlängern möchten. Die Abrechnung basiert auf der endgültigen tatsächlichen Leistungsdauer, mit einem Minimum von einer Stunde.",
+    "mapPickerHelp": "Ziehen oder zoomen Sie die Karte, um den mittleren Stift genau am Eingang zu platzieren. Die obige Adresse wird automatisch aktualisiert; Sie können eine Etage oder Einheit weiterhin manuell hinzufügen.",
+    "hiraOfficialLabel": "HIRA-Beamter",
+    "hiraSpecialists": "{count} Spezialisten"
   },
   "pt-BR": {
     "brandSub": "Assistente de visita médica Agentic AI",
@@ -1645,7 +1654,10 @@
     "minimumServiceDuration": "Mínimo de 1 hora · ajuste em incrementos de 30 minutos",
     "estimatedServiceTotal": "Total estimado de serviço",
     "serviceTimeEnded": "O tempo de serviço selecionado terminou",
-    "serviceTimeEndedDesc": "Escolha se deseja encerrar o serviço agora ou estendê-lo por 30 minutos. A faturação baseia-se na duração real final do serviço, com um mínimo de uma hora."
+    "serviceTimeEndedDesc": "Escolha se deseja encerrar o serviço agora ou estendê-lo por 30 minutos. A faturação baseia-se na duração real final do serviço, com um mínimo de uma hora.",
+    "mapPickerHelp": "Arraste ou amplie o mapa para colocar o alfinete central na entrada exata. O endereço acima é atualizado automaticamente; você ainda pode adicionar um piso ou unidade manualmente.",
+    "hiraOfficialLabel": "Oficial HIRA",
+    "hiraSpecialists": "{count} especialistas"
   },
   "ru": {
     "brandSub": "Агент-помощник по посещению врача с искусственным интеллектом",
@@ -2057,7 +2069,10 @@
     "minimumServiceDuration": "Минимум 1 час · корректировка с шагом 30 минут",
     "estimatedServiceTotal": "Ориентировочная стоимость услуг",
     "serviceTimeEnded": "Выбранное время обслуживания закончилось",
-    "serviceTimeEndedDesc": "Выберите, прекратить ли услугу сейчас или продлить ее на 30 минут. Выставление счетов основано на окончательной фактической продолжительности услуги, минимум один час."
+    "serviceTimeEndedDesc": "Выберите, прекратить ли услугу сейчас или продлить ее на 30 минут. Выставление счетов основано на окончательной фактической продолжительности услуги, минимум один час.",
+    "mapPickerHelp": "Перетащите или увеличьте карту, чтобы поместить центральную булавку точно на вход. Указанный выше адрес обновляется автоматически; вы по-прежнему можете добавить этаж или объект вручную.",
+    "hiraOfficialLabel": "Официальный представитель HIRA",
+    "hiraSpecialists": "{count} специалистов"
   },
   "ar": {
     "brandSub": "مساعد الزيارة الطبية للوكيل AI",
@@ -2469,7 +2484,10 @@
     "minimumServiceDuration": "الحد الأدنى ساعة واحدة · اضبط بزيادات قدرها 30 دقيقة",
     "estimatedServiceTotal": "إجمالي الخدمة المقدرة",
     "serviceTimeEnded": "لقد انتهت مدة الخدمة المحددة",
-    "serviceTimeEndedDesc": "اختر ما إذا كنت تريد إنهاء الخدمة الآن أو تمديدها لمدة 30 دقيقة. تعتمد الفاتورة على مدة الخدمة الفعلية النهائية، بحد أدنى ساعة واحدة."
+    "serviceTimeEndedDesc": "اختر ما إذا كنت تريد إنهاء الخدمة الآن أو تمديدها لمدة 30 دقيقة. تعتمد الفاتورة على مدة الخدمة الفعلية النهائية، بحد أدنى ساعة واحدة.",
+    "mapPickerHelp": "قم بسحب الخريطة أو تكبيرها/تصغيرها لوضع الدبوس الأوسط على المدخل المحدد. يتم تحديث العنوان أعلاه تلقائيًا؛ لا يزال بإمكانك إضافة طابق أو وحدة يدويًا.",
+    "hiraOfficialLabel": "هيرا الرسمية",
+    "hiraSpecialists": "{count} متخصصون"
   },
   "hi": {
     "brandSub": "एजेंट एआई मेडिकल विजिट सहायक",
@@ -2881,7 +2899,10 @@
     "minimumServiceDuration": "न्यूनतम 1 घंटा · 30 मिनट की वृद्धि में समायोजित करें",
     "estimatedServiceTotal": "अनुमानित सेवा कुल",
     "serviceTimeEnded": "चयनित सेवा समय समाप्त हो गया है",
-    "serviceTimeEndedDesc": "चुनें कि सेवा को अभी समाप्त करना है या इसे 30 मिनट तक बढ़ाना है। बिलिंग अंतिम वास्तविक सेवा अवधि पर आधारित होती है, न्यूनतम एक घंटे की।"
+    "serviceTimeEndedDesc": "चुनें कि सेवा को अभी समाप्त करना है या इसे 30 मिनट तक बढ़ाना है। बिलिंग अंतिम वास्तविक सेवा अवधि पर आधारित होती है, न्यूनतम एक घंटे की।",
+    "mapPickerHelp": "केंद्र पिन को सटीक प्रवेश द्वार पर लगाने के लिए मानचित्र को खींचें या ज़ूम करें। उपरोक्त पता स्वचालित रूप से अपडेट हो जाता है; आप अभी भी मैन्युअल रूप से एक फर्श या इकाई जोड़ सकते हैं।",
+    "hiraOfficialLabel": "हीरा अधिकारी",
+    "hiraSpecialists": "{count} विशेषज्ञ"
   },
   "id": {
     "brandSub": "Asisten kunjungan medis AI agen",
@@ -3293,7 +3314,10 @@
     "minimumServiceDuration": "Minimum 1 jam · sesuaikan dalam kelipatan 30 menit",
     "estimatedServiceTotal": "Perkiraan total layanan",
     "serviceTimeEnded": "Waktu layanan yang dipilih telah berakhir",
-    "serviceTimeEndedDesc": "Pilih apakah akan mengakhiri layanan sekarang atau memperpanjangnya selama 30 menit. Penagihan didasarkan pada durasi layanan aktual akhir, dengan minimum satu jam."
+    "serviceTimeEndedDesc": "Pilih apakah akan mengakhiri layanan sekarang atau memperpanjangnya selama 30 menit. Penagihan didasarkan pada durasi layanan aktual akhir, dengan minimum satu jam.",
+    "mapPickerHelp": "Seret atau perbesar peta untuk menempatkan pin tengah tepat di pintu masuk. Alamat di atas diperbarui secara otomatis; Anda masih dapat menambahkan lantai atau unit secara manual.",
+    "hiraOfficialLabel": "pejabat HIRA",
+    "hiraSpecialists": "{count} spesialis"
   },
   "vi": {
     "brandSub": "Trợ lý thăm khám y tế AI của Agentic",
@@ -3705,7 +3729,10 @@
     "minimumServiceDuration": "Tối thiểu 1 giờ · điều chỉnh theo khoảng tăng 30 phút",
     "estimatedServiceTotal": "Tổng dịch vụ ước tính",
     "serviceTimeEnded": "Thời gian phục vụ đã chọn đã kết thúc",
-    "serviceTimeEndedDesc": "Chọn kết thúc dịch vụ ngay bây giờ hoặc kéo dài thêm 30 phút. Việc thanh toán được tính dựa trên thời gian sử dụng dịch vụ thực tế cuối cùng, tối thiểu là một giờ."
+    "serviceTimeEndedDesc": "Chọn kết thúc dịch vụ ngay bây giờ hoặc kéo dài thêm 30 phút. Việc thanh toán được tính dựa trên thời gian sử dụng dịch vụ thực tế cuối cùng, tối thiểu là một giờ.",
+    "mapPickerHelp": "Kéo hoặc thu phóng bản đồ để đặt chốt ở giữa vào lối vào chính xác. Địa chỉ trên được cập nhật tự động; bạn vẫn có thể thêm tầng hoặc căn hộ theo cách thủ công.",
+    "hiraOfficialLabel": "HIRA chính thức",
+    "hiraSpecialists": "{count} chuyên gia"
   },
   "th": {
     "brandSub": "ผู้ช่วยเข้ารับการตรวจทางการแพทย์ Agentic AI",
@@ -4117,7 +4144,10 @@
     "minimumServiceDuration": "ขั้นต่ำ 1 ชั่วโมง · ปรับเพิ่มครั้งละ 30 นาที",
     "estimatedServiceTotal": "ยอดรวมบริการโดยประมาณ",
     "serviceTimeEnded": "เวลาบริการที่เลือกสิ้นสุดลงแล้ว",
-    "serviceTimeEndedDesc": "เลือกว่าจะสิ้นสุดบริการทันทีหรือขยายเวลาอีก 30 นาที การเรียกเก็บเงินจะขึ้นอยู่กับระยะเวลาการให้บริการจริงขั้นสุดท้าย โดยมีขั้นต่ำหนึ่งชั่วโมง"
+    "serviceTimeEndedDesc": "เลือกว่าจะสิ้นสุดบริการทันทีหรือขยายเวลาอีก 30 นาที การเรียกเก็บเงินจะขึ้นอยู่กับระยะเวลาการให้บริการจริงขั้นสุดท้าย โดยมีขั้นต่ำหนึ่งชั่วโมง",
+    "mapPickerHelp": "ลากหรือซูมแผนที่เพื่อวางหมุดตรงกลางตรงทางเข้า ที่อยู่ด้านบนจะอัปเดตโดยอัตโนมัติ คุณยังสามารถเพิ่มชั้นหรือยูนิตได้ด้วยตนเอง",
+    "hiraOfficialLabel": "อย่างเป็นทางการของ HIRA",
+    "hiraSpecialists": "ผู้เชี่ยวชาญ {count} คน"
   },
   "tr": {
     "brandSub": "Ajan AI tıbbi ziyaret asistanı",
@@ -4529,7 +4559,10 @@
     "minimumServiceDuration": "Minimum 1 saat · 30 dakikalık artışlarla ayarlayın",
     "estimatedServiceTotal": "Tahmini hizmet toplamı",
     "serviceTimeEnded": "Seçilen hizmet süresi sona erdi",
-    "serviceTimeEndedDesc": "Hizmeti şimdi sonlandırmayı veya 30 dakika uzatmayı seçin. Faturalandırma, minimum bir saatlik olmak üzere nihai fiili hizmet süresine göre yapılır."
+    "serviceTimeEndedDesc": "Hizmeti şimdi sonlandırmayı veya 30 dakika uzatmayı seçin. Faturalandırma, minimum bir saatlik olmak üzere nihai fiili hizmet süresine göre yapılır.",
+    "mapPickerHelp": "Ortadaki raptiyeyi tam girişe yerleştirmek için haritayı sürükleyin veya yakınlaştırın. Yukarıdaki adres otomatik olarak güncellenir; yine de manuel olarak bir kat veya ünite ekleyebilirsiniz.",
+    "hiraOfficialLabel": "HIRA yetkilisi",
+    "hiraSpecialists": "{count} uzman"
   },
   "it": {
     "brandSub": "Assistente alla visita medica Agentic AI",
@@ -4941,7 +4974,10 @@
     "minimumServiceDuration": "Minimo 1 ora · regolare con incrementi di 30 minuti",
     "estimatedServiceTotal": "Totale del servizio stimato",
     "serviceTimeEnded": "Il tempo di servizio selezionato è terminato",
-    "serviceTimeEndedDesc": "Scegli se terminare adesso il servizio o prolungarlo di 30 minuti. La fatturazione si basa sulla durata effettiva del servizio finale, con un minimo di un'ora."
+    "serviceTimeEndedDesc": "Scegli se terminare adesso il servizio o prolungarlo di 30 minuti. La fatturazione si basa sulla durata effettiva del servizio finale, con un minimo di un'ora.",
+    "mapPickerHelp": "Trascina o ingrandisci la mappa per posizionare il segnaposto centrale sull'ingresso esatto. L'indirizzo sopra si aggiorna automaticamente; puoi comunque aggiungere manualmente un piano o un'unità.",
+    "hiraOfficialLabel": "Funzionario dell'HIRA",
+    "hiraSpecialists": "{count} specialisti"
   },
   "nl": {
     "brandSub": "Agent AI medische bezoekassistent",
@@ -5353,7 +5389,10 @@
     "minimumServiceDuration": "Minimaal 1 uur · aanpassen in stappen van 30 minuten",
     "estimatedServiceTotal": "Geschat servicetotaal",
     "serviceTimeEnded": "De geselecteerde servicetijd is afgelopen",
-    "serviceTimeEndedDesc": "Kies of u de service nu wilt beëindigen of met 30 minuten wilt verlengen. Facturering is gebaseerd op de uiteindelijke werkelijke serviceduur, met een minimum van één uur."
+    "serviceTimeEndedDesc": "Kies of u de service nu wilt beëindigen of met 30 minuten wilt verlengen. Facturering is gebaseerd op de uiteindelijke werkelijke serviceduur, met een minimum van één uur.",
+    "mapPickerHelp": "Versleep of zoom op de kaart om de middelste pin op de exacte ingang te plaatsen. Het bovenstaande adres wordt automatisch bijgewerkt; U kunt nog steeds handmatig een verdieping of unit toevoegen.",
+    "hiraOfficialLabel": "HIRA-functionaris",
+    "hiraSpecialists": "{count} specialisten"
   },
   "pl": {
     "brandSub": "Asystent wizyty lekarskiej agenta AI",
@@ -5765,7 +5804,10 @@
     "minimumServiceDuration": "Minimum 1 godzina · Dostosuj w odstępach 30-minutowych",
     "estimatedServiceTotal": "Szacunkowa suma usług",
     "serviceTimeEnded": "Wybrany czas usługi dobiegł końca",
-    "serviceTimeEndedDesc": "Wybierz, czy zakończyć usługę teraz, czy przedłużyć ją o 30 minut. Rozliczenie jest naliczane na podstawie ostatecznego rzeczywistego czasu trwania usługi, przy czym minimalny czas wynosi jedną godzinę."
+    "serviceTimeEndedDesc": "Wybierz, czy zakończyć usługę teraz, czy przedłużyć ją o 30 minut. Rozliczenie jest naliczane na podstawie ostatecznego rzeczywistego czasu trwania usługi, przy czym minimalny czas wynosi jedną godzinę.",
+    "mapPickerHelp": "Przeciągnij lub powiększ mapę, aby umieścić środkową pinezkę dokładnie przy wejściu. Powyższy adres aktualizuje się automatycznie; nadal możesz dodać piętro lub moduł ręcznie.",
+    "hiraOfficialLabel": "Urzędnik HIRA",
+    "hiraSpecialists": "{count} specjalistów"
   },
   "uk": {
     "brandSub": "Медичний помічник Agentic AI",
@@ -6177,7 +6219,10 @@
     "minimumServiceDuration": "Мінімум 1 година · регулюйте з кроком 30 хвилин",
     "estimatedServiceTotal": "Розрахункова сума послуг",
     "serviceTimeEnded": "Вибраний час обслуговування закінчився",
-    "serviceTimeEndedDesc": "Виберіть, завершити послугу зараз чи продовжити її на 30 хвилин. Оплата базується на остаточній фактичній тривалості послуги, щонайменше одна година."
+    "serviceTimeEndedDesc": "Виберіть, завершити послугу зараз чи продовжити її на 30 хвилин. Оплата базується на остаточній фактичній тривалості послуги, щонайменше одна година.",
+    "mapPickerHelp": "Перетягніть або збільште карту, щоб розмістити центральну шпильку біля входу. Адреса вище оновлюється автоматично; ви все ще можете додати поверх або блок вручну.",
+    "hiraOfficialLabel": "Офіційна особа HIRA",
+    "hiraSpecialists": "{count} фахівців"
   },
   "ms": {
     "brandSub": "Pembantu lawatan perubatan AI ejen",
@@ -6589,7 +6634,10 @@
     "minimumServiceDuration": "Minimum 1 jam · laraskan dalam kenaikan 30 minit",
     "estimatedServiceTotal": "Anggaran jumlah perkhidmatan",
     "serviceTimeEnded": "Masa perkhidmatan yang dipilih telah tamat",
-    "serviceTimeEndedDesc": "Pilih sama ada untuk menamatkan perkhidmatan sekarang atau melanjutkannya selama 30 minit. Pengebilan adalah berdasarkan tempoh perkhidmatan sebenar terakhir, dengan minimum satu jam."
+    "serviceTimeEndedDesc": "Pilih sama ada untuk menamatkan perkhidmatan sekarang atau melanjutkannya selama 30 minit. Pengebilan adalah berdasarkan tempoh perkhidmatan sebenar terakhir, dengan minimum satu jam.",
+    "mapPickerHelp": "Seret atau zum peta untuk meletakkan pin tengah pada pintu masuk yang tepat. Alamat di atas dikemas kini secara automatik; anda masih boleh menambah lantai atau unit secara manual.",
+    "hiraOfficialLabel": "rasmi HIRA",
+    "hiraSpecialists": "{count} pakar"
   },
   "tl": {
     "brandSub": "Agent AI medical visit assistant",
@@ -7001,7 +7049,10 @@
     "minimumServiceDuration": "Minimum na 1 oras · ayusin sa loob ng 30 minutong pagdaragdag",
     "estimatedServiceTotal": "Tinatayang kabuuang serbisyo",
     "serviceTimeEnded": "Ang napiling oras ng serbisyo ay natapos na",
-    "serviceTimeEndedDesc": "Piliin kung tatapusin ang serbisyo ngayon o palawigin ito ng 30 minuto. Ang pagsingil ay batay sa huling aktwal na tagal ng serbisyo, na may pinakamababang isang oras."
+    "serviceTimeEndedDesc": "Piliin kung tatapusin ang serbisyo ngayon o palawigin ito ng 30 minuto. Ang pagsingil ay batay sa huling aktwal na tagal ng serbisyo, na may pinakamababang isang oras.",
+    "mapPickerHelp": "I-drag o i-zoom ang mapa upang ilagay ang center pin sa eksaktong pasukan. Awtomatikong nag-a-update ang address sa itaas; maaari ka pa ring magdagdag ng sahig o unit nang manu-mano.",
+    "hiraOfficialLabel": "Opisyal ng HIRA",
+    "hiraSpecialists": "{count} mga espesyalista"
   },
   "mn": {
     "brandSub": "Agentic AI эмнэлгийн үзлэгийн туслах",
@@ -7413,7 +7464,10 @@
     "minimumServiceDuration": "Хамгийн багадаа 1 цаг · 30 минутын алхмаар тохируулна",
     "estimatedServiceTotal": "Тооцоолсон үйлчилгээний нийт",
     "serviceTimeEnded": "Сонгосон үйлчилгээний хугацаа дууссан",
-    "serviceTimeEndedDesc": "Үйлчилгээг одоо дуусгах уу эсвэл 30 минутаар сунгах уу гэдгээ сонгоно уу. Тооцоолол нь хамгийн багадаа нэг цагийн үйлчилгээний эцсийн бодит хугацаа дээр суурилдаг."
+    "serviceTimeEndedDesc": "Үйлчилгээг одоо дуусгах уу эсвэл 30 минутаар сунгах уу гэдгээ сонгоно уу. Тооцоолол нь хамгийн багадаа нэг цагийн үйлчилгээний эцсийн бодит хугацаа дээр суурилдаг.",
+    "mapPickerHelp": "Газрын зургийг чирж эсвэл томруулж, голын зүүг яг орох хаалган дээр байрлуулна уу. Дээрх хаяг автоматаар шинэчлэгддэг; Та шал эсвэл нэгжийг гараар нэмж болно.",
+    "hiraOfficialLabel": "HIRA албан тушаалтан",
+    "hiraSpecialists": "{count} мэргэжилтэн"
   },
   "uz": {
     "brandSub": "Agentlik AI tibbiy tashrif yordamchisi",
@@ -7825,7 +7879,10 @@
     "minimumServiceDuration": "Minimal 1 soat · 30 daqiqalik qadamlar bilan sozlang",
     "estimatedServiceTotal": "Xizmatlarning taxminiy jami",
     "serviceTimeEnded": "Tanlangan xizmat muddati tugadi",
-    "serviceTimeEndedDesc": "Xizmatni hozir tugatishni yoki uni 30 daqiqaga uzaytirishni tanlang. Hisob-kitob kamida bir soatlik xizmat ko'rsatishning yakuniy muddatiga asoslanadi."
+    "serviceTimeEndedDesc": "Xizmatni hozir tugatishni yoki uni 30 daqiqaga uzaytirishni tanlang. Hisob-kitob kamida bir soatlik xizmat ko'rsatishning yakuniy muddatiga asoslanadi.",
+    "mapPickerHelp": "Markaziy pinni aniq kirish joyiga joylashtirish uchun xaritani torting yoki kattalashtiring. Yuqoridagi manzil avtomatik ravishda yangilanadi; siz hali ham pol yoki birlikni qo'lda qo'shishingiz mumkin.",
+    "hiraOfficialLabel": "HIRA rasmiysi",
+    "hiraSpecialists": "{count} mutaxassis"
   },
   "bn": {
     "brandSub": "এজেন্টিক এআই মেডিকেল ভিজিট সহকারী",
@@ -8237,7 +8294,10 @@
     "minimumServiceDuration": "ন্যূনতম 1 ঘন্টা · 30-মিনিট বৃদ্ধিতে সামঞ্জস্য করুন",
     "estimatedServiceTotal": "আনুমানিক পরিষেবা মোট",
     "serviceTimeEnded": "নির্বাচিত পরিষেবার সময় শেষ হয়েছে৷",
-    "serviceTimeEndedDesc": "পরিষেবাটি এখনই শেষ করতে হবে নাকি 30 মিনিটের মধ্যে বাড়ানো হবে তা বেছে নিন। বিলিং ন্যূনতম এক ঘন্টা সহ চূড়ান্ত প্রকৃত পরিষেবার সময়কালের উপর ভিত্তি করে।"
+    "serviceTimeEndedDesc": "পরিষেবাটি এখনই শেষ করতে হবে নাকি 30 মিনিটের মধ্যে বাড়ানো হবে তা বেছে নিন। বিলিং ন্যূনতম এক ঘন্টা সহ চূড়ান্ত প্রকৃত পরিষেবার সময়কালের উপর ভিত্তি করে।",
+    "mapPickerHelp": "সঠিক প্রবেশপথে কেন্দ্র পিন স্থাপন করতে মানচিত্রটি টেনে আনুন বা জুম করুন। উপরের ঠিকানা স্বয়ংক্রিয়ভাবে আপডেট হয়; আপনি এখনও ম্যানুয়ালি একটি মেঝে বা ইউনিট যোগ করতে পারেন।",
+    "hiraOfficialLabel": "HIRA কর্মকর্তা",
+    "hiraSpecialists": "{count} বিশেষজ্ঞ"
   },
   "ur": {
     "brandSub": "Agentic AI میڈیکل وزٹ اسسٹنٹ",
@@ -8649,7 +8709,10 @@
     "minimumServiceDuration": "کم از کم 1 گھنٹہ · 30 منٹ کے اضافے میں ایڈجسٹ کریں۔",
     "estimatedServiceTotal": "تخمینی سروس کل",
     "serviceTimeEnded": "منتخب سروس کا وقت ختم ہو گیا ہے۔",
-    "serviceTimeEndedDesc": "منتخب کریں کہ آیا سروس کو ابھی ختم کرنا ہے یا اسے 30 منٹ تک بڑھانا ہے۔ بلنگ آخری حقیقی سروس کی مدت پر مبنی ہے، کم از کم ایک گھنٹے کے ساتھ۔"
+    "serviceTimeEndedDesc": "منتخب کریں کہ آیا سروس کو ابھی ختم کرنا ہے یا اسے 30 منٹ تک بڑھانا ہے۔ بلنگ آخری حقیقی سروس کی مدت پر مبنی ہے، کم از کم ایک گھنٹے کے ساتھ۔",
+    "mapPickerHelp": "مرکزی پن کو عین داخلی راستے پر رکھنے کے لیے نقشے کو گھسیٹیں یا زوم کریں۔ اوپر والا پتہ خود بخود اپ ڈیٹ ہو جاتا ہے۔ آپ اب بھی دستی طور پر فرش یا یونٹ شامل کر سکتے ہیں۔",
+    "hiraOfficialLabel": "HIRA اہلکار",
+    "hiraSpecialists": "{count} ماہرین"
   },
   "fa": {
     "brandSub": "دستیار ویزیت پزشکی عامل هوش مصنوعی",
@@ -9061,7 +9124,10 @@
     "minimumServiceDuration": "حداقل 1 ساعت · با افزایش 30 دقیقه تنظیم کنید",
     "estimatedServiceTotal": "کل خدمات تخمینی",
     "serviceTimeEnded": "زمان سرویس انتخابی به پایان رسیده است",
-    "serviceTimeEndedDesc": "انتخاب کنید که آیا خدمات را اکنون پایان دهید یا آن را 30 دقیقه تمدید کنید. صورت‌حساب بر اساس مدت زمان خدمات واقعی نهایی، با حداقل یک ساعت است."
+    "serviceTimeEndedDesc": "انتخاب کنید که آیا خدمات را اکنون پایان دهید یا آن را 30 دقیقه تمدید کنید. صورت‌حساب بر اساس مدت زمان خدمات واقعی نهایی، با حداقل یک ساعت است.",
+    "mapPickerHelp": "نقشه را بکشید یا بزرگنمایی کنید تا پین مرکزی را دقیقاً در ورودی قرار دهید. آدرس بالا به طور خودکار به روز می شود. هنوز هم می توانید یک طبقه یا واحد را به صورت دستی اضافه کنید.",
+    "hiraOfficialLabel": "مقام هیرا",
+    "hiraSpecialists": "متخصصان {count}"
   },
   "ne": {
     "brandSub": "एजेन्टिक एआई मेडिकल भ्रमण सहायक",
@@ -9473,7 +9539,10 @@
     "minimumServiceDuration": "न्यूनतम १ घण्टा · ३० मिनेटको वृद्धिमा समायोजन गर्नुहोस्",
     "estimatedServiceTotal": "अनुमानित सेवा कुल",
     "serviceTimeEnded": "चयन गरिएको सेवा समय समाप्त भएको छ",
-    "serviceTimeEndedDesc": "अहिले नै सेवा अन्त्य गर्ने वा ३० मिनेटसम्म विस्तार गर्ने छनौट गर्नुहोस्। बिलिङ अन्तिम वास्तविक सेवा अवधिमा आधारित छ, न्यूनतम एक घण्टाको साथ।"
+    "serviceTimeEndedDesc": "अहिले नै सेवा अन्त्य गर्ने वा ३० मिनेटसम्म विस्तार गर्ने छनौट गर्नुहोस्। बिलिङ अन्तिम वास्तविक सेवा अवधिमा आधारित छ, न्यूनतम एक घण्टाको साथ।",
+    "mapPickerHelp": "सही प्रवेशद्वारमा केन्द्र पिन राख्न नक्सा तान्नुहोस् वा जुम गर्नुहोस्। माथिको ठेगाना स्वतः अपडेट हुन्छ; तपाईं अझै पनि म्यानुअल रूपमा भुइँ वा एकाइ थप्न सक्नुहुन्छ।",
+    "hiraOfficialLabel": "HIRA अधिकारी",
+    "hiraSpecialists": "{count} विशेषज्ञहरू"
   },
   "my": {
     "brandSub": "Agent AI ဆေးဘက်ဆိုင်ရာအလည်အပတ်လက်ထောက်",
@@ -9885,7 +9954,10 @@
     "minimumServiceDuration": "အနည်းဆုံး 1 နာရီ · မိနစ် 30 တိုး၍ ချိန်ညှိပါ။",
     "estimatedServiceTotal": "ဝန်ဆောင်မှုစုစုပေါင်း ခန့်မှန်းခြေ",
     "serviceTimeEnded": "ရွေးချယ်ထားသော ဝန်ဆောင်မှုအချိန် ကုန်ဆုံးသွားပါပြီ။",
-    "serviceTimeEndedDesc": "ဝန်ဆောင်မှုကို ယခုအဆုံးသတ်ရန် သို့မဟုတ် ၎င်းကို မိနစ် 30 တွင် သက်တမ်းတိုးရန် ရွေးချယ်ပါ။ အနည်းဆုံး တစ်နာရီ အနည်းဆုံးဖြင့် ငွေတောင်းခံခြင်းမှာ နောက်ဆုံး အမှန်တကယ် ဝန်ဆောင်မှုကြာချိန်အပေါ် အခြေခံပါသည်။"
+    "serviceTimeEndedDesc": "ဝန်ဆောင်မှုကို ယခုအဆုံးသတ်ရန် သို့မဟုတ် ၎င်းကို မိနစ် 30 တွင် သက်တမ်းတိုးရန် ရွေးချယ်ပါ။ အနည်းဆုံး တစ်နာရီ အနည်းဆုံးဖြင့် ငွေတောင်းခံခြင်းမှာ နောက်ဆုံး အမှန်တကယ် ဝန်ဆောင်မှုကြာချိန်အပေါ် အခြေခံပါသည်။",
+    "mapPickerHelp": "အတိအကျဝင်ပေါက်တွင် ဗဟိုပင်ကိုထားရန် မြေပုံကို ဆွဲယူ သို့မဟုတ် ချုံ့ချဲ့ပါ။ အထက်ပါလိပ်စာသည် အလိုအလျောက် အပ်ဒိတ်လုပ်သည်; ကြမ်းပြင် သို့မဟုတ် ယူနစ်ကို ကိုယ်တိုင်ထည့်နိုင်သည်။",
+    "hiraOfficialLabel": "HIRA အရာရှိ",
+    "hiraSpecialists": "ကျွမ်းကျင်သူ {count} ဦး"
   },
   "ko": {
     "brandSub": "Agentic AI 의료방문 도우미",
@@ -10297,7 +10369,10 @@
     "minimumServiceDuration": "최소 1시간 · 30분 단위로 조정",
     "estimatedServiceTotal": "예상 서비스 총액",
     "serviceTimeEnded": "선택한 서비스 시간이 종료되었습니다",
-    "serviceTimeEndedDesc": "서비스를 지금 종료할지, 30분 연장할지 선택하세요. 청구는 최종 실제 서비스 기간을 기준으로 하며 최소 1시간입니다."
+    "serviceTimeEndedDesc": "서비스를 지금 종료할지, 30분 연장할지 선택하세요. 청구는 최종 실제 서비스 기간을 기준으로 하며 최소 1시간입니다.",
+    "mapPickerHelp": "지도를 드래그하거나 확대/축소하여 정확한 입구에 중앙 핀을 배치하세요. 위의 주소는 자동으로 업데이트됩니다. 층이나 유닛을 수동으로 추가할 수도 있습니다.",
+    "hiraOfficialLabel": "심사평가원 공식",
+    "hiraSpecialists": "{count} 전문가"
   },
   "ja": {
     "brandSub": "Agent AI 訪問アシスタント",
@@ -10709,6 +10784,9 @@
     "minimumServiceDuration": "最短1時間・30分単位で調整可能",
     "estimatedServiceTotal": "推定サービス総額",
     "serviceTimeEnded": "選択したサービス時間は終了しました",
-    "serviceTimeEndedDesc": "サービスを今すぐ終了するか、30 分延長するかを選択します。料金は、実際の最終サービス時間に基づいて、最低 1 時間から請求されます。"
+    "serviceTimeEndedDesc": "サービスを今すぐ終了するか、30 分延長するかを選択します。料金は、実際の最終サービス時間に基づいて、最低 1 時間から請求されます。",
+    "mapPickerHelp": "Drag or zoom the map to place the center pin on the exact entrance.上記のアドレスは自動的に更新されます。フロアまたはユニットを手動で追加することもできます。",
+    "hiraOfficialLabel": "ヒラ公式",
+    "hiraSpecialists": "{count} 人のスペシャリスト"
   }
 }

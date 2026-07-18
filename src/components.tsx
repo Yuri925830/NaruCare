@@ -186,6 +186,77 @@ export function InteractiveMap({ center, hospitals = [], selected, route = [], o
   return <div ref={container} className={`interactive-map ${className}`} aria-label="Interactive map" />;
 }
 
+export function LocationPickerMap({ center, accuracy, disabled = false, onPick, className = "" }: {
+  center: [number, number];
+  accuracy?: number;
+  disabled?: boolean;
+  onPick: (lat: number, lng: number) => void;
+  className?: string;
+}) {
+  const container = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+  const accuracyRef = useRef<L.Circle | null>(null);
+  const onPickRef = useRef(onPick);
+  const disabledRef = useRef(disabled);
+  const programmaticMove = useRef(false);
+  onPickRef.current = onPick;
+  disabledRef.current = disabled;
+
+  useEffect(() => {
+    if (!container.current || mapRef.current) return;
+    const map = L.map(container.current, { zoomControl: true, attributionControl: true, maxZoom: 20 }).setView(center, 19);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 20,
+      attribution: "&copy; OpenStreetMap contributors",
+    }).addTo(map);
+    const icon = L.divIcon({ className: "map-marker-wrap", html: '<span class="map-marker picker-marker">●</span>', iconSize: [34, 34], iconAnchor: [17, 17] });
+    markerRef.current = L.marker(center, { icon, interactive: false }).addTo(map);
+    accuracyRef.current = L.circle(center, { radius: Math.max(1, accuracy || 1), color: "#785a4d", fillColor: "#e8c9b8", fillOpacity: .18, weight: 1 }).addTo(map);
+    const updateFromMap = () => {
+      if (programmaticMove.current || disabledRef.current) return;
+      const point = map.getCenter();
+      markerRef.current?.setLatLng(point);
+      accuracyRef.current?.setLatLng(point);
+      onPickRef.current(point.lat, point.lng);
+    };
+    map.on("moveend", updateFromMap);
+    const resizeTimer = window.setTimeout(() => map.invalidateSize(), 60);
+    mapRef.current = map;
+    return () => {
+      window.clearTimeout(resizeTimer);
+      map.off("moveend", updateFromMap);
+      map.remove();
+      mapRef.current = null; markerRef.current = null; accuracyRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const next = L.latLng(center);
+    markerRef.current?.setLatLng(next);
+    accuracyRef.current?.setLatLng(next).setRadius(Math.max(1, accuracy || 1));
+    if (map.getCenter().distanceTo(next) <= .25) return;
+    programmaticMove.current = true;
+    map.setView(next, Math.max(map.getZoom(), 18), { animate: false });
+    window.setTimeout(() => { programmaticMove.current = false; }, 0);
+  }, [center[0], center[1], accuracy]);
+
+  useEffect(() => {
+    const element = container.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => mapRef.current?.invalidateSize({ pan: false }));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  return <div className={`location-picker ${disabled ? "is-disabled" : ""} ${className}`}>
+    <div ref={container} className="interactive-map location-picker-map" aria-label="Location picker map" />
+    <span className="location-picker-crosshair" aria-hidden="true" />
+  </div>;
+}
+
 export function EmptyState({ icon = <Languages />, title, children }: { icon?: ReactNode; title: string; children?: ReactNode }) {
   return <div className="empty-state">{icon}<strong>{title}</strong>{children && <p>{children}</p>}</div>;
 }

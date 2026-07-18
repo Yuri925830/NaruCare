@@ -70,6 +70,12 @@ export interface Hospital {
   dataSource?: string;
   sourceUrl?: string;
   lastVerified?: string;
+  officialInstitutionType?: string;
+  officialDoctorCount?: number;
+  officialSpecialties?: string[];
+  officialSpecialistCount?: number;
+  officialEquipment?: string[];
+  officialSpecialCare?: string[];
 }
 
 export interface Companion {
