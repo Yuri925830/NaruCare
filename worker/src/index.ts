@@ -286,6 +286,10 @@ function coordinates(url: URL) {
 }
 
 interface OverpassElement { type: "node" | "way" | "relation"; id: number; lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string> }
+interface NominatimPlace {
+  place_id: number; osm_type?: string; osm_id?: number; lat: string; lon: string; display_name?: string; type?: string;
+  extratags?: Record<string, string>; namedetails?: Record<string, string>;
+}
 
 function reservationStatus(tags: Record<string, string>): HospitalPayload["reservation"] {
   const value = (tags.reservation || tags.appointment || tags["healthcare:appointment"] || "").toLowerCase();
@@ -295,11 +299,53 @@ function reservationStatus(tags: Record<string, string>): HospitalPayload["reser
   return "unknown";
 }
 
+async function nominatimHospitalSearch(lat: number, lng: number, localeCode: string, baseLanguage: string) {
+  const endpoint = new URL("https://nominatim.openstreetmap.org/search");
+  endpoint.search = new URLSearchParams({
+    format: "jsonv2", q: "[hospital]", limit: "20", bounded: "1",
+    viewbox: `${lng - 0.07},${lat + 0.055},${lng + 0.07},${lat - 0.055}`,
+    extratags: "1", addressdetails: "1", namedetails: "1", countrycodes: "kr",
+    "accept-language": `${localeCode},ko,en`,
+  }).toString();
+  const init: RequestInit = { headers: { "user-agent": "NaruCare/1.0 (medical navigation prototype)", accept: "application/json" }, signal: AbortSignal.timeout(12_000) };
+  let response = await fetch(endpoint, init);
+  if (response.status === 429 || response.status >= 500) {
+    const retryAfter = Math.min(3_000, Math.max(1_100, Number(response.headers.get("retry-after") || 0) * 1_000 || 1_100));
+    await new Promise((resolve) => setTimeout(resolve, retryAfter));
+    response = await fetch(endpoint, { ...init, signal: AbortSignal.timeout(12_000) });
+  }
+  if (!response.ok) throw new ApiException(502, "hospital_provider_error", "Hospital map provider unavailable");
+  const payload: unknown = await response.json();
+  if (!Array.isArray(payload)) return [];
+  const typePath: Record<string, string> = { node: "node", way: "way", relation: "relation", N: "node", W: "way", R: "relation" };
+  return (payload as NominatimPlace[]).flatMap<HospitalPayload>((place) => {
+    const pointLat = Number(place.lat); const pointLng = Number(place.lon); const tags = place.extratags || {}; const names = place.namedetails || {};
+    if (!Number.isFinite(pointLat) || !Number.isFinite(pointLng)) return [];
+    const distance = Math.round(haversine(lat, lng, pointLat, pointLng));
+    if (distance > 7_500) return [];
+    const name = names[`name:${localeCode}`] || names[`name:${baseLanguage}`] || names["name:ko"] || names["name:en"] || names.name || place.display_name?.split(",")[0];
+    if (!name) return [];
+    const osmPath = typePath[place.osm_type || ""];
+    const sourceUrl = osmPath && place.osm_id ? `https://www.openstreetmap.org/${osmPath}/${place.osm_id}` : `https://www.openstreetmap.org/search?query=${encodeURIComponent(name)}`;
+    return [{
+      id: place.osm_id ? `${place.osm_type || "place"}-${place.osm_id}` : `place-${place.place_id}`,
+      name, lat: pointLat, lng: pointLng, distance, type: "Hospital", address: place.display_name || "",
+      openingHours: tags.opening_hours, emergency: tags.emergency === "yes" || tags["emergency:yes"] === "yes",
+      reservation: reservationStatus(tags), phone: tags.phone || tags["contact:phone"], website: tags.website || tags["contact:website"],
+      dataSource: "OpenStreetMap Nominatim", sourceUrl, lastVerified: new Date().toISOString().slice(0, 10),
+    }];
+  }).sort((left, right) => left.distance - right.distance).slice(0, 10);
+}
+
 async function nearbyHospitals(url: URL) {
   const { lat, lng } = coordinates(url);
   const requestedLocale = (url.searchParams.get("locale") || "en").toLowerCase();
   const localeCode = /^[a-z]{2,3}(?:-[a-z]{2})?$/.test(requestedLocale) ? requestedLocale : "en";
   const baseLanguage = localeCode.split("-")[0];
+  const cache = caches.default;
+  const cacheKey = new Request(`https://narucare.internal/hospitals?lat=${lat.toFixed(3)}&lng=${lng.toFixed(3)}&locale=${localeCode}`);
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached;
   const query = `[out:json][timeout:12];(nwr(around:5000,${lat},${lng})["amenity"~"^(hospital|clinic|doctors)$"];);out center tags 50;`;
   const providers = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter"];
   let response: Response | null = null;
@@ -314,10 +360,9 @@ async function nearbyHospitals(url: URL) {
       if (candidate.ok) { response = candidate; break; }
     } catch { /* Try the next documented public Overpass instance. */ }
   }
-  if (!response) throw new ApiException(502, "hospital_provider_error", "Hospital map provider unavailable");
-  const payload: unknown = await response.json();
+  const payload: unknown = response ? await response.json() : { elements: [] };
   const elements = payload && typeof payload === "object" && "elements" in payload && Array.isArray(payload.elements) ? payload.elements as OverpassElement[] : [];
-  const hospitals = elements.flatMap<HospitalPayload>((element) => {
+  let hospitals = elements.flatMap<HospitalPayload>((element) => {
     const pointLat = element.lat ?? element.center?.lat; const pointLng = element.lon ?? element.center?.lon; const tags = element.tags || {};
     if (pointLat === undefined || pointLng === undefined) return [];
     const name = tags[`name:${localeCode}`] || tags[`name:${baseLanguage}`] || tags["name:ko"] || tags["name:en"] || tags.name;
@@ -327,7 +372,11 @@ async function nearbyHospitals(url: URL) {
     const sourceUrl = `https://www.openstreetmap.org/${element.type}/${element.id}`;
     return [{ id: `${element.type}-${element.id}`, name, lat: pointLat, lng: pointLng, distance: Math.round(haversine(lat, lng, pointLat, pointLng)), type: amenity === "hospital" ? "Hospital" : amenity === "clinic" ? "Clinic" : "Medical clinic", address, openingHours: tags.opening_hours, emergency: tags.emergency === "yes" || tags["emergency:yes"] === "yes", reservation: reservationStatus(tags), phone: tags.phone || tags["contact:phone"], website: tags.website || tags["contact:website"], dataSource: "OpenStreetMap", sourceUrl, lastVerified: tags["opening_hours:lastcheck"] || tags.check_date || tags["survey:date"] }];
   }).sort((left, right) => left.distance - right.distance).slice(0, 10);
-  return json({ hospitals });
+  if (!hospitals.length) hospitals = await nominatimHospitalSearch(lat, lng, localeCode, baseLanguage);
+  const result = json({ hospitals });
+  result.headers.set("cache-control", "public, max-age=300");
+  await cache.put(cacheKey, result.clone());
+  return result;
 }
 
 async function reverseGeocode(url: URL) {
