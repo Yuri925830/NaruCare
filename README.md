@@ -140,7 +140,7 @@ The operating loop is intentionally stateful:
 flowchart TB
     subgraph Experience[Experience Plane]
         Web[React 19 + TypeScript]
-        Map[Leaflet Interactive Maps]
+        Map[Naver Dynamic Map + Leaflet Fallback]
         Speech[Web Speech + MediaRecorder]
         IP[NaruPose 3D IP Runtime]
     end
@@ -166,11 +166,13 @@ flowchart TB
     subgraph Geo[Geospatial Data Plane]
         OSM[OpenStreetMap / Overpass]
         Nominatim[Nominatim Reverse Geocoding]
-        OSRM[OSRM Walking + Driving]
-        External[Google Maps + Kakao Maps]
+        OSRM[OSRM Walking + Route Fallback]
+        Naver[Naver Dynamic Map + Directions 5]
+        External[Naver Maps + Google Maps + Kakao Maps]
     end
 
     Web -->|HTTPS JSON API| API
+    Map --> Naver
     Map --> OSM
     Speech --> API
     IP --> Web
@@ -185,6 +187,7 @@ flowchart TB
     API --> OSM
     API --> Nominatim
     API --> OSRM
+    API --> Naver
     Web --> External
 ```
 
@@ -274,10 +277,12 @@ NaruCare never manufactures operating data to make a card look complete. Unknown
 
 ## Navigation Runtime
 
-- In-site walking and driving route geometry through OSRM
+- Naver Dynamic Map inside the navigation workspace with an automatic Leaflet fallback
+- Traffic-aware in-site driving geometry through Naver Directions 5
+- Walking route geometry and provider-failure fallback through OSRM
 - Route distance, duration, and polyline rendering
-- Public-transit handoff to external navigation providers
-- User-selectable Google Maps and Kakao Maps launch paths
+- Native Naver Maps handoff for walking, public transit, and turn-by-turn driving navigation
+- User-selectable Naver Maps, Google Maps, and Kakao Maps launch paths
 - Arrival confirmation that transitions directly into the translation workspace
 
 ## Multilingual Voice Mediation
@@ -431,14 +436,14 @@ Desktop and mobile surfaces share the same state model and responsive navigation
 | Plane | Technology | Responsibility |
 | --- | --- | --- |
 | Experience | React 19, TypeScript, Vite 8 | Responsive interaction and typed client state |
-| Mapping | Leaflet, OpenStreetMap | Interactive real-world medical geography |
+| Mapping | Naver Dynamic Map, Leaflet, OpenStreetMap | Korean navigation context with resilient map fallback |
 | Edge API | Cloudflare Workers | Authentication, authorization, routing, orchestration, provider isolation |
 | Relational State | Cloudflare D1 | Users, sessions, medical cards, companions, orders, visits, translation cache |
 | Media State | Cloudflare R2 | Private companion recording chunks |
 | Intelligence | Cloudflare Workers AI | Conversation, medical translation, speech transcription |
-| Routing | OSRM | Walking and driving route geometry |
+| Routing | Naver Directions 5, OSRM | Traffic-aware driving, walking geometry, and provider fallback |
 | Geocoding | Nominatim | Current-location address resolution |
-| External Navigation | Google Maps, Kakao Maps | Transit and turn-by-turn handoff |
+| External Navigation | Naver Maps, Google Maps, Kakao Maps | Walking, transit, and turn-by-turn handoff |
 | Distribution | GitHub Pages, GitHub Actions | Globally available static frontend delivery |
 | Quality | Vitest, TypeScript, Playwright Core | Logic, type, build, and visual acceptance |
 
@@ -477,7 +482,7 @@ The current `v1.0.0` competition release has passed the integrated validation ba
 - Live authentication, bilingual-card, companion, order, visit-record, and logout flows verified
 - Live private R2 upload and exact-object retrieval verified
 - Live Workers AI Korean translation and Naru conversation verified
-- Live OpenStreetMap hospital discovery, reverse geocoding, walking route, and driving route verified
+- Live hospital discovery, reverse geocoding, OSRM walking routes, and Naver Directions 5 driving routes verified
 - GitHub Pages CORS behavior verified against the deployed Worker
 - Desktop and mobile visual-acceptance harness available across the core flow
 - All 21 Naru poses validated through the asset manifest and placement tests
@@ -546,6 +551,15 @@ DB           → Cloudflare D1 / narucare
 RECORDINGS   → Private Cloudflare R2 / narucare-recordings
 AI           → Cloudflare Workers AI
 ```
+
+Provider credentials are stored only as encrypted Worker secrets. They are never committed or exposed as frontend source:
+
+```bash
+npx wrangler secret put NAVER_MAPS_CLIENT_ID --config worker/wrangler.jsonc
+npx wrangler secret put NAVER_MAPS_CLIENT_SECRET --config worker/wrangler.jsonc
+```
+
+The browser receives only the domain-restricted client ID required by the official Dynamic Map SDK. Directions 5 requests and the client secret remain behind the authenticated Worker boundary.
 
 Live API health endpoint:
 

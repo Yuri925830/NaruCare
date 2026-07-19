@@ -142,12 +142,19 @@ export const api = {
       return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
     }
   },
+  async mapsConfig() {
+    try {
+      return await request<{ naverClientId: string; dynamicMap: boolean }>("/api/maps/config", {}, 5_000);
+    } catch {
+      return { naverClientId: "", dynamicMap: false };
+    }
+  },
   async route(origin: [number, number], destination: [number, number], mode: "walking" | "driving" = "walking") {
     try {
       const params = new URLSearchParams({
         startLat: String(origin[0]), startLng: String(origin[1]), endLat: String(destination[0]), endLng: String(destination[1]), mode,
       });
-      const result = await request<{ coordinates: [number, number][]; distance: number; duration: number }>(`/api/route?${params}`);
+      const result = await request<{ coordinates: [number, number][]; distance: number; duration: number; provider?: string }>(`/api/route?${params}`);
       return { ...result, available: result.coordinates.length > 1 };
     } catch {
       return { coordinates: [] as [number, number][], distance: 0, duration: 0, available: false };

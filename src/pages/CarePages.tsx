@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { AlertTriangle, ArrowRight, CalendarCheck2, CalendarOff, Check, Clock3, Languages, LocateFixed, MapPin, Mic, Navigation, Send, ShieldCheck, Square, Stethoscope, Volume2 } from "lucide-react";
 import { api } from "../api";
-import { Button, InfoBanner, InteractiveMap, NaruPose, Panel, StatusPill } from "../components";
+import { Button, InfoBanner, InteractiveMap, NaverNavigationMap, NaruPose, Panel, StatusPill } from "../components";
 import { evaluateOpeningHours, formatOpeningSchedule, formatRestDays } from "../hospitalHours";
 import { localeOptions, useI18n } from "../i18n";
 import { assessMedicalIntent, isAffirmativeResponse, isNaruCapabilityQuestion, isNaruIdentityQuestion, isNegativeResponse } from "../triage";
@@ -243,16 +243,43 @@ export function NavigationPage({ location, hospital, onArrived, onTranslation }:
     return `https://www.google.com/maps/dir/?${params}`;
   };
   const kakaoUrl = `https://map.kakao.com/link/to/${encodeURIComponent(hospital.name)},${hospital.lat},${hospital.lng}`;
+  const openNaverMaps = () => {
+    const actionPath = mode === "walking" ? "route/walk" : mode === "transit" ? "route/public" : "navigation";
+    const params = new URLSearchParams({
+      slat: String(location.lat),
+      slng: String(location.lng),
+      sname: location.address || "Current location",
+      dlat: String(hospital.lat),
+      dlng: String(hospital.lng),
+      dname: hospital.name,
+      appname: `${window.location.origin}${window.location.pathname}`,
+    });
+    const schemeUrl = `nmap://${actionPath}?${params}`;
+    const userAgent = navigator.userAgent;
+    if (/Android/i.test(userAgent)) {
+      window.location.href = `intent://${actionPath}?${params}#Intent;scheme=nmap;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;package=com.nhn.android.nmap;end`;
+      return;
+    }
+    if (/iPhone|iPad|iPod/i.test(userAgent)) {
+      const openedAt = Date.now();
+      window.location.href = schemeUrl;
+      window.setTimeout(() => {
+        if (document.visibilityState === "visible" && Date.now() - openedAt < 3_000) window.location.href = "https://apps.apple.com/app/id311867728";
+      }, 1_500);
+      return;
+    }
+    window.open(`https://map.naver.com/p/search/${encodeURIComponent(hospital.name)}`, "_blank", "noopener,noreferrer");
+  };
   const modeLabels: Record<TravelMode, string> = { walking: t("walkingMode"), transit: t("transitMode"), driving: t("drivingMode") };
   const canPreview = mode !== "transit" && routeAvailable;
 
   return <Panel className="navigation-panel">
     <div className="travel-tabs">{(["walking", "transit", "driving"] as const).map((item) => <button className={mode === item ? "active" : ""} key={item} onClick={() => setMode(item)}>{item === "walking" ? "🚶" : item === "transit" ? "🚇" : "🚗"}<span>{modeLabels[item]}</span></button>)}</div>
     <div className="navigation-layout">
-      <div className="map-card"><div className="map-location"><MapPin size={17} />{t("currentLocation")} · {location.address}</div><InteractiveMap center={origin} hospitals={[hospital]} selected={hospital} route={route} /></div>
+      <div className="map-card"><div className="map-location"><MapPin size={17} />{t("currentLocation")} · {location.address}</div><NaverNavigationMap center={origin} hospital={hospital} route={route} /></div>
       <div className="route-info"><NaruPose pose={14} className="route-naru-pose" /><span>{t("destination")}</span><h2>{hospital.name}</h2><strong>{canPreview ? t("routeSummary", { mode: modeLabels[mode], minutes: duration, distance: distance < 1000 ? `${Math.round(distance)}m` : `${(distance / 1000).toFixed(1)}km` }) : t("routePreviewUnavailable")}</strong><hr /><p>{t("estimatedArrival")}<b>{canPreview ? new Date(Date.now() + duration * 60000).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }) : "—"}</b></p><p>{t("routeStatus")}<b>{canPreview ? t("inProgress") : t("externalNavigation")}</b></p>
         <InfoBanner tone="mint" title={t("autoTranslation")}>{t("arrivalTip")}</InfoBanner>
-        <div className="external-map-links"><a className="button button-primary" href={googleUrl(mode)} target="_blank" rel="noreferrer"><Navigation size={17} />Google Maps</a><a className="button button-secondary" href={kakaoUrl} target="_blank" rel="noreferrer"><MapPin size={17} />Kakao Maps</a></div>
+        <div className="external-map-links"><Button onClick={openNaverMaps}><Navigation size={17} />Naver Maps</Button><a className="button button-secondary" href={googleUrl(mode)} target="_blank" rel="noreferrer"><Navigation size={17} />Google Maps</a><a className="button button-secondary" href={kakaoUrl} target="_blank" rel="noreferrer"><MapPin size={17} />Kakao Maps</a></div>
         <Button onClick={onArrived}><MapPin size={18} />{t("arrived")}</Button><Button variant="secondary" onClick={onTranslation}>{t("openTranslation")}</Button>
       </div>
     </div>

@@ -379,7 +379,7 @@ interface GooglePlace {
   reservable?: boolean;
 }
 
-function envSecret(env: Env, name: "KAKAO_REST_API_KEY" | "GOOGLE_PLACES_API_KEY" | "HIRA_SERVICE_KEY") {
+function envSecret(env: Env, name: "KAKAO_REST_API_KEY" | "GOOGLE_PLACES_API_KEY" | "HIRA_SERVICE_KEY" | "NAVER_MAPS_CLIENT_ID" | "NAVER_MAPS_CLIENT_SECRET") {
   const value = (env as unknown as Record<string, unknown>)[name];
   return typeof value === "string" ? value.trim() : "";
 }
@@ -917,21 +917,80 @@ async function reverseGeocode(url: URL, env: Env, ctx: ExecutionContext) {
 }
 
 interface OsrmResponse { routes?: Array<{ distance: number; duration: number; geometry?: { coordinates?: Array<[number, number]> } }> }
+interface NaverDirectionsResponse {
+  code?: number;
+  route?: Record<string, Array<{
+    summary?: { distance?: number; duration?: number };
+    path?: Array<[number, number]>;
+  }>>;
+}
 
-async function route(url: URL) {
+async function naverDrivingRoute(env: Env, startLat: number, startLng: number, endLat: number, endLng: number) {
+  const clientId = envSecret(env, "NAVER_MAPS_CLIENT_ID");
+  const clientSecret = envSecret(env, "NAVER_MAPS_CLIENT_SECRET");
+  if (!clientId || !clientSecret) return null;
+  const endpoint = new URL("https://maps.apigw.ntruss.com/map-direction/v1/driving");
+  endpoint.search = new URLSearchParams({
+    start: `${startLng},${startLat}`,
+    goal: `${endLng},${endLat}`,
+    option: "traoptimal",
+  }).toString();
+  const response = await fetch(endpoint, {
+    headers: {
+      accept: "application/json",
+      "x-ncp-apigw-api-key-id": clientId,
+      "x-ncp-apigw-api-key": clientSecret,
+    },
+    signal: AbortSignal.timeout(4_500),
+  });
+  if (!response.ok) return null;
+  const payload = await response.json() as NaverDirectionsResponse;
+  const first = payload.route?.traoptimal?.[0] || Object.values(payload.route || {})[0]?.[0];
+  if (payload.code !== 0 || !first?.path?.length || !first.summary) return null;
+  return {
+    coordinates: first.path.map(([lng, lat]) => [lat, lng] as [number, number]),
+    distance: Number(first.summary.distance || 0),
+    duration: Number(first.summary.duration || 0) / 1_000,
+    provider: "Naver Maps",
+  };
+}
+
+async function osrmRoute(startLat: number, startLng: number, endLat: number, endLng: number, mode: "walking" | "driving") {
+  const service = mode === "walking" ? "routed-foot" : "routed-car";
+  const endpoint = `https://routing.openstreetmap.de/${service}/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson&steps=false`;
+  const response = await fetch(endpoint, { headers: { "user-agent": "NaruCare/1.0" }, signal: AbortSignal.timeout(5_500) });
+  if (!response.ok) throw new ApiException(502, "route_provider_error", "Routing unavailable");
+  const result = await response.json() as OsrmResponse;
+  const first = result.routes?.[0];
+  if (!first?.geometry?.coordinates) throw new ApiException(404, "route_not_found", "No route found");
+  return {
+    coordinates: first.geometry.coordinates.map(([lng, lat]) => [lat, lng] as [number, number]),
+    distance: first.distance,
+    duration: first.duration,
+    provider: "OpenStreetMap",
+  };
+}
+
+async function route(request: Request, url: URL, env: Env) {
+  await requireUser(request, env);
   const startLat = Number(url.searchParams.get("startLat")); const startLng = Number(url.searchParams.get("startLng"));
   const endLat = Number(url.searchParams.get("endLat")); const endLng = Number(url.searchParams.get("endLng"));
   if (![startLat, startLng, endLat, endLng].every(Number.isFinite) || Math.abs(startLat) > 90 || Math.abs(endLat) > 90 || Math.abs(startLng) > 180 || Math.abs(endLng) > 180) throw new ApiException(400, "invalid_coordinates", "Invalid route coordinates");
   const requestedMode = url.searchParams.get("mode");
   if (requestedMode !== "walking" && requestedMode !== "driving") throw new ApiException(400, "invalid_route_mode", "Route mode must be walking or driving");
-  const service = requestedMode === "walking" ? "routed-foot" : "routed-car";
-  const endpoint = `https://routing.openstreetmap.de/${service}/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson&steps=false`;
-  const response = await fetch(endpoint, { headers: { "user-agent": "NaruCare/1.0" } });
-  if (!response.ok) throw new ApiException(502, "route_provider_error", "Routing unavailable");
-  const result = await response.json() as OsrmResponse;
-  const first = result.routes?.[0];
-  if (!first?.geometry?.coordinates) throw new ApiException(404, "route_not_found", "No route found");
-  return json({ coordinates: first.geometry.coordinates.map(([lng, lat]) => [lat, lng]), distance: first.distance, duration: first.duration });
+  if (requestedMode === "driving") {
+    try {
+      const naverRoute = await naverDrivingRoute(env, startLat, startLng, endLat, endLng);
+      if (naverRoute) return json(naverRoute);
+    } catch { /* Fall through to the no-cost route provider. */ }
+  }
+  return json(await osrmRoute(startLat, startLng, endLat, endLng, requestedMode));
+}
+
+async function mapsConfig(request: Request, env: Env) {
+  await requireUser(request, env);
+  const naverClientId = envSecret(env, "NAVER_MAPS_CLIENT_ID");
+  return json({ naverClientId, dynamicMap: Boolean(naverClientId) });
 }
 
 function aiText(value: unknown) {
@@ -1311,7 +1370,8 @@ async function routeRequest(request: Request, env: Env, ctx: ExecutionContext) {
   if (request.method === "PUT" && path === "/api/card") return saveCard(request, env);
   if (request.method === "GET" && path === "/api/hospitals") return nearbyHospitals(url, env, ctx);
   if (request.method === "GET" && path === "/api/location/reverse") return reverseGeocode(url, env, ctx);
-  if (request.method === "GET" && path === "/api/route") return route(url);
+  if (request.method === "GET" && path === "/api/maps/config") return mapsConfig(request, env);
+  if (request.method === "GET" && path === "/api/route") return route(request, url, env);
   if (request.method === "POST" && path === "/api/translate") return translate(request, env);
   if (request.method === "POST" && path === "/api/transcribe") return transcribe(request, env, url);
   if (request.method === "POST" && path === "/api/chat") return chat(request, env);

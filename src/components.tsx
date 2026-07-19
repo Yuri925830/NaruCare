@@ -1,10 +1,11 @@
-import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import L from "leaflet";
 import {
   AlertCircle, ArrowLeft, BadgeCheck, CircleUserRound, CreditCard, Globe2, Languages, ListTree,
   MapPin, MessageCircleMore, PhoneCall, ShieldCheck, Sparkles,
 } from "lucide-react";
 import { localeOptions, useI18n } from "./i18n";
+import { api } from "./api";
 import type { Hospital, SessionUser, View } from "./types";
 
 /** One of the 21 official Naru poses from the supplied 7 × 3 character sheet. */
@@ -184,6 +185,133 @@ export function InteractiveMap({ center, hospitals = [], selected, route = [], o
   }, [center[0], center[1], hospitals, selected?.id, route, onSelect]);
 
   return <div ref={container} className={`interactive-map ${className}`} aria-label="Interactive map" />;
+}
+
+interface NaverMapInstance {
+  fitBounds: (bounds: unknown, margin?: number | { top: number; right: number; bottom: number; left: number }) => void;
+  setCenter: (center: unknown) => void;
+  setZoom: (zoom: number) => void;
+  destroy?: () => void;
+}
+
+interface NaverOverlay { setMap: (map: NaverMapInstance | null) => void }
+
+interface NaverMapsNamespace {
+  LatLng: new (lat: number, lng: number) => unknown;
+  LatLngBounds: new () => { extend: (point: unknown) => void };
+  Map: new (element: HTMLElement, options: Record<string, unknown>) => NaverMapInstance;
+  Marker: new (options: Record<string, unknown>) => NaverOverlay;
+  Polyline: new (options: Record<string, unknown>) => NaverOverlay;
+  Event: { trigger: (target: unknown, eventName: string) => void };
+}
+
+declare global {
+  interface Window { naver?: { maps?: NaverMapsNamespace } }
+}
+
+let naverMapsLoader: Promise<NaverMapsNamespace> | null = null;
+
+function loadNaverMaps(clientId: string) {
+  const ready = window.naver?.maps;
+  if (ready) return Promise.resolve(ready);
+  if (naverMapsLoader) return naverMapsLoader;
+  naverMapsLoader = new Promise<NaverMapsNamespace>((resolve, reject) => {
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(clientId)}`;
+    script.dataset.narucareNaverMap = "true";
+    script.onload = () => {
+      const maps = window.naver?.maps;
+      if (maps) resolve(maps);
+      else reject(new Error("Naver Maps SDK did not initialize"));
+    };
+    script.onerror = () => reject(new Error("Naver Maps SDK could not be loaded"));
+    document.head.appendChild(script);
+  }).catch((error) => {
+    naverMapsLoader = null;
+    throw error;
+  });
+  return naverMapsLoader;
+}
+
+export function NaverNavigationMap({ center, hospital, route = [], className = "" }: {
+  center: [number, number];
+  hospital: Hospital;
+  route?: [number, number][];
+  className?: string;
+}) {
+  const container = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<NaverMapInstance | null>(null);
+  const overlaysRef = useRef<NaverOverlay[]>([]);
+  const [maps, setMaps] = useState<NaverMapsNamespace | null>(window.naver?.maps || null);
+  const [useFallback, setUseFallback] = useState(false);
+
+  useEffect(() => {
+    if (maps || useFallback) return;
+    let active = true;
+    void api.mapsConfig().then((config) => {
+      if (!active) return;
+      if (!config.dynamicMap || !config.naverClientId) {
+        setUseFallback(true);
+        return;
+      }
+      return loadNaverMaps(config.naverClientId).then((loaded) => {
+        if (active) setMaps(loaded);
+      });
+    }).catch(() => { if (active) setUseFallback(true); });
+    return () => { active = false; };
+  }, [maps, useFallback]);
+
+  useEffect(() => {
+    if (!maps || !container.current || mapRef.current) return;
+    const map = new maps.Map(container.current, {
+      center: new maps.LatLng(center[0], center[1]),
+      zoom: 15,
+      zoomControl: true,
+      scaleControl: true,
+      mapDataControl: false,
+    });
+    mapRef.current = map;
+    const resizeTimer = window.setTimeout(() => {
+      maps.Event.trigger(map, "resize");
+      map.setCenter(new maps.LatLng(center[0], center[1]));
+    }, 80);
+    return () => {
+      window.clearTimeout(resizeTimer);
+      overlaysRef.current.forEach((overlay) => overlay.setMap(null));
+      overlaysRef.current = [];
+      map.destroy?.();
+      mapRef.current = null;
+    };
+  }, [maps]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!maps || !map) return;
+    overlaysRef.current.forEach((overlay) => overlay.setMap(null));
+    const overlays: NaverOverlay[] = [];
+    const bounds = new maps.LatLngBounds();
+    const origin = new maps.LatLng(center[0], center[1]);
+    const destination = new maps.LatLng(hospital.lat, hospital.lng);
+    bounds.extend(origin);
+    bounds.extend(destination);
+    overlays.push(new maps.Marker({ map, position: origin, title: "Current location" }));
+    overlays.push(new maps.Marker({ map, position: destination, title: hospital.name }));
+    if (route.length > 1) {
+      const path = route.map(([lat, lng]) => {
+        const point = new maps.LatLng(lat, lng);
+        bounds.extend(point);
+        return point;
+      });
+      overlays.push(new maps.Polyline({ map, path, strokeColor: "#785a4d", strokeWeight: 7, strokeOpacity: 0.92 }));
+    }
+    overlaysRef.current = overlays;
+    maps.Event.trigger(map, "resize");
+    map.fitBounds(bounds, { top: 72, right: 38, bottom: 38, left: 38 });
+  }, [maps, center[0], center[1], hospital.id, hospital.lat, hospital.lng, hospital.name, route]);
+
+  if (useFallback) return <InteractiveMap center={center} hospitals={[hospital]} selected={hospital} route={route} className={className} />;
+  return <div ref={container} className={`interactive-map naver-navigation-map ${className}`} aria-label="Naver interactive map" />;
 }
 
 export function LocationPickerMap({ center, accuracy, disabled = false, onPick, className = "" }: {
