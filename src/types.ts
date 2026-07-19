@@ -65,6 +65,7 @@ export interface ChatResponse {
   symptoms?: string;
   symptomStatus?: "none" | "new" | "ongoing" | "improving" | "resolved" | "unknown";
   sources?: MedicalEvidenceSource[];
+  reasoningTier?: "deterministic" | "light" | "deep" | "fallback";
 }
 
 export interface Hospital {
