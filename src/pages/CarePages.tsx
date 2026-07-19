@@ -7,7 +7,7 @@ import { localeOptions, useI18n } from "../i18n";
 import { assessMedicalIntent, isAffirmativeResponse, isNaruCapabilityQuestion, isNaruIdentityQuestion, isNegativeResponse } from "../triage";
 import type { ChatHistoryEntry, Hospital, LocationState, MedicalCard, TranslationRecordEntry } from "../types";
 
-interface Message { id: string; role: "naru" | "user" | "status"; text: string }
+interface Message { id: string; role: "naru" | "user" | "status"; text: string; detail?: string }
 
 export function AgentPage({ card, onCard, onEmergency, onHospitals, onSymptoms, onCompanion, onFlow, onTranslation, gateSignal }: {
   card: MedicalCard | null;
@@ -25,7 +25,7 @@ export function AgentPage({ card, onCard, onEmergency, onHospitals, onSymptoms, 
   const [input, setInput] = useState("");
   const [gate, setGate] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [pendingHospitalSymptoms, setPendingHospitalSymptoms] = useState("");
+  const [pendingHospitalSymptoms, setPendingHospitalSymptoms] = useState<string | null>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,17 +59,17 @@ export function AgentPage({ card, onCard, onEmergency, onHospitals, onSymptoms, 
       setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: t("naruCapabilitiesAnswer") }]);
       return;
     }
-    if (pendingHospitalSymptoms && isAffirmativeResponse(clean)) {
+    if (pendingHospitalSymptoms !== null && isAffirmativeResponse(clean)) {
       const confirmedSymptoms = pendingHospitalSymptoms;
-      setPendingHospitalSymptoms("");
-      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "status", text: t("analyzing") }]);
+      setPendingHospitalSymptoms(null);
+      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "status", text: t("nearbyHospitals"), detail: confirmedSymptoms || t("nearbyAccepting") }]);
       setBusy(true);
       try { await onHospitals(confirmedSymptoms); }
       finally { setBusy(false); }
       return;
     }
-    if (pendingHospitalSymptoms && isNegativeResponse(clean)) {
-      setPendingHospitalSymptoms("");
+    if (pendingHospitalSymptoms !== null && isNegativeResponse(clean)) {
+      setPendingHospitalSymptoms(null);
       setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: t("hospitalOfferDeclined") }]);
       return;
     }
@@ -78,11 +78,12 @@ export function AgentPage({ card, onCard, onEmergency, onHospitals, onSymptoms, 
       .map((message) => ({ role: message.role === "user" ? "user" : "assistant", content: message.text }));
     const previousUserMessages = history.filter((message) => message.role === "user").map((message) => message.content);
     const localTriage = assessMedicalIntent(clean, previousUserMessages, true);
-    const effectiveSymptoms = localTriage.symptoms || card.symptoms?.trim() || clean;
+    const reportedSymptoms = localTriage.symptoms?.trim() || "";
+    const effectiveEmergencySymptoms = reportedSymptoms || card.symptoms?.trim() || clean;
     if (localTriage.intent === "emergency") {
       if (localTriage.symptoms) await onSymptoms?.(localTriage.symptoms);
-      setPendingHospitalSymptoms("");
-      onEmergency(effectiveSymptoms);
+      setPendingHospitalSymptoms(null);
+      onEmergency(effectiveEmergencySymptoms);
       return;
     }
     if (localTriage.intent === "card") { onCard(); return; }
@@ -92,25 +93,25 @@ export function AgentPage({ card, onCard, onEmergency, onHospitals, onSymptoms, 
     if (localTriage.intent === "hospital") {
       if (localTriage.symptoms) await onSymptoms?.(localTriage.symptoms);
       if (localTriage.reason === "hospital_request") {
-        setPendingHospitalSymptoms("");
-        setMessages((current) => [...current, { id: crypto.randomUUID(), role: "status", text: t("analyzing") }]);
+        setPendingHospitalSymptoms(null);
+        setMessages((current) => [...current, { id: crypto.randomUUID(), role: "status", text: t("nearbyHospitals"), detail: reportedSymptoms || t("nearbyAccepting") }]);
         setBusy(true);
-        try { await onHospitals(effectiveSymptoms); }
+        try { await onHospitals(reportedSymptoms); }
         finally { setBusy(false); }
         return;
       }
-      setPendingHospitalSymptoms(effectiveSymptoms);
+      setPendingHospitalSymptoms(reportedSymptoms);
       setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: t("hospitalConsentPrompt") }]);
       return;
     }
     setBusy(true);
     try {
       const response = await api.chat(clean, locale, true, history);
-      const responseSymptoms = response.symptoms?.trim() || effectiveSymptoms;
+      const responseSymptoms = response.symptoms?.trim() || reportedSymptoms;
       if (response.symptoms) await onSymptoms?.(response.symptoms);
       if (response.intent === "emergency") {
-        setPendingHospitalSymptoms("");
-        return onEmergency(responseSymptoms);
+        setPendingHospitalSymptoms(null);
+        return onEmergency(responseSymptoms || card.symptoms?.trim() || clean);
       }
       if (response.intent === "hospital") {
         setPendingHospitalSymptoms(responseSymptoms);
@@ -134,7 +135,7 @@ export function AgentPage({ card, onCard, onEmergency, onHospitals, onSymptoms, 
     <Panel className="chat-panel">
       <div className="agent-online"><NaruPose pose={2} className="chat-naru-pose" /><strong>Naru<small>{t("brandSub")}</small></strong><StatusPill><ShieldCheck size={14} />{t("privateConversation")}</StatusPill></div>
       <div className="messages" ref={messagesRef}>
-        {messages.map((message) => message.role === "status" ? <InfoBanner key={message.id} tone="mint" title={message.text}>{t("analyzingText")}</InfoBanner> : <div key={message.id} className={`message message-${message.role}`}>
+        {messages.map((message) => message.role === "status" ? <InfoBanner key={message.id} tone="mint" title={message.text}>{message.detail || t("nearbyAccepting")}</InfoBanner> : <div key={message.id} className={`message message-${message.role}`}>
           {message.role === "naru" && <div className="message-author"><NaruPose pose={2} className="chat-naru-pose" /><strong>Naru<small>{t("brandSub")}</small></strong></div>}
           <p dir="auto">{message.text}</p>
         </div>)}
@@ -243,6 +244,38 @@ export function NavigationPage({ location, hospital, onArrived, onTranslation }:
     return `https://www.google.com/maps/dir/?${params}`;
   };
   const kakaoUrl = `https://map.kakao.com/link/to/${encodeURIComponent(hospital.name)},${hospital.lat},${hospital.lng}`;
+  const kakaoTaxiUrl = "https://service.kakaomobility.com/launch/kakaot/?ref=KM_homepage_a";
+  const uberAppParams = new URLSearchParams({
+    "pickup[latitude]": String(location.lat),
+    "pickup[longitude]": String(location.lng),
+    "pickup[nickname]": "Current location",
+    "pickup[formatted_address]": location.address || "Current location",
+    "dropoff[latitude]": String(hospital.lat),
+    "dropoff[longitude]": String(hospital.lng),
+    "dropoff[nickname]": hospital.name,
+    "dropoff[formatted_address]": hospital.address || hospital.name,
+  });
+  const uberWebParams = new URLSearchParams({
+    pickup: JSON.stringify({ latitude: location.lat, longitude: location.lng, addressLine1: "Current location", addressLine2: location.address || "Current location" }),
+    "drop[0]": JSON.stringify({ latitude: hospital.lat, longitude: hospital.lng, addressLine1: hospital.name, addressLine2: hospital.address || hospital.name }),
+  });
+  const uberWebUrl = `https://m.uber.com/?${uberWebParams}`;
+  const openUber = () => {
+    const userAgent = navigator.userAgent;
+    if (/Android/i.test(userAgent)) {
+      window.location.href = `intent://riderequest?${uberAppParams}#Intent;scheme=uber;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;package=com.ubercab;S.browser_fallback_url=${encodeURIComponent(uberWebUrl)};end`;
+      return;
+    }
+    if (/iPhone|iPad|iPod/i.test(userAgent)) {
+      const openedAt = Date.now();
+      window.location.href = `uber://riderequest?${uberAppParams}`;
+      window.setTimeout(() => {
+        if (document.visibilityState === "visible" && Date.now() - openedAt < 3_000) window.location.href = uberWebUrl;
+      }, 1_500);
+      return;
+    }
+    window.open(uberWebUrl, "_blank", "noopener,noreferrer");
+  };
   const openNaverMaps = () => {
     const actionPath = mode === "walking" ? "route/walk" : mode === "transit" ? "route/public" : "navigation";
     const params = new URLSearchParams({
@@ -279,7 +312,7 @@ export function NavigationPage({ location, hospital, onArrived, onTranslation }:
       <div className="map-card"><div className="map-location"><MapPin size={17} />{t("currentLocation")} · {location.address}</div><NaverNavigationMap center={origin} hospital={hospital} route={route} /></div>
       <div className="route-info"><NaruPose pose={14} className="route-naru-pose" /><span>{t("destination")}</span><h2>{hospital.name}</h2><strong>{canPreview ? t("routeSummary", { mode: modeLabels[mode], minutes: duration, distance: distance < 1000 ? `${Math.round(distance)}m` : `${(distance / 1000).toFixed(1)}km` }) : t("routePreviewUnavailable")}</strong><hr /><p>{t("estimatedArrival")}<b>{canPreview ? new Date(Date.now() + duration * 60000).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }) : "—"}</b></p><p>{t("routeStatus")}<b>{canPreview ? t("inProgress") : t("externalNavigation")}</b></p>
         <InfoBanner tone="mint" title={t("autoTranslation")}>{t("arrivalTip")}</InfoBanner>
-        <div className="external-map-links"><Button onClick={openNaverMaps}><Navigation size={17} />Naver Maps</Button><a className="button button-secondary" href={googleUrl(mode)} target="_blank" rel="noreferrer"><Navigation size={17} />Google Maps</a><a className="button button-secondary" href={kakaoUrl} target="_blank" rel="noreferrer"><MapPin size={17} />Kakao Maps</a></div>
+        <div className="external-map-links"><Button onClick={openNaverMaps}><Navigation size={17} />Naver Maps</Button><a className="button button-secondary" href={googleUrl(mode)} target="_blank" rel="noreferrer"><Navigation size={17} />Google Maps</a><a className="button button-secondary" href={kakaoUrl} target="_blank" rel="noreferrer"><MapPin size={17} />Kakao Maps</a><a className="button button-secondary" href={kakaoTaxiUrl} target="_blank" rel="noreferrer" title="Open Kakao T and confirm the hospital destination"><Navigation size={17} />Kakao T</a><Button variant="secondary" type="button" onClick={openUber} title="Open Uber with pickup and hospital destination"><Navigation size={17} />Uber</Button></div>
         <Button onClick={onArrived}><MapPin size={18} />{t("arrived")}</Button><Button variant="secondary" onClick={onTranslation}>{t("openTranslation")}</Button>
       </div>
     </div>

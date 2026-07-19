@@ -18,7 +18,7 @@ const categoryQueries: Record<HospitalCategory, string[]> = {
   mental: ["정신건강의학과"],
   dental: ["치과"],
   dermatology: ["피부과"],
-  general: ["가정의학과", "내과", "종합병원"],
+  general: ["종합병원", "대학병원", "의료원"],
 };
 
 export function hospitalSearchQueries(category: HospitalCategory) {
@@ -45,6 +45,11 @@ export function matchesHospitalCategory(
 ) {
   const descriptor = `${name} ${tags.healthcare || ""} ${tags["healthcare:speciality"] || ""} ${tags.amenity || ""}`.toLowerCase();
   if (/(medical\s*shop|sanitätshaus|의료기기|약국|pharmacy|동물병원|동물의료|veterinary|animal\s*hospital|장례식장|funeral|한의원|한방병원|oriental\s*medicine)/u.test(descriptor)) return false;
+  if (category === "general") {
+    // With no reported symptoms, recommend multi-department hospitals instead
+    // of guessing a specialty or returning the nearest single-specialty clinic.
+    return /(종합병원|상급종합|대학병원|대학교\s*병원|의료원|general\s*hospital|university\s*hospital|medical\s*center)/u.test(descriptor);
+  }
   const incompatible: Partial<Record<HospitalCategory, RegExp>> = {
     gastro: /(정신|신경과|신경외과|안과|치과|피부과|정형외과|산부인과|여성병원|요양병원|재활병원|이비인후과|척\s*병원|psychi|neurosurg|neurolog|ophthalm|dental|dermat|orthop|maternity|women'?s\s*hospital|nursing|rehabilitation|spine)/u,
     respiratory: /(정신|신경과|신경외과|안과|치과|피부과|정형외과|산부인과|여성병원|요양병원|재활병원|척\s*병원|psychi|neurosurg|neurolog|ophthalm|dental|dermat|orthop|maternity|women'?s\s*hospital|nursing|rehabilitation|spine)/u,

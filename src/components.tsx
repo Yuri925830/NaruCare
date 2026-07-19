@@ -122,7 +122,7 @@ interface InteractiveMapProps {
   className?: string;
 }
 
-export function InteractiveMap({ center, hospitals = [], selected, route = [], onSelect, className = "" }: InteractiveMapProps) {
+function LeafletInteractiveMap({ center, hospitals = [], selected, route = [], onSelect, className = "" }: InteractiveMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
@@ -189,20 +189,27 @@ export function InteractiveMap({ center, hospitals = [], selected, route = [], o
 
 interface NaverMapInstance {
   fitBounds: (bounds: unknown, margin?: number | { top: number; right: number; bottom: number; left: number }) => void;
+  getCenter: () => NaverLatLng;
   setCenter: (center: unknown) => void;
   setZoom: (zoom: number) => void;
   destroy?: () => void;
 }
 
+interface NaverLatLng { lat: () => number; lng: () => number }
 interface NaverOverlay { setMap: (map: NaverMapInstance | null) => void }
+type NaverEventListener = unknown;
 
 interface NaverMapsNamespace {
-  LatLng: new (lat: number, lng: number) => unknown;
+  LatLng: new (lat: number, lng: number) => NaverLatLng;
   LatLngBounds: new () => { extend: (point: unknown) => void };
   Map: new (element: HTMLElement, options: Record<string, unknown>) => NaverMapInstance;
   Marker: new (options: Record<string, unknown>) => NaverOverlay;
   Polyline: new (options: Record<string, unknown>) => NaverOverlay;
-  Event: { trigger: (target: unknown, eventName: string) => void };
+  Event: {
+    addListener: (target: unknown, eventName: string, listener: () => void) => NaverEventListener;
+    removeListener: (listener: NaverEventListener) => void;
+    trigger: (target: unknown, eventName: string) => void;
+  };
 }
 
 declare global {
@@ -234,15 +241,7 @@ function loadNaverMaps(clientId: string) {
   return naverMapsLoader;
 }
 
-export function NaverNavigationMap({ center, hospital, route = [], className = "" }: {
-  center: [number, number];
-  hospital: Hospital;
-  route?: [number, number][];
-  className?: string;
-}) {
-  const container = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<NaverMapInstance | null>(null);
-  const overlaysRef = useRef<NaverOverlay[]>([]);
+function useNaverMapsSdk() {
   const [maps, setMaps] = useState<NaverMapsNamespace | null>(window.naver?.maps || null);
   const [useFallback, setUseFallback] = useState(false);
 
@@ -261,6 +260,92 @@ export function NaverNavigationMap({ center, hospital, route = [], className = "
     }).catch(() => { if (active) setUseFallback(true); });
     return () => { active = false; };
   }, [maps, useFallback]);
+
+  return { maps, useFallback };
+}
+
+export function InteractiveMap(props: InteractiveMapProps) {
+  const { maps, useFallback } = useNaverMapsSdk();
+  const container = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<NaverMapInstance | null>(null);
+  const overlaysRef = useRef<NaverOverlay[]>([]);
+  const listenersRef = useRef<NaverEventListener[]>([]);
+  const onSelectRef = useRef(props.onSelect);
+  onSelectRef.current = props.onSelect;
+
+  useEffect(() => {
+    if (!maps || !container.current || mapRef.current) return;
+    const map = new maps.Map(container.current, {
+      center: new maps.LatLng(props.center[0], props.center[1]),
+      zoom: 15,
+      zoomControl: true,
+      scaleControl: true,
+      mapDataControl: false,
+    });
+    mapRef.current = map;
+    const resizeTimer = window.setTimeout(() => maps.Event.trigger(map, "resize"), 80);
+    return () => {
+      window.clearTimeout(resizeTimer);
+      listenersRef.current.forEach((listener) => maps.Event.removeListener(listener));
+      listenersRef.current = [];
+      overlaysRef.current.forEach((overlay) => overlay.setMap(null));
+      overlaysRef.current = [];
+      map.destroy?.();
+      mapRef.current = null;
+    };
+  }, [maps]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!maps || !map) return;
+    listenersRef.current.forEach((listener) => maps.Event.removeListener(listener));
+    listenersRef.current = [];
+    overlaysRef.current.forEach((overlay) => overlay.setMap(null));
+    const overlays: NaverOverlay[] = [];
+    const bounds = new maps.LatLngBounds();
+    const origin = new maps.LatLng(props.center[0], props.center[1]);
+    bounds.extend(origin);
+    overlays.push(new maps.Marker({ map, position: origin, title: "Current location" }));
+    props.hospitals?.forEach((hospital) => {
+      const point = new maps.LatLng(hospital.lat, hospital.lng);
+      bounds.extend(point);
+      const marker = new maps.Marker({
+        map,
+        position: point,
+        title: hospital.name,
+        zIndex: props.selected?.id === hospital.id ? 200 : 100,
+      });
+      overlays.push(marker);
+      listenersRef.current.push(maps.Event.addListener(marker, "click", () => onSelectRef.current?.(hospital)));
+    });
+    if (props.route && props.route.length > 1) {
+      const path = props.route.map(([lat, lng]) => {
+        const point = new maps.LatLng(lat, lng);
+        bounds.extend(point);
+        return point;
+      });
+      overlays.push(new maps.Polyline({ map, path, strokeColor: "#785a4d", strokeWeight: 7, strokeOpacity: 0.92 }));
+    }
+    overlaysRef.current = overlays;
+    maps.Event.trigger(map, "resize");
+    if ((props.hospitals?.length || 0) + (props.route?.length || 0) > 0) map.fitBounds(bounds, { top: 64, right: 38, bottom: 38, left: 38 });
+    else { map.setCenter(origin); map.setZoom(15); }
+  }, [maps, props.center[0], props.center[1], props.hospitals, props.selected?.id, props.route]);
+
+  if (useFallback) return <LeafletInteractiveMap {...props} />;
+  return <div ref={container} className={`interactive-map naver-interactive-map ${props.className || ""}`} aria-label="Naver interactive map" />;
+}
+
+export function NaverNavigationMap({ center, hospital, route = [], className = "" }: {
+  center: [number, number];
+  hospital: Hospital;
+  route?: [number, number][];
+  className?: string;
+}) {
+  const container = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<NaverMapInstance | null>(null);
+  const overlaysRef = useRef<NaverOverlay[]>([]);
+  const { maps, useFallback } = useNaverMapsSdk();
 
   useEffect(() => {
     if (!maps || !container.current || mapRef.current) return;
@@ -310,11 +395,11 @@ export function NaverNavigationMap({ center, hospital, route = [], className = "
     map.fitBounds(bounds, { top: 72, right: 38, bottom: 38, left: 38 });
   }, [maps, center[0], center[1], hospital.id, hospital.lat, hospital.lng, hospital.name, route]);
 
-  if (useFallback) return <InteractiveMap center={center} hospitals={[hospital]} selected={hospital} route={route} className={className} />;
+  if (useFallback) return <LeafletInteractiveMap center={center} hospitals={[hospital]} selected={hospital} route={route} className={className} />;
   return <div ref={container} className={`interactive-map naver-navigation-map ${className}`} aria-label="Naver interactive map" />;
 }
 
-export function LocationPickerMap({ center, accuracy, disabled = false, onPick, className = "" }: {
+function LeafletLocationPickerMap({ center, accuracy, disabled = false, onPick, className = "" }: {
   center: [number, number];
   accuracy?: number;
   disabled?: boolean;
@@ -368,7 +453,10 @@ export function LocationPickerMap({ center, accuracy, disabled = false, onPick, 
     if (map.getCenter().distanceTo(next) <= .25) return;
     programmaticMove.current = true;
     map.setView(next, Math.max(map.getZoom(), 18), { animate: false });
-    window.setTimeout(() => { programmaticMove.current = false; }, 0);
+    // A non-animated Leaflet setView emits moveend synchronously. Release the
+    // guard immediately so a user drag that starts while GPS is still refining
+    // is never mistaken for another programmatic recenter.
+    programmaticMove.current = false;
   }, [center[0], center[1], accuracy]);
 
   useEffect(() => {
@@ -381,6 +469,89 @@ export function LocationPickerMap({ center, accuracy, disabled = false, onPick, 
 
   return <div className={`location-picker ${disabled ? "is-disabled" : ""} ${className}`}>
     <div ref={container} className="interactive-map location-picker-map" aria-label="Location picker map" />
+    <span className="location-picker-crosshair" aria-hidden="true" />
+  </div>;
+}
+
+export function LocationPickerMap({ center, accuracy, disabled = false, onPick, className = "" }: {
+  center: [number, number];
+  accuracy?: number;
+  disabled?: boolean;
+  onPick: (lat: number, lng: number) => void;
+  className?: string;
+}) {
+  const { maps, useFallback } = useNaverMapsSdk();
+  const container = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<NaverMapInstance | null>(null);
+  const listenerRef = useRef<NaverEventListener | null>(null);
+  const onPickRef = useRef(onPick);
+  const disabledRef = useRef(disabled);
+  const programmaticTarget = useRef<[number, number] | null>(null);
+  onPickRef.current = onPick;
+  disabledRef.current = disabled;
+
+  useEffect(() => {
+    if (!maps || !container.current || mapRef.current) return;
+    const map = new maps.Map(container.current, {
+      center: new maps.LatLng(center[0], center[1]),
+      zoom: 19,
+      minZoom: 7,
+      maxZoom: 21,
+      zoomControl: true,
+      scaleControl: true,
+      mapDataControl: false,
+    });
+    mapRef.current = map;
+    let acceptingUserMoves = false;
+    const readyTimer = window.setTimeout(() => { acceptingUserMoves = true; }, 180);
+    listenerRef.current = maps.Event.addListener(map, "idle", () => {
+      const point = map.getCenter();
+      const lat = point.lat();
+      const lng = point.lng();
+      const target = programmaticTarget.current;
+      if (target && Math.abs(target[0] - lat) < 0.0000005 && Math.abs(target[1] - lng) < 0.0000005) {
+        programmaticTarget.current = null;
+        return;
+      }
+      programmaticTarget.current = null;
+      if (!acceptingUserMoves || disabledRef.current) return;
+      onPickRef.current(lat, lng);
+    });
+    const resizeTimer = window.setTimeout(() => maps.Event.trigger(map, "resize"), 80);
+    return () => {
+      window.clearTimeout(readyTimer);
+      window.clearTimeout(resizeTimer);
+      if (listenerRef.current) maps.Event.removeListener(listenerRef.current);
+      listenerRef.current = null;
+      map.destroy?.();
+      mapRef.current = null;
+    };
+  }, [maps]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!maps || !map) return;
+    const current = map.getCenter();
+    if (Math.abs(current.lat() - center[0]) < 0.0000005 && Math.abs(current.lng() - center[1]) < 0.0000005) return;
+    programmaticTarget.current = center;
+    map.setCenter(new maps.LatLng(center[0], center[1]));
+  }, [maps, center[0], center[1]]);
+
+  useEffect(() => {
+    const element = container.current;
+    if (!maps || !element || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      const map = mapRef.current;
+      if (!map) return;
+      maps.Event.trigger(map, "resize");
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [maps]);
+
+  if (useFallback) return <LeafletLocationPickerMap center={center} accuracy={accuracy} disabled={disabled} onPick={onPick} className={className} />;
+  return <div className={`location-picker naver-location-picker ${disabled ? "is-disabled" : ""} ${className}`}>
+    <div ref={container} className="interactive-map location-picker-map" aria-label="Naver location picker map" />
     <span className="location-picker-crosshair" aria-hidden="true" />
   </div>;
 }

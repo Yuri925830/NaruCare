@@ -18,6 +18,13 @@ describe("hospital symptom relevance", () => {
     expect(matchesHospitalCategory("청량리정신병원", { amenity: "hospital" }, "mental")).toBe(true);
   });
 
+  it("uses comprehensive hospitals when no symptom was reported", () => {
+    expect(hospitalCategory("")).toBe("general");
+    expect(hospitalSearchQueries("general")).toEqual(["종합병원", "대학병원", "의료원"]);
+    expect(matchesHospitalCategory("경희대학교병원", { amenity: "hospital" }, "general")).toBe(true);
+    expect(matchesHospitalCategory("왕십리내과의원", { amenity: "clinic", "healthcare:speciality": "내과" }, "general")).toBe(false);
+  });
+
   it("excludes non-human, non-treatment, traditional and unrelated spine facilities", () => {
     expect(matchesHospitalCategory("애플동물병원", { amenity: "hospital" }, "gastro")).toBe(false);
     expect(matchesHospitalCategory("건국대학교병원 장례식장", { amenity: "hospital" }, "gastro")).toBe(false);

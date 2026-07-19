@@ -71,6 +71,7 @@ await context.addInitScript(() => {
 });
 const page = await context.newPage();
 const errors = [];
+const hospitalRequestUrls = [];
 async function assertChatDocked(label) {
   const panel = await page.locator(".chat-panel").boundingBox();
   const composer = await page.locator(".chat-composer").boundingBox();
@@ -86,6 +87,7 @@ async function assertChatDocked(label) {
 }
 page.on("pageerror", (error) => errors.push(error.stack || error.message));
 page.on("console", (message) => { if (message.type() === "error" && !message.text().includes("ERR_FAILED")) errors.push(message.text()); });
+page.on("request", (request) => { if (request.url().includes("/api/hospitals?")) hospitalRequestUrls.push(request.url()); });
 await page.route("**/api/**", (route) => route.abort());
 await page.goto(baseUrl, { waitUntil: "networkidle" });
 await page.locator(".auth-art > .language-button").click();
@@ -169,6 +171,14 @@ await page.locator(".agent-grid").waitFor();
 // Reload here to start an independent visit scenario for the hospital path.
 await page.reload({ waitUntil: "networkidle" });
 await page.locator(".agent-grid").waitFor();
+const hospitalRequestCount = hospitalRequestUrls.length;
+await page.locator(".chat-composer input").fill("附近医院");
+await page.locator(".chat-composer").evaluate((form) => form.requestSubmit());
+await page.locator(".hospital-panel").waitFor({ timeout: 5_000 });
+const genericHospitalRequest = hospitalRequestUrls.slice(hospitalRequestCount).at(-1);
+if (!genericHospitalRequest || new URL(genericHospitalRequest).searchParams.get("symptom") !== "") throw new Error("A context-free nearby-hospital request reused or invented symptoms");
+await page.locator(".page-back").click();
+await page.locator(".agent-grid").waitFor();
 await page.locator(".chat-composer input").fill("我刚刚吃了个蛋糕，肚子有点疼");
 await page.locator(".chat-composer").evaluate((form) => form.requestSubmit());
 await page.locator(".message-naru").filter({ hasText: "要不要去附近医院" }).waitFor({ timeout: 3000 });
@@ -183,6 +193,54 @@ if (!/编辑/.test(await page.locator(".medical-card-form > .button").innerText(
 if (!await page.locator('[data-field="address"] textarea').isDisabled()) throw new Error("A saved medical card was not in read-only mode before Edit");
 if (!/蛋糕.*肚子有点疼/.test(await page.locator('[data-field="symptoms"] textarea').inputValue())) throw new Error("The organized chat symptom report was not written back to the medical card before consent");
 if (!/중국/.test(await page.locator('[data-field="nationality"] .korean-preview').innerText())) throw new Error("Nationality was not translated into Korean on the bilingual card");
+await page.setViewportSize({ width: 430, height: 932 });
+const editAction = page.locator(".medical-card-form > .button");
+await editAction.scrollIntoViewIfNeeded();
+await editAction.click();
+try {
+  await page.waitForFunction(() => !document.querySelector('[data-field="address"] textarea')?.disabled, undefined, { timeout: 2_000 });
+} catch {
+  const editBox = await editAction.boundingBox();
+  const state = editBox ? await page.evaluate(({ x, y, width, height }) => {
+    const target = document.elementFromPoint(x + width / 2, y + height / 2);
+    return { target: target ? `${target.tagName}.${target.className}` : "none", text: target?.textContent, scrollY, disabled: document.querySelector('[data-field="address"] textarea')?.disabled };
+  }, editBox) : { target: "no-box" };
+  throw new Error(`The saved medical-card Edit button did not enter edit mode: ${JSON.stringify(state)}`);
+}
+const locateAction = page.locator('[data-field="address"] .locate-address');
+await locateAction.scrollIntoViewIfNeeded();
+await locateAction.click();
+await page.waitForFunction(() => /^37\.5665\d, 126\.9780\d$/.test(document.querySelector('[data-field="address"] textarea')?.value || ""));
+const addressBeforeMapDrag = await page.locator('[data-field="address"] textarea').inputValue();
+const locationPicker = page.locator('[data-field="address"] .location-picker');
+await locationPicker.scrollIntoViewIfNeeded();
+await page.waitForTimeout(350);
+const editableMap = locationPicker.locator(".location-picker-map");
+await editableMap.waitFor();
+await page.waitForFunction(() => {
+  const map = document.querySelector('[data-field="address"] .location-picker-map');
+  return map?.classList.contains("leaflet-container") || Boolean(map?.querySelector("canvas, .leaflet-map-pane"));
+});
+const editablePicker = await editableMap.boundingBox();
+if (!editablePicker) throw new Error("Editable location picker was not rendered");
+const dragStart = { x: editablePicker.x + editablePicker.width * .72, y: editablePicker.y + editablePicker.height * .46 };
+const mapTransformBefore = await editableMap.locator(".leaflet-map-pane").getAttribute("style");
+await page.mouse.move(dragStart.x, dragStart.y);
+await page.mouse.down();
+await page.mouse.move(dragStart.x + 65, dragStart.y + 38, { steps: 12 });
+await page.mouse.up();
+try {
+  await page.waitForFunction((previous) => document.querySelector('[data-field="address"] textarea')?.value !== previous, addressBeforeMapDrag, { timeout: 5_000 });
+} catch {
+  const state = await page.evaluate(({ x, y }) => ({
+    address: document.querySelector('[data-field="address"] textarea')?.value,
+    hitTarget: (() => { const target = document.elementFromPoint(x, y); return target ? `${target.tagName}.${target.className}` : "none"; })(),
+    pickerClass: document.querySelector('[data-field="address"] .location-picker-map')?.className,
+    transform: document.querySelector('[data-field="address"] .leaflet-map-pane')?.getAttribute("style"),
+  }), dragStart);
+  throw new Error(`Dragging the medical-card map did not update the address: ${JSON.stringify({ mapTransformBefore, ...state })}`);
+}
+await page.setViewportSize({ width: 1440, height: 900 });
 await page.locator(".page-back").click();
 await page.locator(".hospital-panel").waitFor();
 const mapBefore = await page.locator(".hospital-layout .map-card").boundingBox();

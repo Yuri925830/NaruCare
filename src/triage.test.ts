@@ -37,6 +37,13 @@ describe("medical triage", () => {
     expect(result.symptoms).toBe("昨天开始咳嗽发烧");
   });
 
+  it("does not invent symptoms for a context-free nearby hospital request", () => {
+    const result = assessMedicalIntent("附近医院");
+    expect(result.intent).toBe("hospital");
+    expect(result.reason).toBe("hospital_request");
+    expect(result.symptoms).toBe("");
+  });
+
   it("marks a symptom report as requiring consent rather than an explicit hospital request", () => {
     const result = assessMedicalIntent("我刚刚吃了个蛋糕，肚子有点疼");
     expect(result.intent).toBe("hospital");

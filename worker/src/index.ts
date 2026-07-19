@@ -801,7 +801,7 @@ async function nearbyHospitals(url: URL, env: Env, ctx: ExecutionContext) {
   const cache = caches.default;
   const hasScheduleProvider = Boolean(envSecret(env, "GOOGLE_PLACES_API_KEY"));
   const hasHiraProvider = Boolean(hiraServiceKey(env));
-  const cacheKey = new Request(`https://narucare.internal/hospitals?v=8&lat=${lat.toFixed(3)}&lng=${lng.toFixed(3)}&locale=${localeCode}&category=${category}&schedule=${hasScheduleProvider ? "google" : "none"}&official=${hasHiraProvider ? "hira" : "none"}`);
+  const cacheKey = new Request(`https://narucare.internal/hospitals?v=9&lat=${lat.toFixed(3)}&lng=${lng.toFixed(3)}&locale=${localeCode}&category=${category}&schedule=${hasScheduleProvider ? "google" : "none"}&official=${hasHiraProvider ? "hira" : "none"}`);
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
   let hospitals: HospitalPayload[] = [];

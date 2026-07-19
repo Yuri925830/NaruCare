@@ -203,7 +203,9 @@ function AppInner() {
   }, [currentRecordId, t, updateCurrentRecord]);
 
   const openHospitals = useCallback(async (nextSymptoms: string) => {
-    const effectiveSymptoms = nextSymptoms.trim() || user?.card?.symptoms?.trim() || symptoms;
+    // An explicit generic hospital request must stay generic. Reusing symptoms
+    // from an older visit would fabricate a condition the user did not report.
+    const effectiveSymptoms = nextSymptoms.trim();
     if (nextSymptoms.trim()) await captureSymptoms(nextSymptoms);
     setSymptoms(effectiveSymptoms);
     setHospitalsLoading(true);

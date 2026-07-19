@@ -35,17 +35,30 @@ export function MedicalCardPage({ card, onSaved }: { card: MedicalCard | null; o
   const [locationError, setLocationError] = useState("");
   const [saved, setSaved] = useState(Boolean(card));
   const [editing, setEditing] = useState(!card);
+  const editingRef = useRef(editing);
+  editingRef.current = editing;
   const [error, setError] = useState("");
   const addressEdited = useRef(Boolean(card?.address));
+  const addressRevision = useRef(0);
   const locationRequest = useRef(0);
   const bestLocationAccuracy = useRef(Number.POSITIVE_INFINITY);
   const mapGeocodeTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
 
   useEffect(() => {
-    if (card) { setForm({ ...emptyCard(card.language || locale), ...card }); setSaved(true); setEditing(false); }
+    // External symptom/address updates may replace the card object while this
+    // page is mounted. Never let that synchronization cancel an active edit.
+    if (card && !editingRef.current) {
+      setForm({ ...emptyCard(card.language || locale), ...card });
+      setSaved(true);
+    }
   }, [card, locale]);
 
   useEffect(() => () => { if (mapGeocodeTimer.current) window.clearTimeout(mapGeocodeTimer.current); }, []);
+
+  const beginEditing = useCallback(() => {
+    editingRef.current = true;
+    setEditing(true);
+  }, []);
 
   const fields = useMemo(() => [
     { key: "name" as const, label: t("name"), required: true },
@@ -67,21 +80,37 @@ export function MedicalCardPage({ card, onSaved }: { card: MedicalCard | null; o
   const locateAddress = useCallback(async (forceAddressUpdate = false) => {
     setLocationError("");
     if (!navigator.geolocation) { setLocationError(t("locationDenied")); return; }
+    if (mapGeocodeTimer.current) window.clearTimeout(mapGeocodeTimer.current);
     const requestId = ++locationRequest.current;
+    const startingAddressRevision = addressRevision.current;
     bestLocationAccuracy.current = Number.POSITIVE_INFINITY;
     setLocating(true);
-    const applyFix = async (point: PreciseLocationFix, refined = false) => {
-      const address = await api.reverseGeocode(point.lat, point.lng);
+    const applyFix = async (point: PreciseLocationFix) => {
       if (locationRequest.current !== requestId) return;
       if (point.accuracy >= bestLocationAccuracy.current) return;
       bestLocationAccuracy.current = point.accuracy;
       setForm((current) => ({
         ...current,
-        address: (forceAddressUpdate && !refined) || !addressEdited.current ? address : current.address,
         latitude: point.lat,
         longitude: point.lng,
         locationAccuracy: point.accuracy,
       }));
+      try {
+        const address = await api.reverseGeocode(point.lat, point.lng);
+        if (locationRequest.current !== requestId || addressRevision.current !== startingAddressRevision) return;
+        if (point.accuracy > bestLocationAccuracy.current) return;
+        if (!forceAddressUpdate && addressEdited.current) return;
+        setForm((current) => ({
+          ...current,
+          address,
+          latitude: point.lat,
+          longitude: point.lng,
+          locationAccuracy: point.accuracy,
+          korean: current.korean ? { ...current.korean, address } : current.korean,
+        }));
+      } catch {
+        if (locationRequest.current === requestId) setLocationError(t("locationDenied"));
+      }
     };
     try {
       const point = await requestFastAccurateLocation(navigator.geolocation, {
@@ -89,7 +118,7 @@ export function MedicalCardPage({ card, onSaved }: { card: MedicalCard | null; o
         precisionTargetMeters: 3,
         firstFixTimeoutMs: 6_000,
         refinementTimeoutMs: 15_000,
-        onRefined: (refined) => applyFix(refined, true),
+        onRefined: (refined) => { void applyFix(refined); },
       });
       await applyFix(point);
     } catch { setLocationError(t("locationDenied")); }
@@ -99,22 +128,31 @@ export function MedicalCardPage({ card, onSaved }: { card: MedicalCard | null; o
   useEffect(() => { if (!card?.address) void locateAddress(false); }, []);
 
   const pickMapLocation = useCallback((lat: number, lng: number) => {
+    beginEditing();
     const requestId = ++locationRequest.current;
+    const startingAddressRevision = addressRevision.current;
     bestLocationAccuracy.current = Number.POSITIVE_INFINITY;
     addressEdited.current = false;
     setLocationError("");
+    setLocating(true);
     setForm((current) => ({ ...current, latitude: lat, longitude: lng, locationAccuracy: undefined }));
     if (mapGeocodeTimer.current) window.clearTimeout(mapGeocodeTimer.current);
     mapGeocodeTimer.current = window.setTimeout(() => {
-      setLocating(true);
       void api.reverseGeocode(lat, lng).then((address) => {
-        if (locationRequest.current !== requestId) return;
-        setForm((current) => ({ ...current, address, latitude: lat, longitude: lng, locationAccuracy: undefined }));
+        if (locationRequest.current !== requestId || addressRevision.current !== startingAddressRevision) return;
+        setForm((current) => ({
+          ...current,
+          address,
+          latitude: lat,
+          longitude: lng,
+          locationAccuracy: undefined,
+          korean: current.korean ? { ...current.korean, address } : current.korean,
+        }));
       }).catch(() => setLocationError(t("locationDenied"))).finally(() => {
         if (locationRequest.current === requestId) setLocating(false);
       });
     }, 420);
-  }, [t]);
+  }, [beginEditing, t]);
 
   function localKoreanValue(key: CardField, value: string) {
     const common: Record<string, string> = {
@@ -158,8 +196,8 @@ export function MedicalCardPage({ card, onSaved }: { card: MedicalCard | null; o
             <option value="">— {t("nationality")} —</option>
             {legacyCountry && <option value={legacyCountry}>{legacyCountry}</option>}
             {countryOptions.map((country) => <option key={country.code} value={country.code}>{country.flag} {country.nativeName}</option>)}
-          </select> : options ? <select value={value} disabled={!editing} onChange={(event) => setForm({ ...form, [key]: event.target.value })}>{options.map(([optionValue, label]) => <option key={optionValue} value={optionValue}>{label}</option>)}</select> : "multiline" in field && field.multiline ? <textarea dir="auto" value={value} disabled={!editing} onChange={(event) => { if (key === "address") addressEdited.current = true; setForm({ ...form, [key]: event.target.value }); }} placeholder={("placeholder" in field && field.placeholder) || ""} required={"required" in field && field.required} /> : <input dir="auto" type={("type" in field && field.type) || "text"} min={key === "age" ? 0 : undefined} max={key === "age" ? 120 : undefined} value={value} disabled={!editing} onChange={(event) => setForm({ ...form, [key]: event.target.value })} placeholder={("placeholder" in field && field.placeholder) || ""} required={"required" in field && field.required} />}
-          {key === "address" && <><Button type="button" variant="secondary" className="locate-address" onClick={() => { addressEdited.current = false; void locateAddress(true); }} disabled={locating || !editing}><LocateFixed size={16} />{locating ? t("locating") : t("useCurrentLocation")}</Button><small className="address-help">{t("addressHelp")}{form.locationAccuracy ? ` · ${t("locationAccuracy", { accuracy: formatAccuracy(form.locationAccuracy) })}` : ""}</small><LocationPickerMap center={[form.latitude ?? 37.5665, form.longitude ?? 126.978]} accuracy={form.locationAccuracy} disabled={!editing} onPick={pickMapLocation} /><small className="address-help map-picker-help">{t("mapPickerHelp")}</small>{locationError && <small className="form-error" role="alert">{locationError}</small>}</>}
+          </select> : options ? <select value={value} disabled={!editing} onChange={(event) => setForm({ ...form, [key]: event.target.value })}>{options.map(([optionValue, label]) => <option key={optionValue} value={optionValue}>{label}</option>)}</select> : "multiline" in field && field.multiline ? <textarea dir="auto" value={value} disabled={!editing} onChange={(event) => { if (key === "address") { addressEdited.current = true; addressRevision.current += 1; } setForm({ ...form, [key]: event.target.value }); }} placeholder={("placeholder" in field && field.placeholder) || ""} required={"required" in field && field.required} /> : <input dir="auto" type={("type" in field && field.type) || "text"} min={key === "age" ? 0 : undefined} max={key === "age" ? 120 : undefined} value={value} disabled={!editing} onChange={(event) => setForm({ ...form, [key]: event.target.value })} placeholder={("placeholder" in field && field.placeholder) || ""} required={"required" in field && field.required} />}
+          {key === "address" && <><Button type="button" variant="secondary" className="locate-address" onClick={() => { beginEditing(); addressEdited.current = false; void locateAddress(true); }} disabled={locating}><LocateFixed size={16} />{locating ? t("locating") : t("useCurrentLocation")}</Button><small className="address-help">{t("addressHelp")}{form.locationAccuracy ? ` · ${t("locationAccuracy", { accuracy: formatAccuracy(form.locationAccuracy) })}` : ""}</small><LocationPickerMap center={[form.latitude ?? 37.5665, form.longitude ?? 126.978]} accuracy={form.locationAccuracy} onPick={pickMapLocation} /><small className="address-help map-picker-help">{t("mapPickerHelp")}</small>{locationError && <small className="form-error" role="alert">{locationError}</small>}</>}
           {key === "symptoms" && <small className="address-help">{t("symptomsAutoFill")}</small>}
           {saved && <small className="korean-preview"><BadgeCheck size={13} />{form.korean?.[key] || localKoreanValue(key, value)}</small>}
         </label>;
@@ -167,7 +205,7 @@ export function MedicalCardPage({ card, onSaved }: { card: MedicalCard | null; o
       {error && <p className="form-error span-2">{error}</p>}
       <p className="card-footer"><ShieldCheck size={15} />{t("cardFooter")}</p>
       {saved && !editing
-        ? <Button type="button" onClick={() => setEditing(true)}><BadgeCheck size={19} />{t("editCard")}</Button>
+        ? <Button type="button" onPointerDown={beginEditing} onClick={beginEditing}><BadgeCheck size={19} />{t("editCard")}</Button>
         : <Button type="submit" disabled={saving || locating}><ShieldCheck size={19} />{saving || locating ? t("loading") : t("submitCard")}</Button>}
     </form>
   </Panel>;
