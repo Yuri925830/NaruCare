@@ -40,7 +40,7 @@ export function AgentPage({ card, onCard, onEmergency, onHospitals, onSymptoms, 
   gateSignal?: number;
 }) {
   const { locale, t } = useI18n();
-  const [messages, setMessages] = useState<Message[]>([{ id: "welcome", role: "naru", text: t("naruGreeting") }]);
+  const [messages, setMessages] = useState<Message[]>([{ id: "welcome", role: "naru", text: t("universalGreeting") }]);
   const [input, setInput] = useState("");
   const [gate, setGate] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -48,7 +48,7 @@ export function AgentPage({ card, onCard, onEmergency, onHospitals, onSymptoms, 
   const messagesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setMessages((current) => current.length === 1 ? [{ id: "welcome", role: "naru", text: t("naruGreeting") }] : current);
+    setMessages((current) => current.length === 1 ? [{ id: "welcome", role: "naru", text: t("universalGreeting") }] : current);
   }, [locale, t]);
 
   useEffect(() => { if (!card && gateSignal) setGate(true); }, [card, gateSignal]);
