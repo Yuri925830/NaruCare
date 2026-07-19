@@ -1346,6 +1346,17 @@ The symptoms field is state, not a transcript. It must contain a concise summary
   const classified = parseTriageModelOutput(output);
   if (classified) {
     if (deterministic.intent === "education" && classified.intent !== "emergency") classified.intent = "education";
+    if ((classified.intent === "hospital" || classified.intent === "emergency") && !classified.symptoms) {
+      if (deterministic.intent === "hospital" && deterministic.symptoms) {
+        classified.intent = "hospital";
+        classified.symptoms = deterministic.symptoms;
+        classified.symptomStatus = classified.symptomStatus === "none" ? "unknown" : classified.symptomStatus;
+      } else {
+        classified.intent = deterministic.intent === "education" ? "education" : "general";
+        classified.symptomStatus = "none";
+        classified.reply ||= localizedThinkingFallback(locale);
+      }
+    }
     if (classified.intent === "recovery" || classified.symptomStatus === "resolved") {
       classified.intent = "recovery";
       classified.symptomStatus = "resolved";
@@ -1354,6 +1365,7 @@ The symptoms field is state, not a transcript. It must contain a concise summary
       classified.symptoms = "";
       classified.symptomStatus = "none";
     }
+    if ((classified.intent === "general" || classified.intent === "education") && !classified.reply) classified.reply = localizedThinkingFallback(locale);
     let sources: MedicalEvidenceSource[] = [];
     if (classified.intent === "education" && classified.searchQuery) {
       try {
