@@ -4,74 +4,176 @@
 
 <h1>NaruCare</h1>
 
-<h3>AI-Native Healthcare Operating System for Foreign Nationals in Korea</h3>
+<h3>Agentic Healthcare Access Infrastructure for Foreign Nationals in Korea</h3>
 
-<p><strong>Cross-lingual care orchestration. Geospatial medical intelligence. Human-centered emergency infrastructure.</strong></p>
+<p><strong>Adaptive medical reasoning. Multi-source hospital intelligence. Cross-lingual care orchestration.</strong></p>
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Open_NaruCare-0A7B83?style=for-the-badge&logo=githubpages&logoColor=white)](https://yuri925830.github.io/NaruCare/)
 [![Version](https://img.shields.io/badge/version-v1.0.0-C8A98B?style=flat-square)](./package.json)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=061018)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?style=flat-square&logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
-[![D1](https://img.shields.io/badge/Cloudflare-D1-F48120?style=flat-square&logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/d1/)
-[![R2](https://img.shields.io/badge/Cloudflare-R2-F48120?style=flat-square&logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/r2/)
-[![Workers AI](https://img.shields.io/badge/Workers-AI-7C3AED?style=flat-square&logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/workers-ai/)
+[![Agent Runtime](https://img.shields.io/badge/reasoning-light_%E2%86%92_deep-7C3AED?style=flat-square)](#agent-decision-fabric)
 [![Languages](https://img.shields.io/badge/interface_languages-28-8B6F61?style=flat-square)](#global-language-runtime)
-[![Tests](https://img.shields.io/badge/automated_tests-14_passed-2E8B57?style=flat-square)](#quality-engineering)
 [![Deploy Frontend](https://github.com/Yuri925830/NaruCare/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/Yuri925830/NaruCare/actions/workflows/deploy-pages.yml)
 
 <br />
 
-<em>Borderless care, engineered as infrastructure.</em>
+<em>Healthcare access should not fail at the language boundary.</em>
 
 </div>
 
 ---
 
-# Vision
+# NaruCare in One Sentence
 
-Healthcare access in a foreign country is not a conversation problem.
+**NaruCare is a stateful Agentic AI healthcare access system that helps foreign nationals in Korea understand what to do next, locate appropriate care, navigate the Korean hospital workflow, communicate across languages, and escalate safely when the situation may be urgent.**
 
-It is an orchestration problem.
+It is not an “AI doctor.”
 
-A patient in distress must move through language, identity, geography, hospital operations, transportation, emergency response, and human coordination—often while navigating pain, uncertainty, and an unfamiliar medical system.
-
-NaruCare turns that fragmented journey into one stateful operating loop.
-
-It establishes a bilingual medical identity, interprets the user's immediate intent, routes risk, discovers real nearby care, explains the Korean hospital workflow, coordinates navigation and translation, activates an explicit 119 pathway when required, and preserves continuity across the entire encounter.
-
-The system continuously answers the questions that matter at the moment of care:
-
-- What does the patient need right now?
-- Is this a navigation problem or an emergency?
-- Which nearby medical facilities are real, relevant, and reachable?
-- What information is verified, unavailable, or still requires a phone call?
-- How can the patient and Korean medical staff understand one another?
-- When should automation stop and a human take control?
-
-> **Access to care should not collapse at the language boundary.**
+It is the coordination layer between a person in distress and the real-world systems required to receive care.
 
 ---
 
-# Product Thesis
+# Why This Exists
 
-Most healthcare assistants are optimized to produce answers.
+Getting medical help in a foreign country is not a single question-and-answer problem.
 
-NaruCare is engineered to coordinate action.
+It is a sequence of connected decisions:
 
-The product treats the foreign-patient journey as **structured, stateful, safety-bounded orchestration** rather than a collection of disconnected chat screens. Identity, symptoms, location, hospital selection, route state, translation context, companion state, and emergency behavior operate against the same user journey.
+```text
+What is happening?
+    → Is this potentially urgent?
+        → What kind of care is appropriate?
+            → Which real facility is nearby and relevant?
+                → Is it open, reachable, and prepared for this need?
+                    → What should the patient bring?
+                        → How does the hospital process work?
+                            → How can the patient and Korean staff understand each other?
+                                → What must be remembered after the visit?
+```
 
-NaruCare unifies systems that are usually fragmented across separate applications:
+Most products fragment this journey across chatbots, map applications, translation tools, hospital directories, emergency calls, and handwritten notes.
 
-- A multilingual medical access layer
-- A geospatial hospital intelligence layer
-- A bounded AI interpretation layer
-- An emergency communication workflow
-- A human-in-the-loop companion orchestration layer
-- A persistent care-state and recording layer
+NaruCare compiles those fragmented steps into one persistent care loop.
 
-This is not another medical chatbot.
+> **This is not a chatbot with healthcare copy. It is an agent runtime with healthcare boundaries.**
 
-This is an AI-native healthcare operating system for foreign nationals in Korea.
+---
+
+# What Makes NaruCare Agentic
+
+NaruCare does not merely generate a response and wait for the next prompt.
+
+It continuously combines:
+
+- authenticated identity
+- bilingual medical-card state
+- current symptoms and symptom evolution
+- prior conversation memory
+- location and hospital category
+- selected facility and route state
+- visit workflow progress
+- translation context
+- companion order state
+- emergency progression
+- persisted visit records
+
+The agent interprets the user’s current intent, selects the least expensive safe reasoning path, validates the result against deterministic rules, and then moves the interface into the appropriate real-world workflow.
+
+```text
+Understand
+    → Assess risk
+        → Select reasoning depth
+            → Validate action
+                → Open the correct workflow
+                    → Persist state
+                        → Continue the care journey
+```
+
+The model can interpret language.
+
+The application owns consequences.
+
+---
+
+# Agent Decision Fabric
+
+NaruCare uses a layered decision architecture rather than sending every message directly to one large model.
+
+```mermaid
+flowchart TB
+    U[User message] --> C[Conversation memory + medical card + current care state]
+    C --> S{Deterministic safety gate}
+
+    S -->|Emergency / explicit workflow command| A[Typed action contract]
+    S -->|Semantic understanding required| L[Fast understanding pass<br/>Llama 3.1 8B]
+
+    L --> R{Adaptive reasoning selector}
+    R -->|Low-risk / bounded| V[Semantic consistency guard]
+    R -->|Ambiguous / contextual / high-stakes| D[Deep reasoning pass<br/>Llama 3.3 70B]
+    D --> V
+
+    V -->|Education question| P[PubMed retrieval<br/>up to 3 relevant sources]
+    V -->|Care action| A
+    P --> E[Evidence-bounded response]
+    E --> A
+
+    A --> W[Hospital / emergency / card / workflow / translation / companion UI]
+    W --> M[(Cloudflare D1 memory and care state)]
+
+    L -. provider failure .-> D
+    D -. provider failure .-> F[Localized safe fallback]
+    F --> A
+```
+
+## Adaptive Reasoning
+
+The first model pass determines intent, confidence, symptom state, and the currently active symptom summary.
+
+A deterministic reasoning selector escalates the request to the deeper model when the message contains signals such as:
+
+- emergency risk
+- low-confidence ambiguity
+- medication safety or interaction questions
+- evolving or multi-factor symptoms
+- context-dependent follow-up language
+- contradictions, corrections, or unresolved references
+- multi-step comparisons or unusually detailed reports
+- disagreement between the semantic model and local safety rules
+
+Simple greetings, lightweight conversation, and bounded low-risk requests stay on the fast path.
+
+Complexity pays for complexity.
+
+## Consistency Guard
+
+A model is not allowed to trigger a high-consequence action without internally consistent evidence.
+
+Examples:
+
+- `hospital` or `emergency` intent without an active symptom summary is rejected or repaired
+- deterministic symptom rules override an inconsistent model downgrade
+- resolved symptoms clear the active symptom state
+- general and education responses cannot silently retain medical-action symptoms
+- invalid JSON, empty output, timeouts, and provider errors fall through explicit recovery contracts
+- every response exposes its execution class as `deterministic`, `light`, `deep`, or `fallback`
+
+## Stateful Conversation Memory
+
+NaruCare persists authenticated chat history in Cloudflare D1.
+
+The runtime restores recent conversation after refresh, reasons over corrections and symptom changes, and keeps a bounded history window rather than treating each sentence as an isolated request.
+
+This allows the agent to understand transitions such as:
+
+```text
+“My stomach has hurt for three days.”
+    → “I vomited yesterday.”
+        → “I am not vomiting now, but I still have a fever.”
+```
+
+The active state is **persistent fever and improving abdominal symptoms**, not a transcript dump of every sentence.
 
 ---
 
@@ -79,127 +181,224 @@ This is an AI-native healthcare operating system for foreign nationals in Korea.
 
 NaruCare is governed by explicit engineering contracts.
 
-### Navigation Before Diagnosis
+## Navigation Before Diagnosis
 
-The system can structure symptoms, identify risk signals, explain workflows, translate communication, and route the user toward care. It does not claim to replace a physician, emergency dispatcher, or licensed medical professional.
+The system may structure symptoms, identify risk signals, explain workflows, translate communication, retrieve educational evidence, and route the user toward care.
 
-### Emergency Access Is Never Gated
+It does not diagnose, prescribe, or replace a physician, pharmacist, emergency dispatcher, or licensed medical professional.
 
-The medical card improves continuity, but it never blocks the emergency pathway. A user without a card can still share location, initiate a 119 call, and activate the Korean emergency broadcast flow.
+## Emergency Access Is Never Gated
 
-### Provenance Before Presentation
+A bilingual medical card improves continuity, but it never blocks the 119 pathway.
 
-Hospital identity, coordinates, metadata, and source links remain traceable to real providers such as OpenStreetMap. Missing operating hours or reservation policies are displayed as unverified—not inferred into false certainty.
+A user without a completed card can still share location, initiate a call, generate a Korean emergency statement, and enter live translation support.
 
-### Deterministic State, Bounded Intelligence
+## Deterministic State, Bounded Intelligence
 
-Application code owns authentication, authorization, card gating, order transitions, recording boundaries, routing contracts, and persistence. AI is constrained to language, interpretation, and supportive guidance.
+Application code owns:
 
-### Human Control at Consequential Boundaries
+- authentication and authorization
+- emergency activation
+- medical-card gating
+- workflow transitions
+- route construction
+- companion order state
+- recording authorization
+- database mutation
+- deletion and ownership boundaries
 
-The browser cannot silently place a phone call, confirm that 119 answered, authorize recording, or complete a real payment. These transitions remain explicit user actions.
+AI is constrained to interpretation, language mediation, evidence-bounded education, and supportive guidance.
 
-### Graceful Degradation by Design
+## Provenance Before Presentation
 
-Map, AI, speech, hospital data, and external navigation are isolated behind clear failure states. A provider outage must not corrupt the user's persisted care state.
+Hospital information is fused from real external providers.
+
+Unknown opening hours, reservation rules, specialist data, or emergency capability remain visibly unknown. NaruCare does not invent operational certainty to make a card look complete.
+
+## Human Control at Consequential Boundaries
+
+The browser cannot silently place a phone call, confirm that 119 answered, authorize recording, complete a real payment, or guarantee hospital acceptance.
+
+Those transitions require explicit user action.
+
+## Graceful Degradation by Design
+
+AI, maps, hospital providers, geocoding, routing, speech recognition, translation, and external navigation are isolated behind failure contracts.
+
+A provider outage may reduce capability.
+
+It must not corrupt persisted care state.
 
 > **The agent may coordinate the care journey. It may never fabricate clinical authority.**
 
 ---
 
-# Care Orchestration Loop
+# End-to-End Care Loop
 
 ```mermaid
 flowchart LR
-    A[Register or Sign In] --> B[Establish Bilingual Medical Card]
+    A[Register or Sign In] --> B[Create Bilingual Medical Card]
     B --> C[Describe Symptoms or Intent]
-    C --> D{Risk Router}
-    D -->|Emergency signal| E[119 Emergency Workflow]
+    C --> D{Agent Risk and Intent Runtime}
+
+    D -->|Potential emergency| E[119 Emergency Protocol]
     D -->|Care required| F[Nearby Hospital Intelligence]
     D -->|General support| G[Naru Conversation]
-    F --> H[Visit Workflow]
-    H --> I[Walking / Driving / Transit Navigation]
-    I --> J[Arrival Confirmation]
-    J --> K[Live Translation]
-    F --> L[Human Companion Matching]
-    L --> M[Companion Order State Machine]
-    M --> N[Consent-Aware Recording to Private R2]
-    K --> O[Visit Record and Follow-up]
-    N --> O
+    D -->|Medical education| H[PubMed-Grounded Answer]
+
+    F --> I[Hospital Detail and Preparation]
+    I --> J[Walking / Driving / Transit Navigation]
+    J --> K[Arrival Confirmation]
+    K --> L[Live User-Language ↔ Korean Translation]
+
+    F --> M[Human Companion Matching]
+    M --> N[Companion Order State Machine]
+    N --> O[Consent-Aware Recording]
+
+    L --> P[Visit Record]
+    O --> P
+    P --> Q[Profile and Care Continuity]
 ```
 
 The operating loop is intentionally stateful:
 
-> **Identify → Understand → Route → Navigate → Translate → Coordinate → Record**
+> **Identify → Understand → Reason → Route → Navigate → Translate → Coordinate → Record**
 
 ---
 
-# System Architecture
+# Product Surface
+
+| Surface | What it does |
+| --- | --- |
+| Authentication | ID/password registration, login, session persistence, logout |
+| Naru Agent | Contextual conversation, adaptive reasoning, risk routing, action transitions |
+| Medical Card | Bilingual identity, insurance, conditions, medication, surgery, symptoms, location |
+| Nearby Hospitals | Symptom-aware facility category, live provider fusion, schedules, provenance, official enrichment |
+| Visit Workflow | Appointment guidance, required documents, preparation, registration, payment, prescription flow |
+| Navigation | Naver map experience, driving and walking routes, external transit handoff |
+| Translation | User-language ↔ Korean text, speech recognition, transcription, speech synthesis |
+| Medical Education | PubMed retrieval and evidence-bounded educational responses |
+| Human Companion | Filtering, matching, order lifecycle, service timing, recording, rating |
+| Emergency | Location, explicit 119 call, Korean broadcast, live translation |
+| Visit Records | Hospital, department, symptoms, status, translation history, companion context |
+| Profile | Medical-card access, records, orders, longitudinal care continuity |
+
+Desktop and mobile surfaces share one care-state model.
+
+---
+
+# Multi-Source Hospital Intelligence
+
+Nearby care is not retrieved from a single directory.
+
+NaruCare runs a provider-fusion pipeline optimized for Korean medical access.
 
 ```mermaid
 flowchart TB
-    subgraph Experience[Experience Plane]
-        Web[React 19 + TypeScript]
-        Map[Naver Dynamic Map + Leaflet Fallback]
-        Speech[Web Speech + MediaRecorder]
-        IP[NaruPose 3D IP Runtime]
-    end
+    Q[Symptoms + current coordinates + locale] --> C[Medical category classifier]
 
-    subgraph Edge[Cloudflare Edge Control Plane]
-        API[Cloudflare Worker API]
-        Auth[PBKDF2 Auth + Hashed Sessions]
-        Router[Intent / Risk / Workflow Router]
-        Guard[Validation + Authorization + CORS]
-    end
+    C --> K[Kakao Local<br/>nearby Korean facility discovery]
+    C --> G[Google Places<br/>hours, phone, website, open state]
+    C --> O[OpenStreetMap / Overpass<br/>resilient open-data fallback]
+    O --> N[Nominatim fallback<br/>search and reverse geocoding]
 
-    subgraph Intelligence[Intelligence Plane]
-        Chat[Llama 3.2 3B]
-        Translate[M2M100 Translation]
-        ASR[Whisper Large v3 Turbo]
-    end
+    K --> KD[Kakao place detail<br/>departments, hours, emergency signals]
+    K --> M[Provider merge and deduplication]
+    G --> M
+    KD --> M
 
-    subgraph State[State and Media Plane]
-        D1[(Cloudflare D1)]
-        R2[(Private Cloudflare R2)]
-    end
-
-    subgraph Geo[Geospatial Data Plane]
-        OSM[OpenStreetMap / Overpass]
-        Nominatim[Nominatim Reverse Geocoding]
-        OSRM[OSRM Walking + Route Fallback]
-        Naver[Naver Dynamic Map + Directions 5]
-        External[Naver Maps + Google Maps + Kakao Maps]
-    end
-
-    Web -->|HTTPS JSON API| API
-    Map --> Naver
-    Map --> OSM
-    Speech --> API
-    IP --> Web
-    API --> Auth
-    API --> Router
-    API --> Guard
-    API --> D1
-    API --> R2
-    API --> Chat
-    API --> Translate
-    API --> ASR
-    API --> OSM
-    API --> Nominatim
-    API --> OSRM
-    API --> Naver
-    Web --> External
+    M --> H[HIRA official enrichment<br/>institution type, doctors, specialties, equipment]
+    H --> P[Verified-data prioritization]
+    P --> UI[Localized hospital cards and map]
 ```
 
-The architecture separates five concerns that must never collapse into one another:
+## Provider Strategy
 
-- **Experience state** — language, responsive interaction, map state, voice state, visual hierarchy, and the Naru character system
-- **Care state** — medical-card readiness, selected hospital, visit phase, companion phase, and emergency progression
-- **Persistent state** — users, sessions, bilingual cards, orders, visit records, translation cache, and recording metadata
-- **Model execution** — conversation, translation, transcription, timeout isolation, and explicit failure contracts
-- **External truth** — hospital provenance, geocoding, route geometry, navigation handoff, and unverifiable data boundaries
+### Kakao Local
 
-The frontend can be deployed independently. The API can evolve without rebuilding the data plane. AI can fail without rewriting durable care state. R2 media remains private and addressable only through authorized order context.
+- Korea-native nearby facility discovery
+- distance-ranked results
+- phone, address, category, and place URL
+- place-detail enrichment for published departments and operating information
+
+### Google Places
+
+- operating schedules and current open state
+- phone, website, facility type, and map URI
+- supplementary emergency and reservation signals
+- merged against Kakao results by normalized name and phone
+
+### HIRA Official Data
+
+When configured, the Health Insurance Review & Assessment Service enrichment layer adds official institutional metadata such as:
+
+- institution type
+- total doctor count
+- clinical departments
+- specialist counts
+- medical equipment
+- special-care capabilities
+
+HIRA enrichment is time-bounded and cached at the edge so official-data latency does not block the hospital screen.
+
+### OpenStreetMap Resilience Layer
+
+If primary commercial providers are unavailable, NaruCare falls back through:
+
+- multiple Overpass endpoints
+- Nominatim bounded search
+- localized name fields
+- source URLs and published metadata
+
+## Truth Model
+
+Every hospital object can expose:
+
+```text
+identity
+coordinates
+distance
+facility type
+address
+opening hours
+current open state
+emergency capability
+reservation evidence
+telephone
+website
+data source
+source URL
+verification date
+official institution type
+doctor count
+specialties
+specialists
+equipment
+special-care capabilities
+```
+
+Missing values remain missing.
+
+**Unknown is a first-class state.**
+
+---
+
+# Navigation Runtime
+
+NaruCare bridges facility discovery and arrival.
+
+- Naver Dynamic Map in the primary navigation workspace
+- traffic-aware driving geometry through Naver Directions 5
+- walking route geometry through OSRM
+- route distance, duration, and polyline rendering
+- resilient Leaflet fallback when the primary map runtime is unavailable
+- user-selectable Naver Maps, Google Maps, and Kakao Maps handoff
+- public-transit handoff to native map applications
+- arrival confirmation that opens the translation workspace
+
+The route is not the end of the workflow.
+
+Arrival is a state transition.
 
 ---
 
@@ -207,169 +406,281 @@ The frontend can be deployed independently. The API can evolve without rebuildin
 
 NaruCare is AI-native, not AI-dependent.
 
-Language models do not own authentication, medical-card gating, emergency activation, route construction, payment state, recording authorization, or database mutation. Those behaviors are enforced by deterministic application logic.
-
 ## Model Topology
 
 | Workload | Runtime | Contract |
 | --- | --- | --- |
-| General Naru conversation | Cloudflare Workers AI · Llama 3.2 3B | Calm, concise navigation support with red-flag escalation boundaries |
-| Cross-lingual medical translation | Cloudflare Workers AI · M2M100 1.2B | Translation-only output with no added diagnosis or advice |
-| Browser voice fallback | Cloudflare Workers AI · Whisper Large v3 Turbo | Medical-context transcription preserving symptoms, medicine names, and numbers |
-| Immediate voice input | Browser Web Speech API | Low-latency recognition when supported by the user's browser |
-| Risk and workflow routing | Deterministic Worker logic | Explicit emergency, hospital, card, and general-intent transitions |
+| Deterministic safety and workflow routing | TypeScript rules in Cloudflare Worker | Immediate emergency and explicit-action control |
+| Fast semantic understanding | Workers AI · Llama 3.1 8B Instruct Fast | Low-latency intent, confidence, symptom-state, and reply pass |
+| Deep medical-context reasoning | Workers AI · Llama 3.3 70B Instruct FP8 Fast | Ambiguous, contextual, evolving, or high-stakes requests |
+| Evidence synthesis | PubMed E-utilities + bounded model pass | Medical education grounded only in retrieved evidence |
+| Cross-lingual medical translation | Workers AI · M2M100 1.2B | Translation-only output without added diagnosis |
+| Voice transcription fallback | Workers AI · Whisper Large v3 Turbo | Medical-context transcription preserving names and numbers |
+| Immediate voice input | Browser Web Speech API | Low-latency recognition when supported |
+| Voice playback | Browser Speech Synthesis | Spoken handoff for patient, staff, and emergency scenarios |
 
-## Response Contract
+## Typed Response Contract
 
 ```text
-User Intent
-    → Deterministic Safety Gate
-    → Bounded Model Execution
-    → Typed Response
-    → Explicit User Action
-    → Persisted State Transition
+User input
+    → deterministic safety gate
+        → semantic understanding
+            → adaptive reasoning tier
+                → schema validation
+                    → consistency guard
+                        → optional evidence retrieval
+                            → typed response
+                                → explicit UI action
+                                    → persisted state transition
 ```
 
-AI provider calls are time-bounded. Empty or invalid model output is rejected. A failed translation is never cached as if it were valid, and source text is never silently presented as translated content.
+Model output is never treated as trusted application state until it passes validation.
 
 ---
 
-# Key Capabilities
+# Evidence-Bounded Medical Education
 
-## Identity and Session Runtime
+General medical questions are separated from personal symptom routing.
 
-- Registration with an arbitrary ID and password—no phone number or email required
-- Immediate post-registration session creation
-- PBKDF2-SHA-256 password derivation with per-user random salt and 100,000 iterations
-- Cryptographically random bearer sessions stored as SHA-256 token hashes
-- Case-insensitive account uniqueness
-- Server-side expiry enforcement and asynchronous session cleanup
-- Origin-aware CORS for local development and GitHub Pages
+For eligible education requests, NaruCare:
 
-## Bilingual Medical Identity
+1. generates a concise English PubMed query
+2. retrieves up to three relevant articles through NCBI E-utilities
+3. bounds external response sizes and request time
+4. extracts title, year, PMID, and abstract text
+5. asks the model to use only the supplied evidence
+6. returns inline source markers and source links
+7. preserves the boundary against diagnosis and personalized dosing
 
-- Medical card required before non-emergency care workflows are unlocked
-- User-language and Korean representations rendered together
-- Name, nationality, age, gender, identity document, insurance, conditions, medicines, surgery history, and clinical notes
-- Optional current address with browser geolocation and reverse geocoding
-- Manual address editing down to building, floor, unit, or room detail
-- Persistent correction and re-entry through Cloudflare D1
+Medication questions receive additional safeguards: the system does not instruct the user to start, stop, or change prescription medication without a clinician or pharmacist.
 
-## Context-Aware Naru Agent
-
-- First-run introduction and card-establishment gate
-- Personalized welcome after card creation
-- Symptom-aware routing into general, hospital, or emergency flows
-- Stateful transitions from conversation into maps, workflows, translation, or human assistance
-- Clear distinction between supportive navigation and medical diagnosis
-
-## Geospatial Hospital Intelligence
-
-- Real nearby hospitals and clinics discovered through OpenStreetMap Overpass data
-- Interactive Leaflet map with zoom, pan, current location, and selectable facilities
-- Distance calculation against the user's live coordinates
-- Localized hospital naming when the source publishes localized fields
-- Source URL, provider identity, last-verification metadata, telephone, website, address, emergency capability, and reservation evidence when published
-- Seoul-time opening-state evaluation for valid `opening_hours` records
-- Explicit “unverified / call to confirm” states when a provider does not publish hours, rest days, or reservation policy
-
-NaruCare never manufactures operating data to make a card look complete. Unknown is a first-class state.
-
-## Navigation Runtime
-
-- Naver Dynamic Map inside the navigation workspace with an automatic Leaflet fallback
-- Traffic-aware in-site driving geometry through Naver Directions 5
-- Walking route geometry and provider-failure fallback through OSRM
-- Route distance, duration, and polyline rendering
-- Native Naver Maps handoff for walking, public transit, and turn-by-turn driving navigation
-- User-selectable Naver Maps, Google Maps, and Kakao Maps launch paths
-- Arrival confirmation that transitions directly into the translation workspace
-
-## Multilingual Voice Mediation
-
-- 28 interface languages with whole-screen locale switching
-- Browser-native speech recognition when available
-- Recorded-audio transcription fallback through Whisper
-- User-language ↔ Korean translation workspace
-- Browser speech synthesis for translated utterances
-- Medical phrasing that preserves symptoms, uncertainty, names, and numeric detail
-
-## 119 Emergency Protocol
-
-- Emergency access with or without a completed medical card
-- Current-location acquisition and address fallback
-- Explicit `tel:119` user-initiated call action
-- Korean emergency statement generated from patient identity, location, and symptoms
-- Symptom translation into Korean before dispatcher playback
-- Unknown-symptom fallback when no medical card or symptom context exists
-- Repeating Korean speech after the user explicitly confirms that the call is connected
-- Immediate transition into live translation support
-
-Browser security policies prohibit silent dialing and cannot detect whether a real phone call was answered. NaruCare exposes these boundaries instead of pretending they do not exist.
-
-## Human-in-the-Loop Companion Orchestration
-
-- 24 seeded competition profiles across different languages, nationalities, ages, ratings, prices, hospital experience, and arrival times
-- Multi-dimensional filtering and deterministic match scoring
-- Companion detail, request, waiting, arrival, in-service, completion, rating, and review surfaces
-- Explicit finite-state order transitions enforced by the Worker
-- Payment-method and deposit state tracking without fabricated financial settlement
-- Consent-aware recording chunks written to private Cloudflare R2 during active service
-- Recording metadata bound to the authorized user and order in D1
-
-The seeded profiles demonstrate the matching and orchestration system. They do not represent already contracted real-world personnel.
-
-## Visit Continuity
-
-- Structured visit records stored per authenticated user
-- Hospital, department, symptoms, date, and status persistence
-- Profile center for card visibility and historical continuity
-- Translation context and workflow access retained throughout the care journey
+Retrieval can fail independently without breaking the wider care journey.
 
 ---
 
 # Global Language Runtime
 
-Language switching is treated as application state, not a decorative selector.
+Language switching is application state, not a decorative selector.
 
-- Authentication, navigation, cards, dialogs, notices, buttons, maps, workflows, companion surfaces, emergency screens, and Naru messages all resolve through the selected locale
-- Chinese, Korean, English, and Japanese are maintained as primary authored packs
-- Twenty-four additional locale packs are generated and validated at build time
-- Korean remains available beside the user's selected language where clinical handoff requires mutual readability
-- Automated coverage checks prevent required interface keys from silently disappearing
+- 28 interface languages
+- Chinese, Korean, English, and Japanese maintained as primary authored packs
+- 24 additional locale packs generated and validated at build time
+- whole-screen localization across authentication, navigation, cards, workflows, maps, emergency screens, companions, records, and Naru messages
+- Korean retained beside the user’s language when a clinical handoff benefits from mutual readability
+- multilingual symptom understanding across colloquial, mixed-language, and incomplete input
+- browser speech recognition plus recorded-audio transcription fallback
+- speech synthesis for translated utterances
 
-The system is designed for multilingual continuity rather than isolated translated pages.
+The goal is not isolated translated pages.
+
+The goal is multilingual continuity.
 
 ---
 
-# Naru 3D IP Runtime
+# Bilingual Medical Identity
 
-Naru is not a flat mascot layered on top of a generic dashboard.
+The medical card creates a persistent bridge between the user’s language and Korean clinical communication.
 
-The interface is designed around the same pearl-finish, soft-polymer, designer-toy material language as the character itself: warm ceramic neutrals, tactile depth, controlled specular highlights, rounded volumetric surfaces, and restrained clinical contrast.
+It can store:
 
-<div align="center">
+- name and nationality
+- age and gender
+- identity-document type and number
+- insurance status
+- current address and coordinates
+- chronic conditions
+- current medication
+- surgery history
+- active symptoms
+- clinical notes
+- preferred language
+- Korean representations of medical fields
 
-<img src="./public/naru/naru-poses-contact-sheet.png" alt="NaruCare 21-pose transparent character system" width="820" />
+Location can be acquired from the browser, reverse-geocoded, corrected manually, and extended down to building, floor, unit, or room detail.
 
-<p><em>Twenty-one independently extracted, reusable, transparent RGBA character states.</em></p>
+Non-emergency care workflows may require the medical card.
 
-</div>
+Emergency access never does.
 
-## Asset Contract
+---
 
-- One source character sheet deterministically decomposed into 21 isolated RGBA PNGs
-- Transparent corners and alpha-bounds recorded in `public/naru/manifest.json`
-- Edge-connected near-white background removal without generative character repainting
-- Contact-sheet validation for one-pass visual inspection
-- One reusable `NaruPose` component across authentication, card, agent, hospital, workflow, navigation, translation, companion, emergency, and profile contexts
-- Pose semantics distributed across the product instead of rendered as a character gallery
+# Multilingual Voice Mediation
 
-```bash
-npm run naru:extract
+The translation workspace supports:
+
+- user-language → Korean communication
+- Korean → user-language communication
+- browser-native speech recognition
+- Whisper transcription fallback for recorded audio
+- browser speech synthesis
+- patient/staff speaker separation
+- preservation of symptoms, medicine names, proper nouns, and numeric detail
+- translation entries appended to the visit record
+
+A failed translation is never cached as successful output.
+
+Source text is never silently relabeled as translated content.
+
+---
+
+# 119 Emergency Protocol
+
+The emergency pathway is designed around browser and human-control realities.
+
+- available with or without a completed medical card
+- current-location acquisition with address fallback
+- explicit `tel:119` call action
+- Korean emergency statement generated from identity, location, and symptoms
+- symptom translation before dispatcher playback
+- safe fallback when symptom context is unknown
+- repeated Korean speech only after the user confirms the call is connected
+- immediate transition into live translation support
+
+The browser cannot silently dial 119 or verify that a dispatcher answered.
+
+NaruCare makes that boundary visible instead of simulating certainty.
+
+---
+
+# Human-in-the-Loop Companion Orchestration
+
+The competition build includes seeded companion profiles that demonstrate the orchestration model.
+
+Capabilities include:
+
+- language, gender, nationality, age, rating, price, ETA, and hospital-experience filtering
+- deterministic match scoring
+- companion detail and request flow
+- service-duration selection and deposit calculation
+- persisted orders
+- rating and review
+- private recording chunks during an authorized service
+- order deletion coupled to recording deletion
+
+The order lifecycle is enforced as a finite-state machine:
+
+```mermaid
+stateDiagram-v2
+    [*] --> requested
+    requested --> accepted
+    requested --> cancelled
+    accepted --> deposit_paid
+    accepted --> cancelled
+    deposit_paid --> arrived
+    deposit_paid --> in_service
+    deposit_paid --> cancelled
+    arrived --> in_service
+    arrived --> cancelled
+    in_service --> completed
+    completed --> [*]
+    cancelled --> [*]
 ```
 
-The IP system is part of the product architecture, not post-production decoration.
+Invalid transitions are rejected by the Worker.
+
+The seeded profiles demonstrate product behavior. They are not represented as already contracted real-world personnel.
+
+---
+
+# Visit Continuity
+
+A care interaction should survive more than one screen.
+
+NaruCare persists:
+
+- hospital and department
+- symptoms
+- visit date and status
+- selected hospital context
+- translation history
+- companion order context
+- service metadata
+- structured visit details
+
+Records are authorization-bound to the authenticated user and can be updated or deleted.
+
+Deleting a record linked to a companion recording also removes the associated private media objects.
+
+---
+
+# System Architecture
+
+```mermaid
+flowchart TB
+    subgraph Experience["Experience Plane"]
+        Web["React 19 + TypeScript + Vite"]
+        UI["Responsive care workflows"]
+        Map["Naver Dynamic Map + Leaflet"]
+        Speech["Web Speech + MediaRecorder"]
+        IP["NaruPose 3D IP runtime"]
+    end
+
+    subgraph Agent["Agent Control Plane"]
+        Worker["Cloudflare Worker API"]
+        Safety["Deterministic safety gate"]
+        Tier["Adaptive reasoning selector"]
+        Schema["Typed response validation"]
+        Memory["Conversation and care-state orchestration"]
+    end
+
+    subgraph Models["Intelligence Plane"]
+        Fast["Llama 3.1 8B Fast"]
+        Deep["Llama 3.3 70B"]
+        Translate["M2M100"]
+        Whisper["Whisper Large v3 Turbo"]
+        PubMed["PubMed retrieval"]
+    end
+
+    subgraph State["State and Media Plane"]
+        D1[("Cloudflare D1")]
+        R2[("Private Cloudflare R2")]
+    end
+
+    subgraph Geo["Korean Medical Data Plane"]
+        Kakao["Kakao Local / place detail"]
+        Google["Google Places"]
+        HIRA["HIRA official APIs"]
+        OSM["OpenStreetMap / Overpass"]
+        Nominatim["Nominatim"]
+        Naver["Naver Directions 5"]
+        OSRM["OSRM"]
+    end
+
+    Web --> UI
+    Web --> Map
+    Web --> Speech
+    Web --> Worker
+
+    Worker --> Safety
+    Safety --> Tier
+    Tier --> Fast
+    Tier --> Deep
+    Worker --> Schema
+    Worker --> Memory
+    Worker --> Translate
+    Worker --> Whisper
+    Worker --> PubMed
+
+    Worker --> D1
+    Worker --> R2
+
+    Worker --> Kakao
+    Worker --> Google
+    Worker --> HIRA
+    Worker --> OSM
+    Worker --> Nominatim
+    Worker --> Naver
+    Worker --> OSRM
+```
+
+The architecture separates concerns that must never collapse into one another:
+
+- **Experience state** — language, visual hierarchy, map state, microphone state, responsive navigation
+- **Care state** — card readiness, symptoms, selected hospital, visit phase, translation phase, emergency phase
+- **Persistent state** — users, sessions, cards, chat memory, orders, records, translation cache, recording metadata
+- **Model execution** — reasoning tier, timeout isolation, schema validation, evidence boundaries, fallback contracts
+- **External truth** — facility provenance, coordinates, schedules, official metadata, route geometry
+- **Consequential control** — calls, recording, payment representation, deletion, and human confirmation
 
 ---
 
@@ -379,55 +690,80 @@ Healthcare software earns trust through boundaries.
 
 ## Authentication Boundary
 
-- Passwords are never stored directly
-- Session tokens are generated with Web Crypto and stored only as hashes
-- Protected resources are resolved from the authenticated session on every request
-- User-owned cards, orders, records, and recordings are authorization-bound on the server
+- arbitrary ID/password registration; no phone number or email required
+- PBKDF2-SHA-256 password derivation
+- per-user random salt
+- 100,000 derivation iterations
+- cryptographically random bearer tokens
+- only SHA-256 token hashes persisted
+- constant-time credential comparison
+- server-side session expiry
+- origin-aware CORS
+- authorization resolved on every protected request
 
 ## Persistence Boundary
 
-- Cloudflare D1 stores relational application state
-- D1 foreign keys enforce user ownership and cascade cleanup
-- Companion order transitions reject invalid state changes
-- Translation cache keys are derived from source language, target language, and source text
-- Schema evolution is versioned through Wrangler migrations
+Cloudflare D1 stores:
+
+- users
+- sessions
+- bilingual medical cards
+- chat memory
+- companion profiles and orders
+- visit records
+- translation cache
+- recording metadata
+
+Foreign keys and server-side ownership checks bind data to the authenticated user.
 
 ## Media Boundary
 
-- Companion recordings are stored in a private R2 bucket
-- Object keys use a hash of the user identifier rather than the raw account ID
-- Recording writes are accepted only for an authenticated order in an active or completed service state
-- Chunk size, content type, order ownership, and sequence index are validated before persistence
+- recording chunks stored in a private R2 bucket
+- raw account IDs excluded from object keys
+- hashed user namespace
+- write access restricted to authorized `in_service` or `completed` orders
+- chunk index, size, content type, ownership, and order state validated
+- deleting an order or linked record removes associated recording objects
 
-## External-Data Boundary
+## Input and Provider Boundary
 
-- Hospital and routing providers remain independently fallible
-- Missing source fields remain visibly unknown
-- External navigation launches only after explicit user selection
-- No production secret is committed to the repository
+- JSON body size limits
+- audio and recording payload limits
+- coordinate range validation
+- bounded external response sizes
+- provider timeouts
+- parameter-bound D1 statements
+- invalid model schemas rejected
+- failed translation output never cached
+- no production secret committed to the repository
 
 Security is not a settings screen.
 
-It is an end-to-end execution contract.
+It is an execution contract.
 
 ---
 
-# Product Surface
+# Reliability Engineering
 
-```text
-Authentication        ID/password registration, login, language runtime
-Naru                  Agent conversation, intent routing, care-state transitions
-Medical Card          Bilingual medical identity, location, address, persistence
-Nearby Hospitals      Real map, provenance, hours, rest days, reservation status
-Visit Workflow        Before-care preparation and in-hospital process guidance
-Navigation            Walking/driving preview, transit handoff, arrival transition
-Translation           Speech recognition, transcription fallback, Korean mediation
-Human Companion       Filtering, matching, ordering, service state, recording, review
-Emergency             Location, 119 dialing, Korean broadcast, live translation
-Profile               Medical-card access, records, account continuity
-```
+NaruCare is designed to preserve the care journey across partial failure.
 
-Desktop and mobile surfaces share the same state model and responsive navigation system.
+- deterministic emergency and explicit-action routing remains available independently of the large model
+- light and deep reasoning models form a bidirectional fallback cascade
+- localized safe responses handle total reasoning-provider failure
+- hospital discovery fuses primary providers and open-data fallbacks
+- HIRA enrichment is optional, time-bounded, and edge-cached
+- schedules can be prioritized without inventing missing hours
+- reverse geocoding uses Korea-native primary data with open fallback
+- route providers fail independently
+- chat memory, visit records, and orders remain durable across refresh
+- invalid order transitions are rejected
+- translation cache stores only validated output
+- external-data failure never rewrites durable care state
+- emergency access remains independent of medical-card completion
+- structured request logs include reasoning tier and escalation reasons
+- Worker observability is enabled
+
+Graceful degradation is a runtime property, not an incident-response slogan.
 
 ---
 
@@ -435,59 +771,124 @@ Desktop and mobile surfaces share the same state model and responsive navigation
 
 | Plane | Technology | Responsibility |
 | --- | --- | --- |
-| Experience | React 19, TypeScript, Vite 8 | Responsive interaction and typed client state |
-| Mapping | Naver Dynamic Map, Leaflet, OpenStreetMap | Korean navigation context with resilient map fallback |
-| Edge API | Cloudflare Workers | Authentication, authorization, routing, orchestration, provider isolation |
-| Relational State | Cloudflare D1 | Users, sessions, medical cards, companions, orders, visits, translation cache |
-| Media State | Cloudflare R2 | Private companion recording chunks |
-| Intelligence | Cloudflare Workers AI | Conversation, medical translation, speech transcription |
-| Routing | Naver Directions 5, OSRM | Traffic-aware driving, walking geometry, and provider fallback |
-| Geocoding | Nominatim | Current-location address resolution |
-| External Navigation | Naver Maps, Google Maps, Kakao Maps | Walking, transit, and turn-by-turn handoff |
-| Distribution | GitHub Pages, GitHub Actions | Globally available static frontend delivery |
-| Quality | Vitest, TypeScript, Playwright Core | Logic, type, build, and visual acceptance |
+| Experience | React 19, TypeScript, Vite 8 | Typed responsive web application |
+| UI Runtime | Custom component system, Lucide React | Care workflows and interaction primitives |
+| Mapping | Naver Dynamic Map, Leaflet | Korean navigation context and resilient map fallback |
+| Edge Control | Cloudflare Workers | Authentication, safety routing, agent orchestration, provider isolation |
+| Relational State | Cloudflare D1 | Identity, cards, memory, orders, records, translation cache |
+| Media State | Private Cloudflare R2 | Authorized companion recording chunks |
+| Fast Reasoning | Workers AI · Llama 3.1 8B Instruct Fast | Low-latency semantic understanding |
+| Deep Reasoning | Workers AI · Llama 3.3 70B Instruct FP8 Fast | Complex and high-stakes context synthesis |
+| Translation | Workers AI · M2M100 1.2B | Cross-lingual medical mediation |
+| Speech | Web Speech API, Whisper Large v3 Turbo | Immediate and fallback voice input |
+| Evidence | PubMed / NCBI E-utilities | Medical education retrieval |
+| Korean Facility Data | Kakao Local, Google Places, HIRA | Discovery, schedules, and official enrichment |
+| Open Geo Fallback | OpenStreetMap, Overpass, Nominatim | Resilient facility and address data |
+| Routing | Naver Directions 5, OSRM | Driving and walking geometry |
+| Distribution | GitHub Pages, GitHub Actions | Static frontend deployment |
+| Quality | Vitest, TypeScript, Playwright Core | Logic, type, build, and visual validation |
 
 ---
 
-# Reliability Engineering
+# Repository Map
 
-NaruCare is designed to preserve care state across refreshes, provider latency, network races, AI timeouts, missing hospital metadata, invalid order transitions, and interrupted user journeys.
+```text
+NaruCare/
+├── public/
+│   └── naru/                       # Reusable Naru character states
+├── scripts/
+│   ├── extract-naru-poses.py       # Deterministic character asset pipeline
+│   ├── generate-countries.mjs      # Country dataset generation
+│   ├── generate-locales.mjs        # Locale-pack generation and validation
+│   └── visual-check.mjs            # Desktop/mobile acceptance harness
+├── src/
+│   ├── pages/                      # Authentication, care, companion, emergency, profile
+│   ├── App.tsx                     # Shared client care-state runtime
+│   ├── api.ts                      # Typed API client and demo fallbacks
+│   ├── components.tsx              # Reusable UI, maps, panels, Naru poses
+│   ├── i18n.tsx                    # 28-language application runtime
+│   ├── triage.ts                   # Deterministic intent and safety layer
+│   ├── reasoningTier.ts            # Light/deep reasoning selector
+│   ├── hospitalMatching.ts         # Symptom-to-facility category matching
+│   ├── hiraHospital.ts             # HIRA parsing and official-data matching
+│   ├── kakaoHospitalDetail.ts      # Kakao detail normalization
+│   ├── hospitalHours.ts            # Seoul-time operating schedule evaluation
+│   ├── location.ts                 # Geolocation and location-state utilities
+│   └── types.ts                    # Shared typed contracts
+├── worker/
+│   ├── migrations/                 # Versioned D1 schema evolution
+│   ├── src/index.ts                # Edge API and orchestration control plane
+│   └── wrangler.jsonc              # Workers, D1, R2, AI, observability bindings
+├── .github/workflows/
+│   └── deploy-pages.yml            # Typed GitHub Pages deployment
+├── package.json
+└── README.md
+```
 
-- Every model response is validated before use
-- Model calls have explicit timeout and provider-error contracts
-- Failed translation output is never cached as success
-- Hospital discovery has multiple Overpass provider paths
-- Session expiry cleanup runs outside the response critical path
-- Large audio and recording payloads are rejected before uncontrolled processing
-- Route and coordinate inputs are range-validated
-- R2 writes are coupled to authorized service state
-- D1 mutations are parameter-bound rather than string-concatenated
-- External truth can become unavailable without corrupting persisted state
-- Core emergency access remains independent of medical-card completion
+---
 
-Graceful degradation is a runtime property, not an incident-response slogan.
+# API Surface
+
+```text
+POST   /api/auth/register
+POST   /api/auth/login
+POST   /api/auth/logout
+GET    /api/me
+
+PUT    /api/card
+
+GET    /api/hospitals
+GET    /api/location/reverse
+GET    /api/maps/config
+GET    /api/route
+
+POST   /api/chat
+GET    /api/chat/history
+POST   /api/chat/memory
+DELETE /api/chat/history
+
+POST   /api/translate
+POST   /api/transcribe
+
+POST   /api/companions
+POST   /api/orders
+GET    /api/orders
+PATCH  /api/orders/:id
+DELETE /api/orders/:id
+PUT    /api/orders/:id/recordings/:chunk
+
+POST   /api/records
+GET    /api/records
+PATCH  /api/records/:id
+DELETE /api/records/:id
+
+GET    /api/health
+```
+
+Protected resources require an authenticated bearer session.
 
 ---
 
 # Quality Engineering
 
-The current `v1.0.0` competition release has passed the integrated validation baseline:
+The validation surface covers far more than rendering.
 
-- 4 automated test files passed
-- 14 automated tests passed
-- Strict TypeScript project validation passed
-- Production Vite build passed
-- Cloudflare Worker dry-run and generated binding types passed
-- Remote D1 migrations applied and foreign-key integrity verified
-- Live authentication, bilingual-card, companion, order, visit-record, and logout flows verified
-- Live private R2 upload and exact-object retrieval verified
-- Live Workers AI Korean translation and Naru conversation verified
-- Live hospital discovery, reverse geocoding, OSRM walking routes, and Naver Directions 5 driving routes verified
-- GitHub Pages CORS behavior verified against the deployed Worker
-- Desktop and mobile visual-acceptance harness available across the core flow
-- All 21 Naru poses validated through the asset manifest and placement tests
+Current automated suites exercise areas including:
 
-Run the local verification baseline:
+- deterministic triage and emergency routing
+- symptom extraction, negation, recovery, and continuity
+- adaptive light/deep reasoning selection
+- inconsistent low-confidence action rejection
+- hospital-category matching
+- HIRA XML parsing, capability normalization, and facility matching
+- Kakao hospital-detail parsing
+- opening-hours evaluation
+- geolocation and address-state behavior
+- country and locale data integrity
+- companion billing and service-duration limits
+- responsive visual flow across core desktop and mobile scenarios
+
+Run the full local baseline:
 
 ```bash
 npm run typecheck
@@ -509,7 +910,7 @@ The quality bar is that the care journey remains coherent across every legitimat
 
 - Node.js 24
 - npm
-- A modern browser with geolocation and microphone support
+- a modern browser with geolocation and microphone support
 - Chrome on Windows for the visual-acceptance script
 
 ## Start the Full Stack
@@ -520,7 +921,19 @@ npx wrangler d1 migrations apply narucare --local --config worker/wrangler.jsonc
 npm run dev
 ```
 
-The frontend runs on `http://localhost:5173` and proxies `/api` to the Worker development runtime on `http://localhost:8787`.
+The frontend runs on:
+
+```text
+http://localhost:5173
+```
+
+The local Worker runs on:
+
+```text
+http://localhost:8787
+```
+
+Vite proxies `/api` to the Worker development runtime.
 
 ## Frontend-Only Mode
 
@@ -528,23 +941,39 @@ The frontend runs on `http://localhost:5173` and proxies `/api` to the Worker de
 npm run dev:web
 ```
 
-When the API is unavailable, selected competition surfaces can fall back to browser-side demonstration data. A formal deployment should always set the production Worker URL.
+Selected competition surfaces can fall back to browser-side demonstration state when the API is unavailable.
+
+A formal deployment should always define the production Worker origin.
 
 ---
 
-# Deployment Topology
+# Configuration
 
-## Cloudflare Backend
+Create local Worker secrets in `worker/.dev.vars` or configure encrypted production secrets through Wrangler.
 
-```bash
-npx wrangler login
-npm run worker:types
-npx wrangler d1 migrations apply narucare --remote --config worker/wrangler.jsonc
-npm run worker:check
-npx wrangler deploy --config worker/wrangler.jsonc --minify
+```text
+KAKAO_REST_API_KEY
+GOOGLE_PLACES_API_KEY
+HIRA_SERVICE_KEY
+NAVER_MAPS_CLIENT_ID
+NAVER_MAPS_CLIENT_SECRET
 ```
 
-Production bindings:
+Frontend production variable:
+
+```text
+VITE_API_URL
+```
+
+The browser receives only the domain-restricted client ID required by the official Naver Dynamic Map SDK.
+
+Provider secrets, Directions requests, database access, model execution, and authorization remain behind the Worker boundary.
+
+---
+
+# Cloudflare Deployment
+
+## Provisioned Bindings
 
 ```text
 DB           → Cloudflare D1 / narucare
@@ -552,50 +981,97 @@ RECORDINGS   → Private Cloudflare R2 / narucare-recordings
 AI           → Cloudflare Workers AI
 ```
 
-Provider credentials are stored only as encrypted Worker secrets. They are never committed or exposed as frontend source:
+## Deploy the Backend
 
 ```bash
+npx wrangler login
+
+npm run worker:types
+npx wrangler d1 migrations apply narucare --remote --config worker/wrangler.jsonc
+npm run worker:check
+
+npx wrangler secret put KAKAO_REST_API_KEY --config worker/wrangler.jsonc
+npx wrangler secret put GOOGLE_PLACES_API_KEY --config worker/wrangler.jsonc
+npx wrangler secret put HIRA_SERVICE_KEY --config worker/wrangler.jsonc
 npx wrangler secret put NAVER_MAPS_CLIENT_ID --config worker/wrangler.jsonc
 npx wrangler secret put NAVER_MAPS_CLIENT_SECRET --config worker/wrangler.jsonc
+
+npx wrangler deploy --config worker/wrangler.jsonc --minify
 ```
 
-The browser receives only the domain-restricted client ID required by the official Dynamic Map SDK. Directions 5 requests and the client secret remain behind the authenticated Worker boundary.
-
-Live API health endpoint:
+Live health endpoint:
 
 [`https://narucare-api.narucare-rich925.workers.dev/api/health`](https://narucare-api.narucare-rich925.workers.dev/api/health)
 
-## GitHub Pages Frontend
+---
 
-1. Push the repository to the `main` branch.
-2. Set `Settings → Pages → Source` to **GitHub Actions**.
-3. Create the repository Actions variable `VITE_API_URL`.
-4. Set its value to the deployed Worker origin:
+# GitHub Pages Deployment
 
-```text
-https://narucare-api.narucare-rich925.workers.dev
+1. Set `Settings → Pages → Source` to **GitHub Actions**.
+2. Create the repository Actions variable `VITE_API_URL`.
+3. Set it to the deployed Worker origin.
+4. Push to `main`.
+5. `.github/workflows/deploy-pages.yml` runs the typed production build and Pages deployment.
+
+Live frontend:
+
+[`https://yuri925830.github.io/NaruCare/`](https://yuri925830.github.io/NaruCare/)
+
+Vite uses relative asset paths so the same build can operate under the repository subpath or a future custom domain.
+
+---
+
+# Naru 3D IP Runtime
+
+Naru is not a flat mascot placed over a generic dashboard.
+
+The product uses one coherent visual system: warm ceramic neutrals, soft-polymer volume, controlled specular highlights, rounded surfaces, and restrained clinical contrast.
+
+<div align="center">
+
+<img src="./public/naru/naru-poses-contact-sheet.png" alt="NaruCare reusable character pose system" width="820" />
+
+<p><em>Reusable transparent character states distributed across the care journey.</em></p>
+
+</div>
+
+The asset pipeline includes:
+
+- deterministic extraction from the source character sheet
+- transparent RGBA output
+- alpha-bound metadata
+- contact-sheet validation
+- one reusable `NaruPose` component
+- semantic pose placement across authentication, card, agent, hospital, navigation, translation, companion, emergency, and profile contexts
+
+```bash
+npm run naru:extract
 ```
 
-5. The workflow in `.github/workflows/deploy-pages.yml` performs the typed production build and Pages deployment.
-
-Vite uses relative asset paths, allowing the same build to run under a repository subpath or a future custom domain.
+The character system is product architecture, not post-production decoration.
 
 ---
 
 # Production Boundary
 
-NaruCare is a competition-grade, deployable technical system—not a licensed medical device or a substitute for professional medical judgment.
+NaruCare is a deployable competition-grade system.
 
-Before public clinical operation, the following external responsibilities must be completed:
+It is not a licensed medical device and is not a substitute for professional medical judgment.
 
-- Real companion onboarding, identity verification, credential review, scheduling, insurance, dispute handling, and availability
-- Korean privacy-law review, recording consent, retention policy, audit access, deletion policy, and R2 lifecycle enforcement
-- Merchant onboarding and signed payment-provider callbacks for Kakao Pay or card settlement
-- Commercial hospital-data enrichment if complete operating hours and reservation policies are required for every facility
-- Emergency-service policy validation with Korean legal and clinical stakeholders
-- Accessibility, incident response, abuse prevention, rate limiting, observability review, and formal security assessment
+Before real clinical operation at scale, the following responsibilities remain:
 
-NaruCare supports care navigation, communication, and coordination. It does not diagnose, prescribe, guarantee hospital acceptance, or replace emergency professionals.
+- real companion recruitment, identity verification, credential review, scheduling, insurance, and dispute handling
+- Korean privacy-law review, consent policy, retention controls, audit access, and deletion governance
+- signed payment intents, provider callbacks, refunds, and settlement reconciliation
+- commercial service-level agreements for hospital schedule and reservation completeness
+- emergency-policy validation with Korean legal, clinical, and public-safety stakeholders
+- accessibility certification
+- rate limiting, abuse prevention, incident response, alerting, and security assessment
+- formal clinical-safety evaluation and post-market monitoring
+
+NaruCare supports access, communication, navigation, and coordination.
+
+It does not diagnose, prescribe, guarantee hospital acceptance, or replace emergency professionals.
 
 Operational honesty is part of the architecture.
 
@@ -603,30 +1079,38 @@ Operational honesty is part of the architecture.
 
 # Roadmap
 
-- Verified real-world companion marketplace and dispatch availability
-- Signed payment intents, callbacks, refunds, and settlement reconciliation
-- Commercial hospital-hours and reservation-data enrichment
-- Streaming translation with conversation memory and speaker separation
-- Consent ledger, recording retention automation, and patient-controlled export
-- Hospital-side communication console and structured pre-arrival handoff
-- Push notifications, background workflow orchestration, and retryable jobs
-- Rate limiting, abuse detection, expanded telemetry, and operational dashboards
-- Native mobile packaging and device-level emergency integrations
-- Formal Korean healthcare, privacy, and accessibility compliance program
+- streaming translation with speaker-aware conversation memory
+- structured pre-arrival handoff for hospital staff
+- verified real-world companion onboarding and dispatch
+- signed payments, refunds, settlement, and dispute workflows
+- consent ledger and automated recording-retention policies
+- patient-controlled record export
+- push notifications and retryable background orchestration
+- expanded observability, rate limiting, abuse detection, and operational dashboards
+- native mobile packaging and device-level emergency integration
+- formal Korean healthcare, privacy, accessibility, and clinical-safety compliance
 
 ---
 
-# Status
+# Current Status
 
-Current release:
+**Release:** `v1.0.0`
 
-**v1.0.0 — Integrated Cross-Lingual Care Orchestration Loop**
+**Stage:** live competition deployment
 
-Current stage:
+**Frontend:** deployed on GitHub Pages
 
-**Competition release · Edge backend deployed · Frontend deployment in progress**
+**Backend:** deployed on Cloudflare Workers
 
-NaruCare has progressed beyond isolated healthcare screens into a shared-state system where bilingual identity, risk routing, hospital intelligence, navigation, translation, emergency behavior, companion coordination, private recording, and visit continuity operate on one coherent care journey.
+**Agent runtime:** deterministic safety gate + adaptive light/deep reasoning + model cascade + safe fallback
+
+**Hospital intelligence:** Kakao + Google Places + HIRA + OpenStreetMap resilience
+
+**Care continuity:** bilingual identity + persistent chat memory + navigation + translation + records + companion workflow
+
+NaruCare has progressed beyond a collection of healthcare screens.
+
+It is now a shared-state care operating loop in which language, risk, geography, workflow, human assistance, and durable memory operate as one coordinated system.
 
 ---
 
@@ -636,6 +1120,8 @@ NaruCare has progressed beyond isolated healthcare screens into a shared-state s
 
 <h3>NaruCare</h3>
 
-<p><strong>Healthcare access, compiled for a world in motion.</strong></p>
+<p><strong>Borderless care, engineered as infrastructure.</strong></p>
+
+<p><em>Understand the moment. Route the risk. Coordinate the journey.</em></p>
 
 </div>
