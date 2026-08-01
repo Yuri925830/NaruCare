@@ -275,7 +275,7 @@ The operating loop is intentionally stateful:
 | Medical Card | Bilingual identity, insurance, conditions, medication, surgery, symptoms, location |
 | Nearby Hospitals | Symptom-aware facility category, live provider fusion, schedules, provenance, official enrichment |
 | Visit Workflow | Appointment guidance, required documents, preparation, registration, payment, prescription flow |
-| Navigation | Naver map experience, driving and walking routes, external transit handoff |
+| Navigation | Kakao map experience, driving and walking routes, external transit handoff |
 | Translation | User-language ↔ Korean text, speech recognition, transcription, speech synthesis |
 | Medical Education | PubMed retrieval and evidence-bounded educational responses |
 | Human Companion | Filtering, matching, order lifecycle, service timing, recording, rating |
@@ -311,6 +311,10 @@ flowchart TB
     H --> P[Verified-data prioritization]
     P --> UI[Localized hospital cards and map]
 ```
+
+## Symptom Relevance Gate
+
+Distance is applied only after clinical-category filtering. The user’s active symptoms are first mapped to a bounded category such as gastroenterology, respiratory care, neurology, orthopedics, ophthalmology, dentistry, dermatology, or mental health. Provider searches use category-specific Korean terms, then reject incompatible specialties and non-human or non-treatment facilities such as veterinary hospitals, pharmacies, funeral halls, and traditional-medicine clinics. Results within that relevant set are distance-ranked and enriched with official or provider-published evidence.
 
 ## Provider Strategy
 
@@ -387,7 +391,7 @@ Missing values remain missing.
 
 NaruCare bridges facility discovery and arrival.
 
-- Naver Dynamic Map in the primary navigation workspace
+- Kakao Maps JavaScript SDK in the primary navigation workspace
 - traffic-aware driving geometry through Naver Directions 5
 - walking route geometry through OSRM
 - route distance, duration, and polyline rendering
@@ -418,6 +422,18 @@ NaruCare is AI-native, not AI-dependent.
 | Voice transcription fallback | Workers AI · Whisper Large v3 Turbo | Medical-context transcription preserving names and numbers |
 | Immediate voice input | Browser Web Speech API | Low-latency recognition when supported |
 | Voice playback | Browser Speech Synthesis | Spoken handoff for patient, staff, and emergency scenarios |
+
+### Why Multiple Models
+
+One model is not optimal for every latency, cost, and reliability boundary. Deterministic TypeScript rules own urgent actions; a small Llama model handles fast semantic classification; the larger Llama model is reserved for ambiguous or high-stakes context; M2M100 performs translation without conversational embellishment; Whisper handles recorded speech; and PubMed retrieval grounds educational answers. This keeps common turns inexpensive while giving specialized workloads a narrower, testable contract.
+
+### Training and Grounding Strategy
+
+The competition build does not fine-tune a medical foundation model. Agent behavior is produced through authored role and safety prompts, typed output schemas, deterministic validation rules, multilingual few-shot examples, bounded conversation memory, and retrieval-augmented generation for eligible PubMed education questions. Future clinical deployment would require expert-reviewed evaluation data and governance before considering task-specific fine-tuning.
+
+### Why Cloudflare
+
+Cloudflare places the Worker control plane, Workers AI inference, D1 relational state, R2 private media, cache, secrets, and observability in one edge runtime. For a latency-sensitive multilingual demo, that reduces network hops and operational surface while preserving server-side ownership checks. The architecture still keeps providers behind typed interfaces so a production deployment can replace individual models or services.
 
 ## Typed Response Contract
 
@@ -540,6 +556,10 @@ The browser cannot silently dial 119 or verify that a dispatcher answered.
 
 NaruCare makes that boundary visible instead of simulating certainty.
 
+## Proof-of-Concept Decision Boundary
+
+Emergency routing is intentionally conservative but does not activate from the words `severe` or `extreme` alone. The deterministic gate requires either an explicit ambulance request, a recognized direct red flag such as inability to breathe, severe chest pain, loss of consciousness, uncontrolled bleeding, seizure, stroke signs, sudden vision loss, self-harm, overdose, or poisoning, or a compound rule such as high fever plus neurological or vision symptoms. A severity modifier must be paired with a recognized serious symptom. These are demonstration safety heuristics, not a clinically validated triage protocol; production use requires review and calibration with Korean emergency and clinical experts.
+
 ---
 
 # Human-in-the-Loop Companion Orchestration
@@ -610,7 +630,7 @@ flowchart TB
     subgraph Experience["Experience Plane"]
         Web["React 19 + TypeScript + Vite"]
         UI["Responsive care workflows"]
-        Map["Naver Dynamic Map + Leaflet"]
+        Map["Kakao Maps JavaScript SDK + Leaflet"]
         Speech["Web Speech + MediaRecorder"]
         IP["NaruPose 3D IP runtime"]
     end
@@ -773,7 +793,7 @@ Graceful degradation is a runtime property, not an incident-response slogan.
 | --- | --- | --- |
 | Experience | React 19, TypeScript, Vite 8 | Typed responsive web application |
 | UI Runtime | Custom component system, Lucide React | Care workflows and interaction primitives |
-| Mapping | Naver Dynamic Map, Leaflet | Korean navigation context and resilient map fallback |
+| Mapping | Kakao Maps JavaScript SDK, Leaflet | Korean navigation context and resilient map fallback |
 | Edge Control | Cloudflare Workers | Authentication, safety routing, agent orchestration, provider isolation |
 | Relational State | Cloudflare D1 | Identity, cards, memory, orders, records, translation cache |
 | Media State | Private Cloudflare R2 | Authorized companion recording chunks |
@@ -952,7 +972,10 @@ A formal deployment should always define the production Worker origin.
 Create local Worker secrets in `worker/.dev.vars` or configure encrypted production secrets through Wrangler.
 
 ```text
+OPENAI_API_KEY
+OPENAI_MODEL
 KAKAO_REST_API_KEY
+KAKAO_JAVASCRIPT_KEY
 GOOGLE_PLACES_API_KEY
 HIRA_SERVICE_KEY
 NAVER_MAPS_CLIENT_ID
@@ -965,9 +988,11 @@ Frontend production variable:
 VITE_API_URL
 ```
 
-The browser receives only the domain-restricted client ID required by the official Naver Dynamic Map SDK.
+The browser receives only the domain-restricted JavaScript key required by the official Kakao Maps Web SDK. `KAKAO_REST_API_KEY` and all other provider credentials remain server-side.
 
 Provider secrets, Directions requests, database access, model execution, and authorization remain behind the Worker boundary.
+
+When `OPENAI_API_KEY` is configured, NaruCare sends chatbot text reasoning to the OpenAI Responses API with response storage disabled and defaults to the cost-optimized `gpt-5.6-luna`. Set `OPENAI_MODEL` to override the model. Without the key, the Worker falls back to its Cloudflare AI binding. Translation and speech transcription continue to use their dedicated Cloudflare models.
 
 ---
 
@@ -991,7 +1016,9 @@ npx wrangler d1 migrations apply narucare --remote --config worker/wrangler.json
 npm run worker:check
 
 npx wrangler secret put KAKAO_REST_API_KEY --config worker/wrangler.jsonc
+npx wrangler secret put KAKAO_JAVASCRIPT_KEY --config worker/wrangler.jsonc
 npx wrangler secret put GOOGLE_PLACES_API_KEY --config worker/wrangler.jsonc
+npx wrangler secret put OPENAI_API_KEY --config worker/wrangler.jsonc
 npx wrangler secret put HIRA_SERVICE_KEY --config worker/wrangler.jsonc
 npx wrangler secret put NAVER_MAPS_CLIENT_ID --config worker/wrangler.jsonc
 npx wrangler secret put NAVER_MAPS_CLIENT_SECRET --config worker/wrangler.jsonc

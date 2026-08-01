@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "./api";
 import { companionServiceTotal, extendCompanionDuration, MAX_COMPANION_SERVICE_MINUTES, normalizeCompanionDuration } from "./companionBilling";
+import {
+  appointmentDecisionComplete,
+  appointmentPolicyFor,
+  defaultAppointmentPreference,
+  type AppointmentDecision,
+  type AppointmentPreference,
+  type HospitalAppointmentBooking,
+  type HospitalAppointmentSlot,
+} from "./hospitalAppointments";
 import { AppShell, LanguageSelector, NaruPose, Panel } from "./components";
 import { getDefaultFilters } from "./data";
 import { I18nProvider, useI18n } from "./i18n";
@@ -15,6 +24,8 @@ import {
 import { CompanionOrdersPage, EmergencyCallingPage, EmergencyConfirmPage, ProfilePage, RecordsPage } from "./pages/EmergencyProfilePages";
 import { MedicalCardPage } from "./pages/MedicalCardPage";
 import type { Companion, CompanionFilters, CompanionOrder, Hospital, LocationState, MedicalCard, SessionUser, View, VisitRecord, VisitRecordDetails } from "./types";
+import { furthestVisitJourneyStep, visitJourneyStepIndex, type CompanionDecision, type VisitJourneyStep } from "./visitJourney";
+import { clearVisitSession, loadVisitSession, saveVisitSession } from "./visitSession";
 
 export function App() {
   return <I18nProvider><AppInner /></I18nProvider>;
@@ -60,6 +71,12 @@ function AppInner() {
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [hospitalsLoading, setHospitalsLoading] = useState(false);
   const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null);
+  const [hospitalConfirmed, setHospitalConfirmed] = useState(false);
+  const [appointmentPreference, setAppointmentPreference] = useState<AppointmentPreference>(() => defaultAppointmentPreference());
+  const [appointmentDecision, setAppointmentDecision] = useState<AppointmentDecision>("pending");
+  const [appointmentBooking, setAppointmentBooking] = useState<HospitalAppointmentBooking | null>(null);
+  const [journeyStep, setJourneyStep] = useState<VisitJourneyStep>("symptoms");
+  const [companionDecision, setCompanionDecision] = useState<CompanionDecision>("pending");
   const [filters, setFilters] = useState<CompanionFilters>(() => getDefaultFilters(locale));
   const [people, setPeople] = useState<Companion[]>(api.allCompanions);
   const [selectedCompanion, setSelectedCompanion] = useState<Companion>(api.allCompanions[0]);
@@ -72,11 +89,62 @@ function AppInner() {
   const [ordersVersion, setOrdersVersion] = useState(0);
   const [currentRecordId, setCurrentRecordId] = useState<string | null>(null);
   const [visitSessionVersion, setVisitSessionVersion] = useState(0);
+  const [visitSessionOwnerId, setVisitSessionOwnerId] = useState<string | null>(null);
   const symptomSaveVersion = useRef(0);
   const bestLocationAccuracy = useRef(Number.POSITIVE_INFINITY);
   const locationRequestVersion = useRef(0);
+  const advanceJourney = useCallback((candidate: VisitJourneyStep) => {
+    setJourneyStep((current) => furthestVisitJourneyStep(current, candidate));
+  }, []);
 
   useEffect(() => { void api.me().then((current) => { if (current) setUser(current); }).finally(() => setChecking(false)); }, []);
+  useEffect(() => {
+    if (!user) {
+      setVisitSessionOwnerId(null);
+      return;
+    }
+    const saved = loadVisitSession(user.id);
+    if (saved) {
+      setSymptoms(saved.symptoms);
+      setHospitals(saved.hospitals);
+      const savedHospital = saved.hospitals.find((hospital) => hospital.id === saved.selectedHospitalId) || null;
+      setSelectedHospital(savedHospital);
+      setHospitalConfirmed(Boolean(saved.hospitalConfirmed && savedHospital));
+      setAppointmentPreference(saved.appointmentPreference);
+      setAppointmentDecision(saved.appointmentDecision);
+      setAppointmentBooking(saved.appointmentBooking);
+      setCompanionDecision(saved.companionDecision);
+      setJourneyStep(saved.journeyStep);
+      setCurrentRecordId(saved.currentRecordId);
+    } else {
+      setSymptoms("");
+      setHospitals([]);
+      setSelectedHospital(null);
+      setHospitalConfirmed(false);
+      setAppointmentPreference(defaultAppointmentPreference());
+      setAppointmentDecision("pending");
+      setAppointmentBooking(null);
+      setCompanionDecision("pending");
+      setJourneyStep("symptoms");
+      setCurrentRecordId(null);
+    }
+    setVisitSessionOwnerId(user.id);
+  }, [user?.id]);
+  useEffect(() => {
+    if (!user || visitSessionOwnerId !== user.id) return;
+    saveVisitSession(user.id, {
+      symptoms,
+      hospitals,
+      selectedHospitalId: selectedHospital?.id || null,
+      hospitalConfirmed,
+      appointmentPreference,
+      appointmentDecision,
+      appointmentBooking,
+      companionDecision,
+      journeyStep,
+      currentRecordId,
+    });
+  }, [appointmentBooking, appointmentDecision, appointmentPreference, companionDecision, currentRecordId, hospitalConfirmed, hospitals, journeyStep, selectedHospital?.id, symptoms, user?.id, visitSessionOwnerId]);
   useEffect(() => {
     if (!user) return;
     void refreshLocation();
@@ -150,6 +218,7 @@ function AppInner() {
     const clean = extractReportableSymptoms(text);
     if (!clean || clean === t("unknown")) return;
     setSymptoms(clean);
+    advanceJourney("hospital");
     const card = user?.card;
     if (!card || card.symptoms === clean) return;
     const saveVersion = ++symptomSaveVersion.current;
@@ -171,10 +240,18 @@ function AppInner() {
     } catch {
       await api.saveCard(nextCard).catch(() => undefined);
     }
-  }, [locale, t, user?.card]);
+  }, [advanceJourney, locale, t, user?.card]);
 
   const clearCurrentSymptoms = useCallback(async () => {
     setSymptoms("");
+    setHospitals([]);
+    setSelectedHospital(null);
+    setAppointmentPreference(defaultAppointmentPreference());
+    setAppointmentDecision("pending");
+    setAppointmentBooking(null);
+    setCompanionDecision("pending");
+    setJourneyStep("symptoms");
+    setHospitalConfirmed(false);
     const card = user?.card;
     if (!card) return;
     // Invalidate any older background symptom translation so it cannot race
@@ -232,9 +309,15 @@ function AppInner() {
     const effectiveSymptoms = extractReportableSymptoms(nextSymptoms);
     if (effectiveSymptoms) await captureSymptoms(effectiveSymptoms);
     setSymptoms(effectiveSymptoms);
+    setHospitalConfirmed(false);
+    if (effectiveSymptoms) advanceJourney("hospital");
     setHospitalsLoading(true);
     setHospitals([]);
     setSelectedHospital(null);
+    setAppointmentDecision("pending");
+    setAppointmentBooking(null);
+    setCompanionDecision("pending");
+    setJourneyStep("hospital");
     goTo("hospitals");
     const recordPromise = beginVisitRecord(effectiveSymptoms);
     try {
@@ -251,9 +334,46 @@ function AppInner() {
       const results = current.verified ? await api.hospitals(current.lat, current.lng, effectiveSymptoms, locale) : [];
       setHospitals(results);
       setSelectedHospital(results[0] || null);
-      if (results[0]) void recordPromise.then((recordId) => updateCurrentRecord({ hospital: results[0].name, status: "hospital_selected" }, recordId));
+      await recordPromise;
     } finally { setHospitalsLoading(false); }
-  }, [beginVisitRecord, captureSymptoms, goTo, locale, location, refreshLocation, updateCurrentRecord, user?.card]);
+  }, [advanceJourney, beginVisitRecord, captureSymptoms, goTo, locale, location, refreshLocation, user?.card]);
+
+  function openJourneyStep(step: VisitJourneyStep) {
+    if (visitJourneyStepIndex(step) > visitJourneyStepIndex(journeyStep)) return;
+    if (step === "symptoms") {
+      goTo("agent");
+      return;
+    }
+    if (step === "hospital") {
+      if (hospitals.length) goTo("hospitals");
+      else void openHospitals(symptoms);
+      return;
+    }
+    if (step === "appointment" && selectedHospital && hospitalConfirmed) {
+      goTo("hospitals");
+      return;
+    }
+    if (step === "companion" && selectedHospital && hospitalConfirmed
+      && appointmentDecisionComplete(selectedHospital, appointmentDecision, appointmentBooking)) {
+      setCompanionDecision("pending");
+      setJourneyStep("companion");
+      goTo("agent");
+      return;
+    }
+    if (step === "prepare" && selectedHospital && hospitalConfirmed && companionDecision !== "pending") {
+      goTo("visit-flow");
+      return;
+    }
+    if (step === "navigation" && selectedHospital) {
+      goTo("navigation");
+      return;
+    }
+    if (step === "translation") {
+      goTo("translation");
+      return;
+    }
+    if (step === "complete") goTo("records");
+  }
 
   function navigate(next: View) {
     if (!user) return;
@@ -263,6 +383,22 @@ function AppInner() {
       setGateSignal((value) => value + 1);
       return;
     }
+    if (next === "hospitals") {
+      void openHospitals(extractReportableSymptoms(symptoms || user.card?.symptoms || ""));
+      return;
+    }
+    if (next === "visit-flow") {
+      if (!selectedHospital || !hospitalConfirmed) {
+        void openHospitals(extractReportableSymptoms(symptoms || user.card?.symptoms || ""));
+      } else if (!appointmentDecisionComplete(selectedHospital, appointmentDecision, appointmentBooking)) {
+        goTo("hospitals");
+      } else if (companionDecision === "pending") {
+        goTo("agent");
+      } else {
+        goTo("visit-flow");
+      }
+      return;
+    }
     if (next === "emergency-confirm") void beginEmergencyRecord(extractReportableSymptoms(symptoms || user.card?.symptoms || ""));
     goTo(next);
   }
@@ -270,8 +406,59 @@ function AppInner() {
   function openLanguage() { goTo("language"); }
 
   async function match() {
+    const matches = await api.getCompanions(filters);
+    setPeople(matches);
+    advanceJourney("prepare");
     goTo("companions");
-    setPeople(await api.getCompanions(filters));
+  }
+
+  function decideCompanion(decision: Exclude<CompanionDecision, "pending">) {
+    setCompanionDecision(decision);
+    if (decision === "use") {
+      goTo("companions-notice");
+      return;
+    }
+    advanceJourney("prepare");
+    goTo("visit-flow");
+  }
+
+  function changeAppointmentPreference(preference: AppointmentPreference) {
+    setAppointmentPreference(preference);
+    setAppointmentDecision("pending");
+    setAppointmentBooking(null);
+    setCompanionDecision("pending");
+    if (selectedHospital && hospitalConfirmed) setJourneyStep("appointment");
+  }
+
+  function bookAppointment(slot: HospitalAppointmentSlot) {
+    if (!selectedHospital || slot.hospitalId !== selectedHospital.id) return;
+    const booking: HospitalAppointmentBooking = {
+      id: `APT-${Date.now().toString(36).toUpperCase()}`,
+      hospitalId: selectedHospital.id,
+      hospitalName: selectedHospital.name,
+      slot,
+      status: "confirmed",
+      createdAt: new Date().toISOString(),
+    };
+    setAppointmentBooking(booking);
+    setAppointmentDecision("booked");
+    setCompanionDecision("pending");
+    setJourneyStep("companion");
+  }
+
+  function skipAppointment() {
+    if (!selectedHospital || appointmentPolicyFor(selectedHospital) === "required") return;
+    setAppointmentBooking(null);
+    setAppointmentDecision("skip");
+    setCompanionDecision("pending");
+    setJourneyStep("companion");
+  }
+
+  function cancelAppointment() {
+    setAppointmentBooking(null);
+    setAppointmentDecision("pending");
+    setCompanionDecision("pending");
+    if (selectedHospital && hospitalConfirmed) setJourneyStep("appointment");
   }
 
   async function applyForCompanion(person = selectedCompanion) {
@@ -384,12 +571,19 @@ function AppInner() {
   }
 
   const resetVisitSession = useCallback(async (destination: "agent" | "records" | "card") => {
+    if (user) clearVisitSession(user.id);
     recordingStream?.getTracks().forEach((track) => track.stop());
     setRecordingStream(null);
     setSymptoms("");
     setHospitals([]);
     setHospitalsLoading(false);
     setSelectedHospital(null);
+    setHospitalConfirmed(false);
+    setAppointmentPreference(defaultAppointmentPreference());
+    setAppointmentDecision("pending");
+    setAppointmentBooking(null);
+    setCompanionDecision("pending");
+    setJourneyStep("symptoms");
     setFilters(getDefaultFilters(locale));
     setPeople(api.allCompanions);
     setSelectedCompanion(api.allCompanions[0]);
@@ -408,11 +602,12 @@ function AppInner() {
       setUser((current) => current ? { ...current, card: clearedCard } : current);
       await api.saveCard(clearedCard).catch(() => undefined);
     }
-  }, [locale, recordingStream, user?.card]);
+  }, [locale, recordingStream, user?.card, user?.id]);
 
   async function finishVisitAssistance() {
     await updateCurrentRecord({ status: "completed" });
-    await resetVisitSession("agent");
+    advanceJourney("complete");
+    goTo("agent", { replace: true });
   }
 
   const titles: Record<View, string> = {
@@ -423,19 +618,131 @@ function AppInner() {
   };
 
   if (checking) return <div className="app-loading"><NaruPose pose={2} /><span>{t("loading")}</span></div>;
-  if (!user) return <AuthPage onAuthenticated={(current) => { setUser(current); setView("agent"); setViewHistory([]); setVisitedViews(["agent"]); }} />;
+  if (!user) return <AuthPage onAuthenticated={(current) => {
+    setUser(current);
+    setAppointmentPreference(defaultAppointmentPreference());
+    setAppointmentDecision("pending");
+    setAppointmentBooking(null);
+    setCompanionDecision("pending");
+    setJourneyStep("symptoms");
+    setHospitalConfirmed(false);
+    setView("agent");
+    setViewHistory([]);
+    setVisitedViews(["agent"]);
+  }} />;
 
   const renderView = (target: View): ReactNode => {
     switch (target) {
       case "card": return <MedicalCardPage card={user.card} onSaved={(card) => { const wasNew = !user.card; setUser({ ...user, card }); if (wasNew) goBack(); }} />;
-      case "agent": return <AgentPage key={`visit-${visitSessionVersion}`} card={user.card} onCard={() => goTo("card")} onEmergency={(value) => { const verifiedSymptoms = extractReportableSymptoms(value); void captureSymptoms(verifiedSymptoms); void beginEmergencyRecord(verifiedSymptoms); setSymptoms(verifiedSymptoms); goTo("emergency-confirm"); }} onHospitals={openHospitals} onSymptoms={captureSymptoms} onSymptomsResolved={clearCurrentSymptoms} onFlow={() => goTo("visit-flow")} onTranslation={() => goTo("translation")} onCompanion={() => goTo("companions-notice")} gateSignal={gateSignal} />;
-      case "hospitals": return <HospitalsPage location={location} hospitals={hospitals} loading={hospitalsLoading} selected={selectedHospital} onSelect={(hospital) => { setSelectedHospital(hospital); void updateCurrentRecord({ hospital: hospital.name, status: "hospital_selected" }); }} onFlow={() => goTo("visit-flow")} onCompanion={() => goTo("companions-notice")} onRoute={() => { void updateCurrentRecord({ hospital: selectedHospital?.name || t("hospital"), status: "navigating" }); goTo("navigation"); }} onRefresh={async () => { setHospitalsLoading(true); try { const next = await refreshLocation(); const results = next.verified ? await api.hospitals(next.lat, next.lng, symptoms, locale) : []; setHospitals(results); setSelectedHospital(results[0] || null); } finally { setHospitalsLoading(false); } }} />;
-      case "visit-flow": return <VisitFlowPage onStart={() => selectedHospital ? goTo("navigation") : void openHospitals(symptoms)} onReturn={() => goBack()} />;
-      case "navigation": return selectedHospital ? <NavigationPage location={location} hospital={selectedHospital} onArrived={() => { void updateCurrentRecord({ status: "arrived" }); goTo("translation"); }} onTranslation={() => goTo("translation")} /> : <Panel><p>{t("noHospitalsFound")}</p></Panel>;
-      case "translation": return <TranslationPage userLanguage={user.card?.language || locale} active={view === "translation"} onRecorded={(entry) => { if (currentRecordId) void api.appendRecordTranslation(currentRecordId, entry).then(() => setRecordsVersion((value) => value + 1)); }} onComplete={() => void finishVisitAssistance()} />;
+      case "agent": return <AgentPage
+        key={`visit-${visitSessionVersion}`}
+        card={user.card}
+        journeyStep={journeyStep}
+        companionDecision={companionDecision}
+        selectedHospital={selectedHospital}
+        appointmentPreference={appointmentPreference}
+        onCard={() => goTo("card")}
+        onEmergency={(value) => { const verifiedSymptoms = extractReportableSymptoms(value); void captureSymptoms(verifiedSymptoms); void beginEmergencyRecord(verifiedSymptoms); setSymptoms(verifiedSymptoms); goTo("emergency-confirm"); }}
+        onHospitals={openHospitals}
+        onSymptoms={captureSymptoms}
+        onSymptomsResolved={clearCurrentSymptoms}
+        onFlow={() => openJourneyStep("prepare")}
+        onTranslation={() => openJourneyStep("translation")}
+        onCompanion={() => goTo("companions-notice")}
+        onCompanionDecision={decideCompanion}
+        onAppointmentPreference={changeAppointmentPreference}
+        onBookAppointment={bookAppointment}
+        onSkipAppointment={skipAppointment}
+        onOpenAppointments={() => goTo("hospitals")}
+        onJourneyStep={openJourneyStep}
+        onRestartJourney={() => void resetVisitSession("agent")}
+        onRecords={() => goTo("records")}
+        gateSignal={gateSignal}
+      />;
+      case "hospitals": return <HospitalsPage
+        location={location}
+        hospitals={hospitals}
+        loading={hospitalsLoading}
+        selected={selectedHospital}
+        confirmed={hospitalConfirmed}
+        appointmentPreference={appointmentPreference}
+        appointmentDecision={appointmentDecision}
+        appointmentBooking={appointmentBooking}
+        appointmentComplete={Boolean(selectedHospital && appointmentDecisionComplete(selectedHospital, appointmentDecision, appointmentBooking))}
+        needsCompanionDecision={Boolean(selectedHospital && appointmentDecisionComplete(selectedHospital, appointmentDecision, appointmentBooking) && companionDecision === "pending")}
+        canRoute={visitJourneyStepIndex(journeyStep) >= visitJourneyStepIndex("navigation")}
+        onSelect={(hospital) => {
+          const changed = selectedHospital?.id !== hospital.id || !hospitalConfirmed;
+          setSelectedHospital(hospital);
+          setHospitalConfirmed(true);
+          if (changed) {
+            setAppointmentDecision("pending");
+            setAppointmentBooking(null);
+            setCompanionDecision("pending");
+            setJourneyStep("appointment");
+          }
+          void updateCurrentRecord({ hospital: hospital.name, status: "hospital_selected" });
+        }}
+        onAppointmentPreference={changeAppointmentPreference}
+        onBookAppointment={bookAppointment}
+        onSkipAppointment={skipAppointment}
+        onCancelAppointment={cancelAppointment}
+        onFlow={() => {
+          if (!selectedHospital || !hospitalConfirmed) return;
+          if (!appointmentDecisionComplete(selectedHospital, appointmentDecision, appointmentBooking)) return;
+          if (companionDecision === "pending") {
+            goTo("agent");
+            return;
+          }
+          if (visitJourneyStepIndex(journeyStep) >= visitJourneyStepIndex("prepare")) goTo("visit-flow");
+        }}
+        onCompanion={() => goTo("companions-notice")}
+        onRoute={() => {
+          if (!selectedHospital || visitJourneyStepIndex(journeyStep) < visitJourneyStepIndex("navigation")) return;
+          void updateCurrentRecord({ hospital: selectedHospital.name, status: "navigating" });
+          goTo("navigation");
+        }}
+        onRefresh={async () => {
+          setHospitalsLoading(true);
+          setHospitalConfirmed(false);
+          setAppointmentDecision("pending");
+          setAppointmentBooking(null);
+          setCompanionDecision("pending");
+          setJourneyStep("hospital");
+          try {
+            const next = await refreshLocation();
+            const results = next.verified ? await api.hospitals(next.lat, next.lng, symptoms, locale) : [];
+            setHospitals(results);
+            setSelectedHospital(results[0] || null);
+          } finally { setHospitalsLoading(false); }
+        }}
+      />;
+      case "visit-flow": return <VisitFlowPage onStart={() => {
+        if (!selectedHospital || !hospitalConfirmed) {
+          void openHospitals(symptoms);
+          return;
+        }
+        if (!appointmentDecisionComplete(selectedHospital, appointmentDecision, appointmentBooking)) {
+          goTo("hospitals");
+          return;
+        }
+        if (companionDecision === "pending" || visitJourneyStepIndex(journeyStep) < visitJourneyStepIndex("prepare")) {
+          goTo("agent");
+          return;
+        }
+        advanceJourney("navigation");
+        void updateCurrentRecord({ hospital: selectedHospital.name, status: "navigating" });
+        goTo("navigation");
+      }} onReturn={() => goBack()} />;
+      case "navigation": return selectedHospital ? <NavigationPage location={location} hospital={selectedHospital} onArrived={() => {
+        void updateCurrentRecord({ status: "arrived" });
+        advanceJourney("translation");
+        goTo("translation");
+      }} onTranslation={() => goTo("translation")} /> : <Panel><p>{t("noHospitalsFound")}</p></Panel>;
+      case "translation": return <TranslationPage userLanguage={user.card?.language || locale} active={view === "translation"} onRecorded={(entry) => { if (currentRecordId) void api.appendRecordTranslation(currentRecordId, entry).then(() => setRecordsVersion((value) => value + 1)); }} onComplete={visitJourneyStepIndex(journeyStep) >= visitJourneyStepIndex("translation") ? () => void finishVisitAssistance() : undefined} />;
       case "companions-notice": return <CompanionNoticePage onContinue={() => goTo("companions-filter")} />;
       case "companions-filter": return <CompanionFilterPage filters={filters} onChange={setFilters} onMatch={() => void match()} />;
-      case "companions": return <CompanionListPage people={people} onFilters={() => goTo("companions-filter")} onDetail={selectCompanion} onChoose={selectCompanion} />;
+      case "companions": return <CompanionListPage people={people} onFilters={() => goTo("companions-filter")} onDetail={selectCompanion} onChoose={selectCompanion} onContinue={() => goTo("visit-flow")} />;
       case "companion-detail": return <CompanionDetailPage person={selectedCompanion} durationMinutes={companionDurationMinutes} onDurationChange={setCompanionDurationMinutes} onChat={() => goTo("companion-chat")} onApply={() => applyForCompanion()} />;
       case "companion-chat": return <CompanionChatPage person={selectedCompanion} hospitalName={selectedHospital?.name || t("hospital")} durationMinutes={companionDurationMinutes} onApply={() => applyForCompanion()} />;
       case "companion-waiting": return order ? <CompanionWaitingPage person={order.companion} onAccepted={() => void acceptOrder()} onMessage={() => goTo("companion-chat")} onCancel={() => { void api.updateOrder(order.id, "cancelled"); setOrder(null); goTo("companions"); }} /> : <Panel />;
@@ -446,7 +753,7 @@ function AppInner() {
       case "companion-orders": return <CompanionOrdersPage version={ordersVersion} onResume={resumeOrder} onDeleted={companionOrderDeleted} onCountChange={setOrdersCount} />;
       case "emergency-confirm": return <EmergencyConfirmPage hasCard={Boolean(user.card)} onCall={() => { void refreshLocation(); goTo("emergency-calling"); }} onDecline={() => user.card ? void openHospitals(extractReportableSymptoms(symptoms || user.card.symptoms || "")) : goTo("card")} />;
       case "emergency-calling": return <EmergencyCallingPage user={user} location={location} symptoms={extractReportableSymptoms(symptoms || user.card?.symptoms || "")} active={view === "emergency-calling"} onTranslation={() => goTo("translation")} onEnd={() => { void (async () => { await updateCurrentRecord({ status: "completed" }); await resetVisitSession(user.card ? "agent" : "card"); })(); }} />;
-      case "profile": return <ProfilePage user={user} recordsCount={recordsCount} ordersCount={ordersCount} onCard={() => goTo("card")} onRecords={() => goTo("records")} onOrders={() => goTo("companion-orders")} onLanguage={openLanguage} onLogout={() => { void api.logout(); setUser(null); setViewHistory([]); setVisitedViews(["agent"]); }} />;
+      case "profile": return <ProfilePage user={user} recordsCount={recordsCount} ordersCount={ordersCount} onCard={() => goTo("card")} onRecords={() => goTo("records")} onOrders={() => goTo("companion-orders")} onLanguage={openLanguage} onLogout={() => { clearVisitSession(user.id); void api.logout(); setUser(null); setAppointmentPreference(defaultAppointmentPreference()); setAppointmentDecision("pending"); setAppointmentBooking(null); setJourneyStep("symptoms"); setCompanionDecision("pending"); setHospitalConfirmed(false); setViewHistory([]); setVisitedViews(["agent"]); }} />;
       case "records": return <RecordsPage version={recordsVersion} onCountChange={setRecordsCount} />;
       case "language": return <Panel className="in-app-language"><h2>{t("chooseLanguage")}</h2><p>{t("languageSubtitle")}</p><LanguageSelector compact onDone={goBack} /></Panel>;
       default: return null;

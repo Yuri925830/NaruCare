@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { BadgeCheck, Check, Clock3, MessageCircleMore, Mic, Phone, ShieldCheck, Star, UserRound, WalletCards } from "lucide-react";
 import { api } from "../api";
+import { companionFlowCopy } from "../companionFlow";
 import { actualBillableMinutes, companionServiceTotal, extendCompanionDuration, MAX_COMPANION_SERVICE_MINUTES, normalizeCompanionDuration } from "../companionBilling";
+import { companionPersonaFor, companionPersonaLabels } from "../companionPersonas";
 import { Button, formatWon, InfoBanner, NaruPose, NaruStandard, Panel, StatusPill } from "../components";
 import { localeOptions, useI18n } from "../i18n";
 import type { Companion, CompanionFilters, CompanionOrder } from "../types";
@@ -38,8 +40,9 @@ export function CompanionFilterPage({ filters, onChange, onMatch }: { filters: C
   </div>;
 }
 
-export function CompanionListPage({ people, onFilters, onDetail, onChoose }: { people: Companion[]; onFilters: () => void; onDetail: (person: Companion) => void; onChoose: (person: Companion) => void | Promise<void> }) {
-  const { t } = useI18n();
+export function CompanionListPage({ people, onFilters, onDetail, onChoose, onContinue }: { people: Companion[]; onFilters: () => void; onDetail: (person: Companion) => void; onChoose: (person: Companion) => void | Promise<void>; onContinue: () => void }) {
+  const { locale, t } = useI18n();
+  const companionFlow = companionFlowCopy(locale);
   const [limit, setLimit] = useState(6);
   const [choosingId, setChoosingId] = useState("");
   const [chooseError, setChooseError] = useState("");
@@ -52,18 +55,23 @@ export function CompanionListPage({ people, onFilters, onDetail, onChoose }: { p
   }
   return <Panel className="companion-list-panel">
     <InfoBanner title={t("matchedForYou")} action={<div className="match-banner-action"><NaruPose pose={11} className="companion-list-naru" /><Button variant="ghost" onClick={onFilters}>{t("changeFilters")}</Button></div>}>{t("matchingBasis")}</InfoBanner>
-    <div className="companion-list">{people.slice(0, limit).map((person) => <article key={person.id}>
-      <span className="person-avatar">{person.nativeName.slice(0, 1)}</span><div className="person-main"><h3>{person.name}</h3><div><StatusPill>{person.match || 90}% {t("match")}</StatusPill><em><Star size={14} fill="currentColor" />{person.rating}</em></div><small>{person.languages.map((code) => localeOptions.find((item) => item.code === code)?.nativeName || code).join(" / ")}</small></div>
-      <div className="person-price"><strong>₩{formatWon(person.price)} {t("perHour")}</strong><small>{t("arrivesIn", { minutes: person.eta, max: person.eta + 8 })}</small></div>
-      <div className="person-actions"><Button variant="ghost" onClick={() => onDetail(person)}>{t("viewDetails")}</Button><Button onClick={() => void choose(person)} disabled={Boolean(choosingId)}>{choosingId === person.id ? t("loading") : t("chooseCompanion")}</Button></div>
-    </article>)}</div>
+    <div className="companion-list">{people.slice(0, limit).map((person) => {
+      const persona = companionPersonaFor(person.id, locale);
+      return <article key={person.id}>
+        <span className="person-avatar">{person.nativeName.slice(0, 1)}</span><div className="person-main"><h3>{person.name}</h3><div><StatusPill>{person.match || 90}% {t("match")}</StatusPill><em><Star size={14} fill="currentColor" />{person.rating}</em></div>{persona && <strong className="person-persona">{persona.title}</strong>}<small>{person.languages.map((code) => localeOptions.find((item) => item.code === code)?.nativeName || code).join(" / ")}</small></div>
+        <div className="person-price"><strong>₩{formatWon(person.price)} {t("perHour")}</strong><small>{t("arrivesIn", { minutes: person.eta, max: person.eta + 8 })}</small></div>
+        <div className="person-actions"><Button variant="ghost" onClick={() => onDetail(person)}>{t("viewDetails")}</Button><Button onClick={() => void choose(person)} disabled={Boolean(choosingId)}>{choosingId === person.id ? t("loading") : t("chooseCompanion")}</Button></div>
+      </article>;
+    })}</div>
     {chooseError && <p className="form-error" role="alert">{chooseError}</p>}
-    <div className="list-footer"><InfoBanner tone="navy" icon="shield" title={t("serviceSafety")}>{t("serviceSafetyDesc")}</InfoBanner>{limit < people.length && <Button onClick={() => setLimit(Math.min(limit + 6, people.length))}>{t("loadMoreMatches")}</Button>}</div>
+    <div className="list-footer"><InfoBanner tone="navy" icon="shield" title={t("serviceSafety")}>{t("serviceSafetyDesc")}</InfoBanner><div className="list-footer-actions">{limit < people.length && <Button variant="secondary" onClick={() => setLimit(Math.min(limit + 6, people.length))}>{t("loadMoreMatches")}</Button>}<Button onClick={onContinue}>{companionFlow.continuePreparation}</Button></div></div>
   </Panel>;
 }
 
 export function CompanionDetailPage({ person, durationMinutes, onDurationChange, onChat, onApply }: { person: Companion; durationMinutes: number; onDurationChange: (minutes: number) => void; onChat: () => void; onApply: () => void | Promise<void> }) {
   const { locale, t } = useI18n();
+  const persona = companionPersonaFor(person.id, locale);
+  const personaLabels = companionPersonaLabels(locale);
   const [experience, setExperience] = useState(person.experience);
   const [applying, setApplying] = useState(false);
   const [applyError, setApplyError] = useState("");
@@ -79,8 +87,8 @@ export function CompanionDetailPage({ person, durationMinutes, onDurationChange,
   }, [locale, person.experience]);
   async function apply() { if (applying) return; setApplying(true); setApplyError(""); try { await onApply(); } catch { setApplyError(t("errorGeneric")); } finally { setApplying(false); } }
   return <Panel className="companion-detail-panel">
-    <div className="detail-profile"><NaruPose pose={17} className="companion-detail-naru" /><span className="person-avatar xl">{person.nativeName.slice(0, 1)}</span><h2>{person.name}</h2><p>{person.languages.map((code) => localeOptions.find((item) => item.code === code)?.nativeName || code).join(" · ")} · {t("fluent")}</p><StatusPill>{person.hospitals[0]} {t("hospitalFamiliar")}</StatusPill><div className="detail-stats"><span><strong>{person.rating}</strong><small>{t("ratingLabel")}</small></span><span><strong>{person.match || 96}%</strong><small>{t("onTime")}</small></span><span><strong>{person.reviewCount}+</strong><small>{t("completedOrders")}</small></span></div><div className="detail-buttons"><Button variant="secondary" onClick={onChat}><MessageCircleMore />{t("startChat")}</Button><Button onClick={() => void apply()} disabled={applying}><UserRound />{applying ? t("loading") : t("applyCompanion")}</Button></div>{applyError && <p className="form-error" role="alert">{applyError}</p>}</div>
-    <div className="detail-info"><div className="duration-selector"><label htmlFor="companion-duration">{t("serviceDuration")}</label><select id="companion-duration" value={durationMinutes} onChange={(event) => onDurationChange(Number(event.target.value))}>{Array.from({ length: 23 }, (_, index) => 60 + index * 30).map((minutes) => <option key={minutes} value={minutes}>{t("hours", { count: minutes / 60 })}</option>)}</select><small>{t("minimumServiceDuration")}</small><strong>{t("estimatedServiceTotal")}: ₩{formatWon(companionServiceTotal(person.price, durationMinutes))}</strong></div><h3>{t("experience")}</h3><p className="detail-copy">{experience}</p><h3>{t("userReview")}</h3><div className="review-card"><strong>“{t("sampleCompanionReview")}”</strong><small>— {t("completedOrders")}</small><em>★★★★★ {person.rating}</em></div><div className="detail-price"><small>{t("servicePrice")}</small><strong>₩{formatWon(person.price)} {t("perHour")}</strong></div><InfoBanner tone="navy" icon="shield" title={t("serviceSafety")}>{t("serviceSafetyDesc")}</InfoBanner></div>
+    <div className="detail-profile"><NaruPose pose={17} className="companion-detail-naru" /><span className="person-avatar xl">{person.nativeName.slice(0, 1)}</span><h2>{person.name}</h2><p>{person.languages.map((code) => localeOptions.find((item) => item.code === code)?.nativeName || code).join(" · ")} · {t("fluent")}</p>{persona && <StatusPill>{persona.title}</StatusPill>}<StatusPill>{person.hospitals[0]} {t("hospitalFamiliar")}</StatusPill><div className="detail-stats"><span><strong>{person.rating}</strong><small>{t("ratingLabel")}</small></span><span><strong>{person.match || 96}%</strong><small>{t("onTime")}</small></span><span><strong>{person.reviewCount}+</strong><small>{t("completedOrders")}</small></span></div><div className="detail-buttons"><Button variant="secondary" onClick={onChat}><MessageCircleMore />{t("startChat")}</Button><Button onClick={() => void apply()} disabled={applying}><UserRound />{applying ? t("loading") : t("applyCompanion")}</Button></div>{applyError && <p className="form-error" role="alert">{applyError}</p>}</div>
+    <div className="detail-info"><div className="duration-selector"><label htmlFor="companion-duration">{t("serviceDuration")}</label><select id="companion-duration" value={durationMinutes} onChange={(event) => onDurationChange(Number(event.target.value))}>{Array.from({ length: 23 }, (_, index) => 60 + index * 30).map((minutes) => <option key={minutes} value={minutes}>{t("hours", { count: minutes / 60 })}</option>)}</select><small>{t("minimumServiceDuration")}</small><strong>{t("estimatedServiceTotal")}: ₩{formatWon(companionServiceTotal(person.price, durationMinutes))}</strong></div>{persona && <section className="persona-detail" aria-labelledby="companion-persona-title"><small>{personaLabels.persona}</small><h3 id="companion-persona-title">{persona.title}</h3><p>{persona.summary}</p><h4>{personaLabels.communication}</h4><p>{persona.communicationStyle}</p><h4>{personaLabels.strengths}</h4><div className="persona-strengths">{persona.strengths.map((strength) => <span key={strength}>{strength}</span>)}</div><h4>{personaLabels.boundaries}</h4><ul>{persona.safetyBoundaries.map((boundary) => <li key={boundary}>{boundary}</li>)}</ul></section>}<h3>{t("experience")}</h3><p className="detail-copy">{experience}</p><h3>{t("userReview")}</h3><div className="review-card"><strong>“{t("sampleCompanionReview")}”</strong><small>— {t("completedOrders")}</small><em>★★★★★ {person.rating}</em></div><div className="detail-price"><small>{t("servicePrice")}</small><strong>₩{formatWon(person.price)} {t("perHour")}</strong></div><InfoBanner tone="navy" icon="shield" title={t("serviceSafety")}>{t("serviceSafetyDesc")}</InfoBanner></div>
   </Panel>;
 }
 

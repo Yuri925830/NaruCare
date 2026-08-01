@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import L from "leaflet";
 import {
-  AlertCircle, ArrowLeft, BadgeCheck, CircleUserRound, CreditCard, Globe2, Languages, ListTree,
-  MapPin, MessageCircleMore, PhoneCall, ShieldCheck, Sparkles,
+  AlertCircle, ArrowLeft, BadgeCheck, Check, CircleUserRound, CreditCard, Globe2, Hospital as HospitalIcon, Languages, ListTree,
+  LockKeyhole, MapPin, MessageCircleMore, PhoneCall, ShieldCheck, Sparkles, UserRound,
 } from "lucide-react";
 import { localeOptions, useI18n } from "./i18n";
 import { api } from "./api";
+import { companionFlowCopy } from "./companionFlow";
+import { hospitalAppointmentCopy } from "./hospitalAppointmentCopy";
 import type { Hospital, SessionUser, View } from "./types";
+import { isVisitJourneyStepUnlocked, visitJourneyStepIndex, visitJourneySteps, type VisitJourneyStep } from "./visitJourney";
 
 /** One of the 21 official Naru poses from the supplied 7 × 3 character sheet. */
 export function NaruPose({ pose = 1, className = "" }: { pose?: number; className?: string }) {
@@ -37,12 +40,63 @@ export function StatusPill({ children, tone = "mint" }: { children: ReactNode; t
   return <span className={`status-pill status-${tone}`}>{children}</span>;
 }
 
-const nav = [
+export function VisitJourneyProgress({ current, onStep, compact = false }: {
+  current: VisitJourneyStep;
+  onStep: (step: VisitJourneyStep) => void;
+  compact?: boolean;
+}) {
+  const { locale, t } = useI18n();
+  const companionFlow = companionFlowCopy(locale);
+  const appointmentFlow = hospitalAppointmentCopy(locale);
+  const currentIndex = visitJourneyStepIndex(current);
+  const labels: Record<VisitJourneyStep, string> = {
+    symptoms: t("journeySymptoms"),
+    hospital: t("journeyHospital"),
+    appointment: appointmentFlow.journeyLabel,
+    companion: companionFlow.journeyLabel,
+    prepare: t("journeyPrepare"),
+    navigation: t("journeyNavigation"),
+    translation: t("journeyTranslation"),
+    complete: t("journeyComplete"),
+  };
+
+  return <div className={`visit-journey-progress ${compact ? "compact" : ""}`} aria-label={t("visitJourney")}>
+    {visitJourneySteps.map((step, index) => {
+      const unlocked = isVisitJourneyStepUnlocked(current, step);
+      const done = index < currentIndex || (current === "complete" && step === "complete");
+      const active = index === currentIndex && !done;
+      return <button
+        type="button"
+        key={step}
+        className={`${done ? "done" : active ? "active" : "locked"}`}
+        disabled={!unlocked}
+        aria-current={active ? "step" : undefined}
+        onClick={() => onStep(step)}
+      >
+        <span>{done ? <Check size={15} /> : unlocked ? index + 1 : <LockKeyhole size={13} />}</span>
+        <strong>{labels[step]}{!compact && <small>{done ? t("journeyDone") : active ? t("journeyCurrent") : t("journeyLocked")}</small>}</strong>
+      </button>;
+    })}
+  </div>;
+}
+
+const bottomNav = [
   { id: "card" as View, key: "navCard" as const, Icon: CreditCard },
   { id: "agent" as View, key: "navNaru" as const, Icon: MessageCircleMore },
   { id: "visit-flow" as View, key: "navFlow" as const, Icon: ListTree },
   { id: "emergency-confirm" as View, key: "navEmergency" as const, Icon: AlertCircle, emergency: true },
   { id: "profile" as View, key: "navProfile" as const, Icon: CircleUserRound },
+];
+
+const sideNav = [
+  bottomNav[0],
+  bottomNav[1],
+  { id: "hospitals" as View, key: "findHospital" as const, Icon: HospitalIcon, emergency: false },
+  bottomNav[2],
+  { id: "companions-notice" as View, key: "companion" as const, Icon: UserRound, emergency: false },
+  { id: "translation" as View, key: "translation" as const, Icon: Languages, emergency: false },
+  bottomNav[3],
+  bottomNav[4],
 ];
 
 interface AppShellProps {
@@ -60,15 +114,21 @@ interface AppShellProps {
 export function AppShell({ view, title, user, onNavigate, onLanguage, onBack, canGoBack, children, hideHeader }: AppShellProps) {
   const { t } = useI18n();
   const card = user.card;
-  const isActive = (id: View) => id === view
+  const isSideActive = (id: View) => id === view
+    || (id === "hospitals" && ["hospitals", "navigation"].includes(view))
+    || (id === "companions-notice" && ["companions", "companions-notice", "companions-filter", "companion-detail", "companion-chat", "companion-waiting", "companion-payment", "companion-arrived", "companion-service", "companion-finished"].includes(view))
+    || (id === "emergency-confirm" && view === "emergency-calling")
+    || (id === "profile" && ["records", "companion-orders"].includes(view));
+  const isBottomActive = (id: View) => id === view
     || (id === "agent" && ["hospitals", "navigation", "translation", "companions", "companions-notice", "companions-filter", "companion-detail", "companion-chat", "companion-waiting", "companion-payment", "companion-arrived", "companion-service", "companion-finished"].includes(view))
+    || (id === "emergency-confirm" && view === "emergency-calling")
     || (id === "profile" && ["records", "companion-orders"].includes(view));
 
   return <div className="app-layout">
     <aside className="sidebar">
       <div className="brand"><span className="brand-mark">N</span><span><strong>NaruCare</strong><small>{t("brandSub")}</small></span></div>
       <nav className="side-nav">
-        {nav.map(({ id, key, Icon, emergency }) => <button key={id} className={`${isActive(id) ? "active" : ""} ${emergency ? "emergency-nav" : ""}`} onClick={() => onNavigate(id)}>
+        {sideNav.map(({ id, key, Icon, emergency }) => <button key={id} className={`${isSideActive(id) ? "active" : ""} ${emergency ? "emergency-nav" : ""}`} onClick={() => onNavigate(id)}>
           <Icon size={22} /><span>{t(key)}</span>{emergency && <i />}
         </button>)}
       </nav>
@@ -82,7 +142,7 @@ export function AppShell({ view, title, user, onNavigate, onLanguage, onBack, ca
       <div className="page-content">{children}</div>
     </main>
     <nav className="bottom-nav">
-      {nav.map(({ id, key, Icon, emergency }) => <button key={id} className={`${isActive(id) ? "active" : ""} ${emergency ? "emergency-nav" : ""}`} onClick={() => onNavigate(id)}>
+      {bottomNav.map(({ id, key, Icon, emergency }) => <button key={id} className={`${isBottomActive(id) ? "active" : ""} ${emergency ? "emergency-nav" : ""}`} onClick={() => onNavigate(id)}>
         <span><Icon size={21} /></span><small>{t(key)}</small>
       </button>)}
     </nav>
@@ -168,7 +228,8 @@ function LeafletInteractiveMap({ center, hospitals = [], selected, route = [], o
     L.marker(center, { icon: userIcon, title: "Current location" }).addTo(layer);
     bounds.push(center);
     hospitals.forEach((hospital) => {
-      const icon = L.divIcon({ className: "map-marker-wrap", html: `<span class="map-marker hospital-marker${selected?.id === hospital.id ? " selected" : ""}">+</span>`, iconSize: [34, 34], iconAnchor: [17, 17] });
+      const isSelected = selected?.id === hospital.id;
+      const icon = L.divIcon({ className: "map-marker-wrap", html: `<span class="map-marker hospital-marker${isSelected ? " selected" : ""}">+</span>`, iconSize: [34, 34], iconAnchor: [17, 17] });
       const tooltip = document.createElement("span");
       tooltip.textContent = hospital.name;
       const marker = L.marker([hospital.lat, hospital.lng], { icon, title: hospital.name }).addTo(layer).bindTooltip(tooltip);
@@ -187,62 +248,99 @@ function LeafletInteractiveMap({ center, hospitals = [], selected, route = [], o
   return <div ref={container} className={`interactive-map ${className}`} aria-label="Interactive map" />;
 }
 
-interface NaverMapInstance {
-  fitBounds: (bounds: unknown, margin?: number | { top: number; right: number; bottom: number; left: number }) => void;
-  getCenter: () => NaverLatLng;
-  setCenter: (center: unknown) => void;
-  setZoom: (zoom: number) => void;
-  destroy?: () => void;
+interface KakaoLatLng {
+  getLat: () => number;
+  getLng: () => number;
 }
 
-interface NaverLatLng { lat: () => number; lng: () => number }
-interface NaverOverlay { setMap: (map: NaverMapInstance | null) => void }
-type NaverEventListener = unknown;
+interface KakaoLatLngBounds {
+  extend: (point: KakaoLatLng) => void;
+}
 
-interface NaverMapsNamespace {
-  LatLng: new (lat: number, lng: number) => NaverLatLng;
-  LatLngBounds: new () => { extend: (point: unknown) => void };
-  Map: new (element: HTMLElement, options: Record<string, unknown>) => NaverMapInstance;
-  Marker: new (options: Record<string, unknown>) => NaverOverlay;
-  Polyline: new (options: Record<string, unknown>) => NaverOverlay;
-  Event: {
-    addListener: (target: unknown, eventName: string, listener: () => void) => NaverEventListener;
-    removeListener: (listener: NaverEventListener) => void;
-    trigger: (target: unknown, eventName: string) => void;
+interface KakaoMapInstance {
+  addControl: (control: unknown, position: unknown) => void;
+  getCenter: () => KakaoLatLng;
+  getLevel: () => number;
+  relayout: () => void;
+  setBounds: (bounds: KakaoLatLngBounds, paddingTop?: number, paddingRight?: number, paddingBottom?: number, paddingLeft?: number) => void;
+  setCenter: (center: KakaoLatLng) => void;
+  setLevel: (level: number) => void;
+  setMaxLevel: (level: number) => void;
+  setMinLevel: (level: number) => void;
+}
+
+interface KakaoOverlay {
+  setMap: (map: KakaoMapInstance | null) => void;
+}
+
+type KakaoEventHandler = () => void;
+
+interface KakaoListener {
+  target: unknown;
+  eventName: string;
+  handler: KakaoEventHandler;
+}
+
+interface KakaoDomListener {
+  element: HTMLElement;
+  handler: EventListener;
+}
+
+interface KakaoMapsNamespace {
+  load: (callback: () => void) => void;
+  LatLng: new (lat: number, lng: number) => KakaoLatLng;
+  LatLngBounds: new () => KakaoLatLngBounds;
+  Map: new (element: HTMLElement, options: Record<string, unknown>) => KakaoMapInstance;
+  Marker: new (options: Record<string, unknown>) => KakaoOverlay;
+  CustomOverlay: new (options: Record<string, unknown>) => KakaoOverlay;
+  Polyline: new (options: Record<string, unknown>) => KakaoOverlay;
+  ZoomControl: new () => unknown;
+  ControlPosition: { RIGHT: unknown };
+  event: {
+    addListener: (target: unknown, eventName: string, handler: KakaoEventHandler) => void;
+    removeListener: (target: unknown, eventName: string, handler: KakaoEventHandler) => void;
   };
 }
 
 declare global {
-  interface Window { naver?: { maps?: NaverMapsNamespace } }
+  interface Window { kakao?: { maps?: KakaoMapsNamespace } }
 }
 
-let naverMapsLoader: Promise<NaverMapsNamespace> | null = null;
+let kakaoMapsLoader: Promise<KakaoMapsNamespace> | null = null;
 
-function loadNaverMaps(clientId: string) {
-  const ready = window.naver?.maps;
-  if (ready) return Promise.resolve(ready);
-  if (naverMapsLoader) return naverMapsLoader;
-  naverMapsLoader = new Promise<NaverMapsNamespace>((resolve, reject) => {
+function loadKakaoMaps(javaScriptKey: string) {
+  const ready = window.kakao?.maps;
+  if (ready && typeof ready.Map === "function") return Promise.resolve(ready);
+  if (kakaoMapsLoader) return kakaoMapsLoader;
+  kakaoMapsLoader = new Promise<KakaoMapsNamespace>((resolve, reject) => {
     const script = document.createElement("script");
     script.async = true;
-    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(clientId)}`;
-    script.dataset.narucareNaverMap = "true";
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=${encodeURIComponent(javaScriptKey)}`;
+    script.dataset.narucareKakaoMap = "true";
     script.onload = () => {
-      const maps = window.naver?.maps;
-      if (maps) resolve(maps);
-      else reject(new Error("Naver Maps SDK did not initialize"));
+      const maps = window.kakao?.maps;
+      if (!maps) {
+        reject(new Error("Kakao Maps SDK did not initialize"));
+        return;
+      }
+      maps.load(() => {
+        const loaded = window.kakao?.maps;
+        if (loaded && typeof loaded.Map === "function") resolve(loaded);
+        else reject(new Error("Kakao Maps SDK did not finish loading"));
+      });
     };
-    script.onerror = () => reject(new Error("Naver Maps SDK could not be loaded"));
+    script.onerror = () => reject(new Error("Kakao Maps SDK could not be loaded"));
     document.head.appendChild(script);
   }).catch((error) => {
-    naverMapsLoader = null;
+    kakaoMapsLoader = null;
     throw error;
   });
-  return naverMapsLoader;
+  return kakaoMapsLoader;
 }
 
-function useNaverMapsSdk() {
-  const [maps, setMaps] = useState<NaverMapsNamespace | null>(window.naver?.maps || null);
+function useKakaoMapsSdk() {
+  const initialMaps = window.kakao?.maps;
+  const [maps, setMaps] = useState<KakaoMapsNamespace | null>(initialMaps && typeof initialMaps.Map === "function" ? initialMaps : null);
   const [useFallback, setUseFallback] = useState(false);
 
   useEffect(() => {
@@ -250,11 +348,11 @@ function useNaverMapsSdk() {
     let active = true;
     void api.mapsConfig().then((config) => {
       if (!active) return;
-      if (!config.dynamicMap || !config.naverClientId) {
+      if (!config.dynamicMap || !config.kakaoJavaScriptKey) {
         setUseFallback(true);
         return;
       }
-      return loadNaverMaps(config.naverClientId).then((loaded) => {
+      return loadKakaoMaps(config.kakaoJavaScriptKey).then((loaded) => {
         if (active) setMaps(loaded);
       });
     }).catch(() => { if (active) setUseFallback(true); });
@@ -264,59 +362,85 @@ function useNaverMapsSdk() {
   return { maps, useFallback };
 }
 
+function removeKakaoListeners(maps: KakaoMapsNamespace, listeners: KakaoListener[]) {
+  listeners.forEach(({ target, eventName, handler }) => maps.event.removeListener(target, eventName, handler));
+}
+
+function removeKakaoDomListeners(listeners: KakaoDomListener[]) {
+  listeners.forEach(({ element, handler }) => element.removeEventListener("click", handler));
+}
+
 export function InteractiveMap(props: InteractiveMapProps) {
-  const { maps, useFallback } = useNaverMapsSdk();
+  const { maps, useFallback } = useKakaoMapsSdk();
   const container = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<NaverMapInstance | null>(null);
-  const overlaysRef = useRef<NaverOverlay[]>([]);
-  const listenersRef = useRef<NaverEventListener[]>([]);
+  const mapRef = useRef<KakaoMapInstance | null>(null);
+  const overlaysRef = useRef<KakaoOverlay[]>([]);
+  const listenersRef = useRef<KakaoListener[]>([]);
+  const domListenersRef = useRef<KakaoDomListener[]>([]);
   const onSelectRef = useRef(props.onSelect);
   onSelectRef.current = props.onSelect;
 
   useEffect(() => {
     if (!maps || !container.current || mapRef.current) return;
-    const map = new maps.Map(container.current, {
+    const mapElement = container.current;
+    const map = new maps.Map(mapElement, {
       center: new maps.LatLng(props.center[0], props.center[1]),
-      zoom: 15,
-      zoomControl: true,
-      scaleControl: true,
-      mapDataControl: false,
+      level: 4,
     });
+    map.addControl(new maps.ZoomControl(), maps.ControlPosition.RIGHT);
     mapRef.current = map;
-    const resizeTimer = window.setTimeout(() => maps.Event.trigger(map, "resize"), 80);
+    const resizeTimer = window.setTimeout(() => map.relayout(), 80);
     return () => {
       window.clearTimeout(resizeTimer);
-      listenersRef.current.forEach((listener) => maps.Event.removeListener(listener));
+      removeKakaoListeners(maps, listenersRef.current);
       listenersRef.current = [];
+      removeKakaoDomListeners(domListenersRef.current);
+      domListenersRef.current = [];
       overlaysRef.current.forEach((overlay) => overlay.setMap(null));
       overlaysRef.current = [];
-      map.destroy?.();
       mapRef.current = null;
+      mapElement.replaceChildren();
     };
   }, [maps]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!maps || !map) return;
-    listenersRef.current.forEach((listener) => maps.Event.removeListener(listener));
+    removeKakaoListeners(maps, listenersRef.current);
     listenersRef.current = [];
+    removeKakaoDomListeners(domListenersRef.current);
+    domListenersRef.current = [];
     overlaysRef.current.forEach((overlay) => overlay.setMap(null));
-    const overlays: NaverOverlay[] = [];
+    const overlays: KakaoOverlay[] = [];
     const bounds = new maps.LatLngBounds();
     const origin = new maps.LatLng(props.center[0], props.center[1]);
     bounds.extend(origin);
-    overlays.push(new maps.Marker({ map, position: origin, title: "Current location" }));
+    overlays.push(new maps.Marker({ map, position: origin, title: "Current location", zIndex: 300 }));
     props.hospitals?.forEach((hospital) => {
       const point = new maps.LatLng(hospital.lat, hospital.lng);
       bounds.extend(point);
-      const marker = new maps.Marker({
+      const isSelected = props.selected?.id === hospital.id;
+      const markerButton = document.createElement("button");
+      markerButton.type = "button";
+      markerButton.className = `map-marker hospital-marker${isSelected ? " selected" : ""}`;
+      markerButton.textContent = "+";
+      markerButton.title = hospital.name;
+      markerButton.dataset.hospitalId = hospital.id;
+      markerButton.setAttribute("aria-label", hospital.name);
+      markerButton.setAttribute("aria-pressed", String(isSelected));
+      const marker = new maps.CustomOverlay({
         map,
         position: point,
-        title: hospital.name,
-        zIndex: props.selected?.id === hospital.id ? 200 : 100,
+        content: markerButton,
+        xAnchor: 0.5,
+        yAnchor: 0.5,
+        clickable: true,
+        zIndex: isSelected ? 200 : 100,
       });
       overlays.push(marker);
-      listenersRef.current.push(maps.Event.addListener(marker, "click", () => onSelectRef.current?.(hospital)));
+      const handler: EventListener = () => onSelectRef.current?.(hospital);
+      markerButton.addEventListener("click", handler);
+      domListenersRef.current.push({ element: markerButton, handler });
     });
     if (props.route && props.route.length > 1) {
       const path = props.route.map(([lat, lng]) => {
@@ -327,46 +451,45 @@ export function InteractiveMap(props: InteractiveMapProps) {
       overlays.push(new maps.Polyline({ map, path, strokeColor: "#785a4d", strokeWeight: 7, strokeOpacity: 0.92 }));
     }
     overlaysRef.current = overlays;
-    maps.Event.trigger(map, "resize");
-    if ((props.hospitals?.length || 0) + (props.route?.length || 0) > 0) map.fitBounds(bounds, { top: 64, right: 38, bottom: 38, left: 38 });
-    else { map.setCenter(origin); map.setZoom(15); }
+    map.relayout();
+    if ((props.hospitals?.length || 0) + (props.route?.length || 0) > 0) map.setBounds(bounds, 64, 38, 38, 38);
+    else { map.setCenter(origin); map.setLevel(4); }
   }, [maps, props.center[0], props.center[1], props.hospitals, props.selected?.id, props.route]);
 
   if (useFallback) return <LeafletInteractiveMap {...props} />;
-  return <div ref={container} className={`interactive-map naver-interactive-map ${props.className || ""}`} aria-label="Naver interactive map" />;
+  return <div ref={container} className={`interactive-map kakao-interactive-map ${props.className || ""}`} aria-label="Kakao interactive map" />;
 }
 
-export function NaverNavigationMap({ center, hospital, route = [], className = "" }: {
+export function KakaoNavigationMap({ center, hospital, route = [], className = "" }: {
   center: [number, number];
   hospital: Hospital;
   route?: [number, number][];
   className?: string;
 }) {
   const container = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<NaverMapInstance | null>(null);
-  const overlaysRef = useRef<NaverOverlay[]>([]);
-  const { maps, useFallback } = useNaverMapsSdk();
+  const mapRef = useRef<KakaoMapInstance | null>(null);
+  const overlaysRef = useRef<KakaoOverlay[]>([]);
+  const { maps, useFallback } = useKakaoMapsSdk();
 
   useEffect(() => {
     if (!maps || !container.current || mapRef.current) return;
-    const map = new maps.Map(container.current, {
+    const mapElement = container.current;
+    const map = new maps.Map(mapElement, {
       center: new maps.LatLng(center[0], center[1]),
-      zoom: 15,
-      zoomControl: true,
-      scaleControl: true,
-      mapDataControl: false,
+      level: 4,
     });
+    map.addControl(new maps.ZoomControl(), maps.ControlPosition.RIGHT);
     mapRef.current = map;
     const resizeTimer = window.setTimeout(() => {
-      maps.Event.trigger(map, "resize");
+      map.relayout();
       map.setCenter(new maps.LatLng(center[0], center[1]));
     }, 80);
     return () => {
       window.clearTimeout(resizeTimer);
       overlaysRef.current.forEach((overlay) => overlay.setMap(null));
       overlaysRef.current = [];
-      map.destroy?.();
       mapRef.current = null;
+      mapElement.replaceChildren();
     };
   }, [maps]);
 
@@ -374,14 +497,14 @@ export function NaverNavigationMap({ center, hospital, route = [], className = "
     const map = mapRef.current;
     if (!maps || !map) return;
     overlaysRef.current.forEach((overlay) => overlay.setMap(null));
-    const overlays: NaverOverlay[] = [];
+    const overlays: KakaoOverlay[] = [];
     const bounds = new maps.LatLngBounds();
     const origin = new maps.LatLng(center[0], center[1]);
     const destination = new maps.LatLng(hospital.lat, hospital.lng);
     bounds.extend(origin);
     bounds.extend(destination);
-    overlays.push(new maps.Marker({ map, position: origin, title: "Current location" }));
-    overlays.push(new maps.Marker({ map, position: destination, title: hospital.name }));
+    overlays.push(new maps.Marker({ map, position: origin, title: "Current location", zIndex: 200 }));
+    overlays.push(new maps.Marker({ map, position: destination, title: hospital.name, zIndex: 100 }));
     if (route.length > 1) {
       const path = route.map(([lat, lng]) => {
         const point = new maps.LatLng(lat, lng);
@@ -391,12 +514,12 @@ export function NaverNavigationMap({ center, hospital, route = [], className = "
       overlays.push(new maps.Polyline({ map, path, strokeColor: "#785a4d", strokeWeight: 7, strokeOpacity: 0.92 }));
     }
     overlaysRef.current = overlays;
-    maps.Event.trigger(map, "resize");
-    map.fitBounds(bounds, { top: 72, right: 38, bottom: 38, left: 38 });
+    map.relayout();
+    map.setBounds(bounds, 72, 38, 38, 38);
   }, [maps, center[0], center[1], hospital.id, hospital.lat, hospital.lng, hospital.name, route]);
 
   if (useFallback) return <LeafletInteractiveMap center={center} hospitals={[hospital]} selected={hospital} route={route} className={className} />;
-  return <div ref={container} className={`interactive-map naver-navigation-map ${className}`} aria-label="Naver interactive map" />;
+  return <div ref={container} className={`interactive-map kakao-navigation-map ${className}`} aria-label="Kakao interactive map" />;
 }
 
 function LeafletLocationPickerMap({ center, accuracy, disabled = false, onPick, className = "" }: {
@@ -480,10 +603,10 @@ export function LocationPickerMap({ center, accuracy, disabled = false, onPick, 
   onPick: (lat: number, lng: number) => void;
   className?: string;
 }) {
-  const { maps, useFallback } = useNaverMapsSdk();
+  const { maps, useFallback } = useKakaoMapsSdk();
   const container = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<NaverMapInstance | null>(null);
-  const listenerRef = useRef<NaverEventListener | null>(null);
+  const mapRef = useRef<KakaoMapInstance | null>(null);
+  const listenerRef = useRef<KakaoEventHandler | null>(null);
   const onPickRef = useRef(onPick);
   const disabledRef = useRef(disabled);
   const programmaticTarget = useRef<[number, number] | null>(null);
@@ -494,25 +617,23 @@ export function LocationPickerMap({ center, accuracy, disabled = false, onPick, 
 
   useEffect(() => {
     if (!maps || !container.current || mapRef.current) return;
-    const map = new maps.Map(container.current, {
-      center: new maps.LatLng(center[0], center[1]),
-      zoom: 19,
-      minZoom: 7,
-      maxZoom: 21,
-      zoomControl: true,
-      scaleControl: true,
-      mapDataControl: false,
-    });
-    mapRef.current = map;
     const mapElement = container.current;
+    const map = new maps.Map(mapElement, {
+      center: new maps.LatLng(center[0], center[1]),
+      level: 2,
+    });
+    map.setMinLevel(1);
+    map.setMaxLevel(10);
+    map.addControl(new maps.ZoomControl(), maps.ControlPosition.RIGHT);
+    mapRef.current = map;
     const markUserGesture = () => { gestureVersion.current += 1; };
     mapElement.addEventListener("pointerdown", markUserGesture, true);
     mapElement.addEventListener("touchstart", markUserGesture, true);
     mapElement.addEventListener("wheel", markUserGesture, { capture: true, passive: true });
-    listenerRef.current = maps.Event.addListener(map, "idle", () => {
+    const handleIdle = () => {
       const point = map.getCenter();
-      const lat = point.lat();
-      const lng = point.lng();
+      const lat = point.getLat();
+      const lng = point.getLng();
       const target = programmaticTarget.current;
       if (target && Math.abs(target[0] - lat) < 0.0000005 && Math.abs(target[1] - lng) < 0.0000005) {
         programmaticTarget.current = null;
@@ -522,17 +643,19 @@ export function LocationPickerMap({ center, accuracy, disabled = false, onPick, 
       if (gestureVersion.current === handledGestureVersion.current || disabledRef.current) return;
       handledGestureVersion.current = gestureVersion.current;
       onPickRef.current(lat, lng);
-    });
-    const resizeTimer = window.setTimeout(() => maps.Event.trigger(map, "resize"), 80);
+    };
+    maps.event.addListener(map, "idle", handleIdle);
+    listenerRef.current = handleIdle;
+    const resizeTimer = window.setTimeout(() => map.relayout(), 80);
     return () => {
       window.clearTimeout(resizeTimer);
       mapElement.removeEventListener("pointerdown", markUserGesture, true);
       mapElement.removeEventListener("touchstart", markUserGesture, true);
       mapElement.removeEventListener("wheel", markUserGesture, true);
-      if (listenerRef.current) maps.Event.removeListener(listenerRef.current);
+      if (listenerRef.current) maps.event.removeListener(map, "idle", listenerRef.current);
       listenerRef.current = null;
-      map.destroy?.();
       mapRef.current = null;
+      mapElement.replaceChildren();
     };
   }, [maps]);
 
@@ -540,7 +663,7 @@ export function LocationPickerMap({ center, accuracy, disabled = false, onPick, 
     const map = mapRef.current;
     if (!maps || !map) return;
     const current = map.getCenter();
-    if (Math.abs(current.lat() - center[0]) < 0.0000005 && Math.abs(current.lng() - center[1]) < 0.0000005) return;
+    if (Math.abs(current.getLat() - center[0]) < 0.0000005 && Math.abs(current.getLng() - center[1]) < 0.0000005) return;
     programmaticTarget.current = center;
     map.setCenter(new maps.LatLng(center[0], center[1]));
   }, [maps, center[0], center[1]]);
@@ -551,15 +674,17 @@ export function LocationPickerMap({ center, accuracy, disabled = false, onPick, 
     const observer = new ResizeObserver(() => {
       const map = mapRef.current;
       if (!map) return;
-      maps.Event.trigger(map, "resize");
+      const current = map.getCenter();
+      map.relayout();
+      map.setCenter(current);
     });
     observer.observe(element);
     return () => observer.disconnect();
   }, [maps]);
 
   if (useFallback) return <LeafletLocationPickerMap center={center} accuracy={accuracy} disabled={disabled} onPick={onPick} className={className} />;
-  return <div className={`location-picker naver-location-picker ${disabled ? "is-disabled" : ""} ${className}`}>
-    <div ref={container} className="interactive-map location-picker-map" aria-label="Naver location picker map" />
+  return <div className={`location-picker kakao-location-picker ${disabled ? "is-disabled" : ""} ${className}`}>
+    <div ref={container} className="interactive-map location-picker-map" aria-label="Kakao location picker map" />
     <span className="location-picker-crosshair" aria-hidden="true" />
   </div>;
 }

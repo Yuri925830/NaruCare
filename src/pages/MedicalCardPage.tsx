@@ -11,8 +11,8 @@ type CardField = "name" | "nationality" | "address" | "age" | "gender" | "docume
 
 const koreanLabels: Record<CardField, string> = {
   name: "이름 / 호칭", nationality: "국적", age: "나이", gender: "성별", documentType: "신분증 종류",
-  address: "현재 거주지 (선택)", documentNumber: "신분증 번호", insurance: "한국 건강보험", conditions: "만성질환 / 알레르기",
-  medications: "현재 복용 약물", surgeries: "수술 / 중요 병력", symptoms: "현재 증상", notes: "기타 메모", language: "주요 통역 언어",
+  address: "현재 거주지 (선택)", documentNumber: "신분증 번호", insurance: "국민건강보험 가입 여부", conditions: "만성질환 / 알레르기",
+  medications: "현재 복용 중인 약", surgeries: "수술 이력 / 주요 병력", symptoms: "현재 증상", notes: "기타 메모", language: "주요 통역 언어",
 };
 
 function emptyCard(language: string): MedicalCard {
@@ -186,14 +186,14 @@ export function MedicalCardPage({ card, onSaved }: { card: MedicalCard | null; o
     <InfoBanner title={t("personalCard")} icon="shield" action={<div className="banner-character">{saved && !editing
       ? <Button type="button" variant="secondary" className="card-banner-edit" onClick={beginEditing}><BadgeCheck size={16} />{t("editCard")}</Button>
       : <span className="soft-chip">{t("editable")}</span>}<NaruPose pose={4} className="medical-card-naru" /></div>}>{t("cardPrivacy")}</InfoBanner>
-    {saved && <div className="bilingual-heading"><Languages size={20} /><div><strong>{t("bilingualCard")}</strong><small>{t("userLanguage")} · {localeOptions.find((item) => item.code === form.language)?.nativeName} / 한국어</small></div></div>}
+    {saved && <div className="bilingual-heading"><Languages size={20} /><div><strong>{locale === "ko" ? t("navCard") : t("bilingualCard")}</strong><small>{locale === "ko" ? "한국어" : `${t("userLanguage")} · ${localeOptions.find((item) => item.code === form.language)?.nativeName} / 한국어`}</small></div></div>}
     <form className="medical-card-form" onSubmit={submit}>
       {fields.map((field) => {
         const key = field.key;
         const value = String(form[key] ?? "");
         const options = "options" in field ? field.options : null;
         return <label key={key} data-field={key}>
-          <span>{field.label}{saved && <em> / {koreanLabels[key]}</em>}</span>
+          <span>{field.label}{saved && locale !== "ko" && <em> / {koreanLabels[key]}</em>}</span>
           {"country" in field && field.country ? <select value={value} required disabled={!editing} onChange={(event) => setForm({ ...form, nationality: event.target.value })}>
             <option value="">— {t("nationality")} —</option>
             {legacyCountry && <option value={legacyCountry}>{legacyCountry}</option>}
@@ -201,7 +201,7 @@ export function MedicalCardPage({ card, onSaved }: { card: MedicalCard | null; o
           </select> : options ? <select value={value} disabled={!editing} onChange={(event) => setForm({ ...form, [key]: event.target.value })}>{options.map(([optionValue, label]) => <option key={optionValue} value={optionValue}>{label}</option>)}</select> : "multiline" in field && field.multiline ? <textarea dir="auto" value={value} disabled={!editing} onChange={(event) => { if (key === "address") { addressEdited.current = true; addressRevision.current += 1; } setForm({ ...form, [key]: event.target.value }); }} placeholder={("placeholder" in field && field.placeholder) || ""} required={"required" in field && field.required} /> : <input dir="auto" type={("type" in field && field.type) || "text"} min={key === "age" ? 0 : undefined} max={key === "age" ? 120 : undefined} value={value} disabled={!editing} onChange={(event) => setForm({ ...form, [key]: event.target.value })} placeholder={("placeholder" in field && field.placeholder) || ""} required={"required" in field && field.required} />}
           {key === "address" && <><Button type="button" variant="secondary" className="locate-address" onClick={() => { beginEditing(); addressEdited.current = false; void locateAddress(true); }} disabled={locating}><LocateFixed size={16} />{locating ? t("locating") : t("useCurrentLocation")}</Button><small className="address-help">{t("addressHelp")}{form.locationAccuracy ? ` · ${t("locationAccuracy", { accuracy: formatAccuracy(form.locationAccuracy) })}` : ""}</small><LocationPickerMap center={[form.latitude ?? 37.5665, form.longitude ?? 126.978]} accuracy={form.locationAccuracy} disabled={!editing} onPick={pickMapLocation} /><small className="address-help map-picker-help">{t("mapPickerHelp")}</small>{locationError && <small className="form-error" role="alert">{locationError}</small>}</>}
           {key === "symptoms" && <small className="address-help">{t("symptomsAutoFill")}</small>}
-          {saved && <small className="korean-preview"><BadgeCheck size={13} />{form.korean?.[key] || localKoreanValue(key, value)}</small>}
+          {saved && locale !== "ko" && <small className="korean-preview"><BadgeCheck size={13} />{form.korean?.[key] || localKoreanValue(key, value)}</small>}
         </label>;
       })}
       {error && <p className="form-error span-2">{error}</p>}

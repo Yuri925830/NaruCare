@@ -24,11 +24,19 @@ describe("medical triage", () => {
     "肚子疼，一直拉肚子还吐了，今天吃了海鲜",
     "I have a fever and cough",
     "열이 나고 기침이 나요",
+    "두통 있어요",
     "Tengo fiebre y tos",
     "J'ai de la fièvre et je tousse",
     "Tôi bị sốt và ho",
   ])("routes non-red-flag symptoms to hospitals: %s", (message) => {
     expect(assessMedicalIntent(message).intent).toBe("hospital");
+  });
+
+  it("recognizes a short Korean headache report as a journey symptom", () => {
+    const result = assessMedicalIntent("두통 있어요");
+    expect(hasMedicalSymptoms("두통 있어요")).toBe(true);
+    expect(result.reason).toBe("symptoms");
+    expect(extractReportableSymptoms(result.symptoms)).toBe("두통 있어요");
   });
 
   it("honors an explicit hospital request and carries prior symptom context", () => {
@@ -118,6 +126,12 @@ describe("medical triage", () => {
 
   it("does not turn an explicitly negated chest pain statement into an emergency", () => {
     expect(assessMedicalIntent("我没有胸痛，只是想了解韩国医院怎么预约").intent).not.toBe("emergency");
+  });
+
+  it("requires a recognized serious symptom in addition to a severity adjective", () => {
+    expect(assessMedicalIntent("I feel extremely tired today").intent).not.toBe("emergency");
+    expect(assessMedicalIntent("I have a severe cough").intent).not.toBe("emergency");
+    expect(assessMedicalIntent("I have severe chest pain").intent).toBe("emergency");
   });
 
   it("keeps ordinary conversation general", () => {

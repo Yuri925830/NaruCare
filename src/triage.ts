@@ -47,7 +47,7 @@ const NEURO_OR_VISION = /(视力模糊|看不清|看不见|眼前发黑|意识�
 const SEVERE_MODIFIER = /(剧烈|严重|非常痛|痛得受不了|无法站立|持续恶化|severe|extreme|unbearable|worst|rapidly\s+worsening|심한|극심|激しい|intenso|grave|sévère|stark|schwer|сильн|شديد)/iu;
 const SERIOUS_SYMPTOM = /(头痛|腹痛|肚子痛|出血|呕吐|发烧|发热|胸痛|过敏|受伤|烧伤|pain|headache|abdominal|bleed|vomit|fever|allerg|injur|burn|통증|두통|복통|출혈|구토|발열|알레르|부상|痛|頭痛|腹痛|出血|嘔吐|発熱|けが)/iu;
 
-const SYMPTOM = /(疼|痛|不舒服|难受|发烧|发热|高烧|发冷|咳嗽|头晕|眩晕|恶心|乏力|无力|过敏|出血|肿|麻木|呼吸|喘|腹泻|呕吐|拉肚子|皮疹|受伤|看不清|看不见|视力模糊|耳鸣|流鼻涕|喉咙|心悸|失眠|便血|尿血|pain|hurt|unwell|fever|chills|cough|dizz|nause|weak|allerg|bleed|swollen|numb|breath|diarrhea|vomit|rash|injur|blurred\s+vision|can't\s+see|sore\s+throat|palpitation|아프|통증|불편|열이|발열|오한|기침|어지|메스꺼|구토|설사|알레르|출혈|붓|저림|호흡|다쳤|시야|안\s*보|목이|痛い|苦しい|発熱|咳|めまい|吐き気|嘔吐|下痢|発疹|出血|腫れ|しびれ|息|見え|喉|fiebre|dolor|tos|mareo|náusea|vómito|diarrea|sangrado|fièvre|douleur|toux|vertige|nausée|vomissement|durchfall|schmerz|fieber|husten|schwindel|übelkeit|febre|dor|tosse|tontura|náusea|температур|боль|кашель|тошнот|рвот|диаре|حمى|ألم|سعال|دوار|غثيان|قيء|إسهال|demam|sakit|batuk|pusing|mual|muntah|diare|sốt|đau|(?:^|[\s,.;!?])ho(?:$|[\s,.;!?])|chóng mặt|buồn nôn|nôn|tiêu chảy)/iu;
+const SYMPTOM = /(疼|痛|不舒服|难受|发烧|发热|高烧|发冷|咳嗽|头晕|眩晕|恶心|乏力|无力|过敏|出血|肿|麻木|呼吸|喘|腹泻|呕吐|拉肚子|皮疹|受伤|看不清|看不见|视力模糊|耳鸣|流鼻涕|喉咙|心悸|失眠|便血|尿血|pain|hurt|unwell|fever|chills|cough|dizz|nause|weak|allerg|bleed|swollen|numb|breath|diarrhea|vomit|rash|injur|blurred\s+vision|can't\s+see|sore\s+throat|palpitation|아프|통증|두통|복통|불편|열이|발열|오한|기침|어지|메스꺼|구토|설사|알레르|출혈|붓|저림|호흡|다쳤|시야|안\s*보|목이|痛い|苦しい|発熱|咳|めまい|吐き気|嘔吐|下痢|発疹|出血|腫れ|しびれ|息|見え|喉|fiebre|dolor|tos|mareo|náusea|vómito|diarrea|sangrado|fièvre|douleur|toux|vertige|nausée|vomissement|durchfall|schmerz|fieber|husten|schwindel|übelkeit|febre|dor|tosse|tontura|náusea|температур|боль|кашель|тошнот|рвот|диаре|головокруж|кружится\s+голова|حمى|ألم|سعال|دوار|غثيان|قيء|إسهال|demam|sakit|batuk|pusing|mual|muntah|diare|sốt|đau|(?:^|[\s,.;!?])ho(?:$|[\s,.;!?])|chóng mặt|buồn nôn|nôn|tiêu chảy)/iu;
 const FOLLOW_UP = /^(是|有|对|嗯|还有|而且|刚才|现在|越来越|那|那么|所以|这种情况|yes|yeah|also|and|now|worse|맞아|네|그리고|지금|はい|ある|それと)\b/iu;
 
 function normalize(value: string) {
@@ -104,7 +104,8 @@ export function isSymptomsResolvedStatement(value: string) {
   const chineseRecovery = /^(?:(?:好吧|好的)[，,。\s]*)?(?:(?:我|我的|我现在|现在我|目前我|本人)(?:的)?\s*)?(?:(?:肚子|肚|胃|头|脑袋|胸|胸口|心口|喉咙|嗓子|腰|背|牙|腿|手|脚|眼睛|身体|症状|不舒服)\s*)?(?:(?:已经|现在|终于|完全|也)\s*)?(?:(?:不再|不|没再|没有再)\s*(?:怎么|那么|很|继续)?\s*(?:疼|痛|难受|吐|呕吐|拉肚子|腹泻|发烧|发热|咳嗽|头晕|恶心|出血|不舒服)|(?:不吐也不拉|不拉也不吐))(?:了|啦|咯)[。！!\s]*$/u;
   const englishRecovery = /^(?:i(?:'m| am) (?:fine|okay|better) now|i (?:do not|don't|no longer) (?:hurt|feel sick)|it (?:does not|doesn't) hurt anymore|my .{0,20} (?:pain|symptom)s? (?:is|are) gone)[.!\s]*$/iu;
   const koreanRecovery = /^(?:이제\s*)?(?:저는?\s*)?(?:배|머리|가슴|목|허리|몸)?(?:가|이|은|는)?\s*(?:더 이상\s*)?(?:아프지 않|안 아프|괜찮아졌|증상이 없어졌|회복했)(?:어요|습니다|어|다)?[.!\s]*$/u;
-  return chineseRecovery.test(clean) || englishRecovery.test(clean) || koreanRecovery.test(clean);
+  const japaneseRecovery = /^(?:もう\s*)?(?:大丈夫です[。.\s]*)?(?:(?:痛み|症状)(?:は|が)?\s*)?(?:完全に\s*)?(?:なくなりました|消えました|治りました)[。！!\s]*$/u;
+  return chineseRecovery.test(clean) || englishRecovery.test(clean) || koreanRecovery.test(clean) || japaneseRecovery.test(clean);
 }
 
 function symptomSummary(current: string, previous: string[]) {

@@ -145,9 +145,9 @@ export const api = {
   },
   async mapsConfig() {
     try {
-      return await request<{ naverClientId: string; dynamicMap: boolean }>("/api/maps/config", {}, 5_000);
+      return await request<{ kakaoJavaScriptKey: string; dynamicMap: boolean }>("/api/maps/config", {}, 5_000);
     } catch {
-      return { naverClientId: "", dynamicMap: false };
+      return { kakaoJavaScriptKey: "", dynamicMap: false };
     }
   },
   async route(origin: [number, number], destination: [number, number], mode: "walking" | "driving" = "walking") {
@@ -166,14 +166,15 @@ export const api = {
     try {
       const data = await request<{ translated: string }>("/api/translate", { method: "POST", body: JSON.stringify({ text, source, target }) });
       return data.translated;
-    } catch {
+    } catch (error) {
       const common: Record<string, string> = {
         "我从今天早上开始肚子很痛，一直腹泻，还吐了。我今天吃过海鲜。": "오늘 아침부터 배가 많이 아프고 설사와 구토를 했습니다. 오늘 해산물을 먹었습니다.",
         "해산물을 드셨나요? 열은 있습니까?": "Did you eat seafood? Do you have a fever?",
         "None": target.startsWith("ko") ? "없음" : "None",
         "无": target.startsWith("ko") ? "없음" : "None",
       };
-      return common[text] || text;
+      if (common[text]) return common[text];
+      throw error;
     }
   },
   async transcribe(audio: Blob, language: string): Promise<string> {

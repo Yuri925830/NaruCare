@@ -12,7 +12,7 @@ export type HospitalCategory =
 const categoryQueries: Record<HospitalCategory, string[]> = {
   gastro: ["소화기내과", "내과"],
   respiratory: ["호흡기내과", "이비인후과", "내과"],
-  neurology: ["신경과"],
+  neurology: ["신경과", "신경외과", "내과", "종합병원"],
   orthopedic: ["정형외과"],
   ophthalmology: ["안과"],
   mental: ["정신건강의학과"],
@@ -43,7 +43,7 @@ export function matchesHospitalCategory(
   tags: Record<string, string>,
   category: HospitalCategory,
 ) {
-  const descriptor = `${name} ${tags.healthcare || ""} ${tags["healthcare:speciality"] || ""} ${tags.amenity || ""}`.toLowerCase();
+  const descriptor = `${name} ${Object.values(tags).join(" ")}`.normalize("NFKC").toLowerCase();
   if (/(medical\s*shop|sanitätshaus|의료기기|약국|pharmacy|동물병원|동물의료|veterinary|animal\s*hospital|장례식장|funeral|한의원|한방병원|oriental\s*medicine)/u.test(descriptor)) return false;
   if (category === "general") {
     // With no reported symptoms, recommend multi-department hospitals instead

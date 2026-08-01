@@ -7,6 +7,11 @@ describe("hospital symptom relevance", () => {
     expect(hospitalSearchQueries("gastro")).toEqual(["소화기내과", "내과"]);
   });
 
+  it("includes safe primary and general-care alternatives for headaches", () => {
+    expect(hospitalCategory("두통 있어요")).toBe("neurology");
+    expect(hospitalSearchQueries("neurology")).toEqual(["신경과", "신경외과", "내과", "종합병원"]);
+  });
+
   it("keeps general hospitals but excludes clearly unrelated specialties", () => {
     expect(matchesHospitalCategory("한양대학교의료원", { amenity: "hospital" }, "gastro")).toBe(true);
     expect(matchesHospitalCategory("사랑의 안과", { amenity: "hospital" }, "gastro")).toBe(false);
@@ -27,6 +32,8 @@ describe("hospital symptom relevance", () => {
 
   it("excludes non-human, non-treatment, traditional and unrelated spine facilities", () => {
     expect(matchesHospitalCategory("애플동물병원", { amenity: "hospital" }, "gastro")).toBe(false);
+    expect(matchesHospitalCategory("Apple Medical Center", { amenity: "clinic", species: "animal", healthcare: "veterinary" }, "respiratory")).toBe(false);
+    expect(matchesHospitalCategory("서울 메디컬", { amenity: "veterinary", "healthcare:speciality": "small_animals" }, "neurology")).toBe(false);
     expect(matchesHospitalCategory("건국대학교병원 장례식장", { amenity: "hospital" }, "gastro")).toBe(false);
     expect(matchesHospitalCategory("거북이한의원2F", { amenity: "hospital" }, "gastro")).toBe(false);
     expect(matchesHospitalCategory("연세 바로 척 병원", { amenity: "hospital" }, "gastro")).toBe(false);
