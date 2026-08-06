@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "local": "npm run setup:local && npm run dev",
+    "setup:local": "npm install && node scripts/setup-local.mjs && npm run db:local",
     "dev": "concurrently -n web,api -c cyan,magenta \"vite\" \"wrangler dev --config worker/wrangler.jsonc --port 8787\"",
     "dev:web": "vite",
     "dev:api": "wrangler dev --config worker/wrangler.jsonc --port 8787",

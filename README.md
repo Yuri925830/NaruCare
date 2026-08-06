@@ -935,8 +935,19 @@ The quality bar is that the care journey remains coherent across every legitimat
 
 ## Start the Full Stack
 
+After pulling the repository, one command installs dependencies, creates a safe local configuration when needed, applies the local database migrations, and starts both servers:
+
+```bash
+npm run local
+```
+
+On Windows, `start-local.cmd` can be opened directly instead. Existing `worker/.dev.vars` values are never overwritten. Blank provider keys use the project's open-data and built-in fallback paths; add private keys locally only when the corresponding provider is required.
+
+The equivalent manual sequence is:
+
 ```bash
 npm ci
+node scripts/setup-local.mjs
 npx wrangler d1 migrations apply narucare --local --config worker/wrangler.jsonc
 npm run dev
 ```

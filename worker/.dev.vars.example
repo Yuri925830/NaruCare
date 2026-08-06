@@ -1,9 +1,15 @@
-# Copy this file to .dev.vars and replace the value with your OpenAI API key.
-OPENAI_API_KEY=sk-your-openai-api-key
+# Optional. Local setup copies this file to .dev.vars without overwriting an existing file.
+OPENAI_API_KEY=
 OPENAI_MODEL=gpt-5.6-luna
 
 # Kakao Local REST API: hospital search and reverse geocoding.
-KAKAO_REST_API_KEY=your-kakao-rest-api-key
+KAKAO_REST_API_KEY=
 
 # Kakao Maps Web SDK: use the JavaScript key and register local/production domains.
-KAKAO_JAVASCRIPT_KEY=your-kakao-javascript-key
+KAKAO_JAVASCRIPT_KEY=
+
+# Optional enrichment and route providers.
+GOOGLE_PLACES_API_KEY=
+HIRA_SERVICE_KEY=
+NAVER_MAPS_CLIENT_ID=
+NAVER_MAPS_CLIENT_SECRET=
