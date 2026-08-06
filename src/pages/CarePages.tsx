@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { AlertTriangle, ArrowRight, CalendarCheck2, CalendarOff, CarFront, Check, Clock3, Copy, Languages, LocateFixed, Map, MapPin, Mic, Navigation, Send, ShieldCheck, Square, Star, Stethoscope, Trash2, UserRound, Volume2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, BadgeCheck, CalendarCheck2, CalendarOff, CarFront, Check, Clock3, Copy, Languages, LocateFixed, Map, MapPin, Mic, Navigation, Pencil, Send, ShieldCheck, Square, Star, Stethoscope, Trash2, UserRound, Volume2 } from "lucide-react";
 import { api } from "../api";
 import { findAppointmentSlotFromText, parseAppointmentPreference } from "../appointmentConversation";
 import { companionFlowCopy } from "../companionFlow";
@@ -14,15 +14,33 @@ import {
   type HospitalAppointmentBooking,
   type HospitalAppointmentSlot,
 } from "../hospitalAppointments";
-import { Button, InfoBanner, InteractiveMap, KakaoNavigationMap, NaruPose, Panel, StatusPill, VisitJourneyProgress } from "../components";
+import { Button, InfoBanner, InteractiveMap, KakaoNavigationMap, LocationPickerMap, NaruPose, Panel, StatusPill, VisitJourneyProgress } from "../components";
 import { hospitalDemoInsightFor, hospitalDemoLabels, hospitalDemoText } from "../hospitalDemoInsights";
 import { evaluateOpeningHours, formatOpeningSchedule, formatRestDays } from "../hospitalHours";
 import { localeOptions, useI18n } from "../i18n";
+import {
+  MEDICAL_CARD_CHAT_STEPS,
+  applyMedicalCardChatAnswer,
+  createMedicalCardChatDraft,
+  isMedicalCardCancelAnswer,
+  maskMedicalCardChatValue,
+  medicalCardConversationCopy,
+  parseMedicalCardChatAnswer,
+  type MedicalCardAnswerError,
+  type MedicalCardChatField,
+} from "../medicalCardConversation";
 import { assessMedicalIntent, extractReportableSymptoms, isAffirmativeResponse, isNaruCapabilityQuestion, isNaruIdentityQuestion, isNegativeResponse, isSymptomsResolvedStatement } from "../triage";
 import type { ChatHistoryEntry, Hospital, LocationState, MedicalCard, MedicalEvidenceSource, TranslationRecordEntry } from "../types";
 import { companionDecisionFromText, type CompanionDecision, type VisitJourneyStep } from "../visitJourney";
 
 interface Message { id: string; role: "naru" | "user" | "status"; text: string; detail?: string; sources?: MedicalEvidenceSource[] }
+
+interface MedicalCardChatState {
+  draft: MedicalCard;
+  stepIndex: number;
+  phase: "collect" | "review" | "saving";
+  returnToReview: boolean;
+}
 
 function InlineMessageText({ text }: { text: string }) {
   return <>{text.split(/(\*\*[^*]+\*\*)/g).map((part, index) => part.startsWith("**") && part.endsWith("**")
@@ -45,7 +63,7 @@ function WelcomeMessage({ text }: { text: string }) {
 
 export function AgentPage({
   card, journeyStep, companionDecision, selectedHospital, appointmentPreference,
-  onCard, onEmergency, onHospitals, onSymptoms, onSymptomsResolved, onCompanion,
+  onCard, onSaveCard, onEmergency, onHospitals, onSymptoms, onSymptomsResolved, onCompanion,
   onCompanionDecision, onAppointmentPreference, onBookAppointment, onSkipAppointment,
   onOpenAppointments, onFlow, onTranslation, onJourneyStep, onRestartJourney, onRecords, gateSignal,
 }: {
@@ -55,6 +73,7 @@ export function AgentPage({
   selectedHospital: Hospital | null;
   appointmentPreference: AppointmentPreference;
   onCard: () => void;
+  onSaveCard: (card: MedicalCard) => Promise<MedicalCard>;
   onEmergency: (symptoms: string) => void;
   onHospitals: (symptoms: string) => void | Promise<void>;
   onSymptoms?: (symptoms: string) => void | Promise<void>;
@@ -76,6 +95,7 @@ export function AgentPage({
   const companionFlow = companionFlowCopy(locale);
   const conversation = conversationCopy(locale);
   const appointmentFlow = hospitalAppointmentCopy(locale);
+  const medicalCardFlow = medicalCardConversationCopy(locale);
   const [messages, setMessages] = useState<Message[]>([{ id: "welcome", role: "naru", text: t("universalGreeting") }]);
   const [input, setInput] = useState("");
   const [gate, setGate] = useState(false);
@@ -83,9 +103,52 @@ export function AgentPage({
   const [historyLoading, setHistoryLoading] = useState(true);
   const [clearingHistory, setClearingHistory] = useState(false);
   const [pendingHospitalSymptoms, setPendingHospitalSymptoms] = useState<string | null>(null);
+  const [medicalCardChat, setMedicalCardChat] = useState<MedicalCardChatState | null>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const previousJourneyStep = useRef(journeyStep);
+  const medicalCardFieldLabels = useMemo<Record<MedicalCardChatField, string>>(() => ({
+    name: t("name"),
+    nationality: t("nationality"),
+    age: t("age"),
+    gender: t("gender"),
+    language: t("primaryLanguage"),
+    documentType: t("documentType"),
+    documentNumber: t("documentNumber"),
+    insurance: t("insurance"),
+    address: t("residentialAddress"),
+    conditions: t("conditions"),
+    medications: t("medications"),
+    surgeries: t("surgeries"),
+    symptoms: t("currentSymptoms"),
+    notes: t("notes"),
+  }), [t]);
+  const currentMedicalCardStep = medicalCardChat?.phase === "collect"
+    ? MEDICAL_CARD_CHAT_STEPS[medicalCardChat.stepIndex]
+    : null;
+  const medicalCardChoiceOptions = useMemo(() => {
+    if (!currentMedicalCardStep) return [] as { value: string; label: string }[];
+    if (currentMedicalCardStep.kind === "gender") return [
+      { value: "female", label: t("female") },
+      { value: "male", label: t("male") },
+      { value: "other", label: t("other") },
+    ];
+    if (currentMedicalCardStep.kind === "document") return [
+      { value: "alien", label: t("alienRegistration") },
+      { value: "passport", label: t("passport") },
+    ];
+    if (currentMedicalCardStep.kind === "insurance") return [
+      { value: "yes", label: t("yes") },
+      { value: "no", label: t("no") },
+    ];
+    if (currentMedicalCardStep.kind === "language") {
+      return [...new Set([locale, "ko", "en", "zh-CN", "ja"])]
+        .map((code) => localeOptions.find((option) => option.code === code))
+        .filter((option): option is (typeof localeOptions)[number] => Boolean(option))
+        .map((option) => ({ value: option.code, label: `${option.badge} ${option.nativeName}` }));
+    }
+    return [] as { value: string; label: string }[];
+  }, [currentMedicalCardStep, locale, t]);
   const chatAppointmentAvailability = useMemo(
     () => journeyStep === "appointment" && selectedHospital
       ? appointmentAvailabilityFor(selectedHospital, appointmentPreference)
@@ -211,6 +274,7 @@ export function AgentPage({
         return;
       }
       setPendingHospitalSymptoms(null);
+      setMedicalCardChat(null);
       setMessages([
         { id: "welcome", role: "naru", text: t("universalGreeting") },
         { id: crypto.randomUUID(), role: "status", text: conversation.cleared },
@@ -220,13 +284,116 @@ export function AgentPage({
     }
   };
 
+  const medicalCardErrorText = (error: MedicalCardAnswerError) => {
+    if (error === "invalidAge") return medicalCardFlow.ageError;
+    if (error === "invalidChoice") return medicalCardFlow.choiceError;
+    return medicalCardFlow.requiredError;
+  };
+
+  const startMedicalCardCreation = (sourceText = medicalCardFlow.startAction, showChoice = true) => {
+    if (card) {
+      onCard();
+      return;
+    }
+    setGate(false);
+    setInput("");
+    setMedicalCardChat({
+      draft: createMedicalCardChatDraft(locale),
+      stepIndex: 0,
+      phase: "collect",
+      returnToReview: false,
+    });
+    setMessages((current) => [
+      ...current,
+      ...(showChoice ? [{ id: crypto.randomUUID(), role: "user" as const, text: sourceText }] : []),
+      { id: crypto.randomUUID(), role: "naru", text: medicalCardFlow.start },
+    ]);
+    void api.rememberChat(sourceText, medicalCardFlow.start, "card");
+    window.setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const cancelMedicalCardCreation = (userText?: string) => {
+    setMedicalCardChat(null);
+    setInput("");
+    setMessages((current) => [
+      ...current,
+      ...(userText ? [{ id: crypto.randomUUID(), role: "user" as const, text: userText }] : []),
+      { id: crypto.randomUUID(), role: "naru", text: medicalCardFlow.cancelled },
+    ]);
+    window.setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const answerMedicalCardQuestion = (answer: string, displayAnswer = answer) => {
+    const current = medicalCardChat;
+    if (!current || current.phase !== "collect") return;
+    if (isMedicalCardCancelAnswer(answer)) {
+      cancelMedicalCardCreation(displayAnswer);
+      return;
+    }
+    const step = MEDICAL_CARD_CHAT_STEPS[current.stepIndex];
+    if (!step) return;
+    const visibleAnswer = step.key === "documentNumber"
+      ? maskMedicalCardChatValue(step.key, displayAnswer)
+      : displayAnswer;
+    setMessages((messages) => [...messages, { id: crypto.randomUUID(), role: "user", text: visibleAnswer }]);
+    const parsed = parseMedicalCardChatAnswer(step, answer);
+    if (!parsed.ok) {
+      setMessages((messages) => [...messages, { id: crypto.randomUUID(), role: "naru", text: medicalCardErrorText(parsed.error) }]);
+      window.setTimeout(() => inputRef.current?.focus(), 0);
+      return;
+    }
+    const draft = applyMedicalCardChatAnswer(current.draft, step.key, parsed.value);
+    if (current.returnToReview || current.stepIndex >= MEDICAL_CARD_CHAT_STEPS.length - 1) {
+      setMedicalCardChat({ draft, stepIndex: current.stepIndex, phase: "review", returnToReview: false });
+      return;
+    }
+    setMedicalCardChat({ ...current, draft, stepIndex: current.stepIndex + 1 });
+    window.setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const editMedicalCardField = (stepIndex: number) => {
+    setMedicalCardChat((current) => current ? { ...current, stepIndex, phase: "collect", returnToReview: true } : current);
+    window.setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const saveMedicalCardFromChat = async () => {
+    const current = medicalCardChat;
+    if (!current || current.phase !== "review" || busy) return;
+    setMedicalCardChat({ ...current, phase: "saving" });
+    setBusy(true);
+    try {
+      await onSaveCard(current.draft);
+      setMedicalCardChat(null);
+      setMessages((messages) => [...messages, { id: crypto.randomUUID(), role: "naru", text: medicalCardFlow.saved }]);
+      void api.rememberChat(medicalCardFlow.startAction, medicalCardFlow.saved, "card");
+    } catch {
+      setMedicalCardChat({ ...current, phase: "review" });
+      setMessages((messages) => [...messages, { id: crypto.randomUUID(), role: "naru", text: medicalCardFlow.saveError }]);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const displayMedicalCardValue = (field: MedicalCardChatField, value: string) => {
+    if (!value) return medicalCardFlow.emptyValue;
+    if (field === "gender") return value === "female" ? t("female") : value === "male" ? t("male") : t("other");
+    if (field === "documentType") return value === "alien" ? t("alienRegistration") : t("passport");
+    if (field === "insurance") return value === "yes" ? t("yes") : t("no");
+    if (field === "language") return localeOptions.find((option) => option.code === value)?.nativeName || value;
+    return maskMedicalCardChatValue(field, value);
+  };
+
   const send = async (text = input) => {
     const clean = text.trim();
     if (!clean || busy || historyLoading || clearingHistory) return;
     setInput("");
+    if (medicalCardChat?.phase === "collect") {
+      answerMedicalCardQuestion(clean);
+      return;
+    }
     setMessages((current) => [...current, { id: crypto.randomUUID(), role: "user", text: clean }]);
     const cardIntent = /(就诊卡|診療カード|medical card|진료카드|create.*card|建卡)/i.test(clean);
-    if (!card && cardIntent) { void api.rememberChat(clean, "", "card"); onCard(); return; }
+    if (!card && cardIntent) { startMedicalCardCreation(clean, false); return; }
     if (!card) {
       const reply = t("cardRequired");
       setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
@@ -347,7 +514,11 @@ export function AgentPage({
       onEmergency(effectiveEmergencySymptoms);
       return;
     }
-    if (localTriage.intent === "card") { void api.rememberChat(clean, "", "card"); onCard(); return; }
+    if (localTriage.intent === "card") {
+      if (card) { void api.rememberChat(clean, "", "card"); onCard(); }
+      else startMedicalCardCreation(clean, false);
+      return;
+    }
     if (localTriage.intent === "flow") { void api.rememberChat(clean, "", "flow"); onFlow?.(); return; }
     if (localTriage.intent === "translation") { void api.rememberChat(clean, "", "translation"); onTranslation?.(); return; }
     if (localTriage.intent === "companion") {
@@ -441,6 +612,46 @@ export function AgentPage({
           {message.id === "welcome" ? <WelcomeMessage text={message.text} /> : <p dir="auto">{message.text}</p>}
           {message.sources?.length ? <div className="message-sources">{message.sources.map((source, index) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer"><span>[{index + 1}]</span>{source.title}{source.year ? ` · ${source.year}` : ""}</a>)}</div> : null}
         </div>)}
+        {medicalCardChat && <section className="medical-card-chat" aria-labelledby="medical-card-chat-title">
+          <div className="medical-card-chat-heading">
+            <span className="medical-card-chat-icon"><BadgeCheck size={21} /></span>
+            <span>
+              <small>{medicalCardChat.phase === "collect"
+                ? medicalCardFlow.progress.replace("{current}", String(medicalCardChat.stepIndex + 1)).replace("{total}", String(MEDICAL_CARD_CHAT_STEPS.length))
+                : medicalCardFlow.reviewTitle}</small>
+              <strong id="medical-card-chat-title">{medicalCardFlow.title}</strong>
+            </span>
+          </div>
+          <div className="medical-card-chat-progress" role="progressbar" aria-valuemin={0} aria-valuemax={MEDICAL_CARD_CHAT_STEPS.length} aria-valuenow={medicalCardChat.phase === "collect" ? medicalCardChat.stepIndex + 1 : MEDICAL_CARD_CHAT_STEPS.length}>
+            <i style={{ width: `${medicalCardChat.phase === "collect" ? ((medicalCardChat.stepIndex + 1) / MEDICAL_CARD_CHAT_STEPS.length) * 100 : 100}%` }} />
+          </div>
+          {medicalCardChat.phase === "collect" && currentMedicalCardStep && <>
+            <p className="medical-card-chat-question">{medicalCardFlow.ask.replace("{field}", medicalCardFieldLabels[currentMedicalCardStep.key])}</p>
+            <span className={`medical-card-chat-requirement ${currentMedicalCardStep.required ? "required" : "optional"}`}>{currentMedicalCardStep.required ? medicalCardFlow.required : medicalCardFlow.optional}</span>
+            {medicalCardChoiceOptions.length > 0 && <div className="medical-card-chat-options" role="group" aria-label={medicalCardFieldLabels[currentMedicalCardStep.key]}>
+              {medicalCardChoiceOptions.map((option) => <button type="button" key={option.value} onClick={() => answerMedicalCardQuestion(option.value, option.label)}>{option.label}</button>)}
+            </div>}
+            <div className="medical-card-chat-actions">
+              {!currentMedicalCardStep.required && <Button variant="secondary" onClick={() => answerMedicalCardQuestion("skip", medicalCardFlow.skip)}>{medicalCardFlow.skip}</Button>}
+              <Button variant="ghost" onClick={() => cancelMedicalCardCreation()}>{medicalCardFlow.cancel}</Button>
+            </div>
+          </>}
+          {(medicalCardChat.phase === "review" || medicalCardChat.phase === "saving") && <>
+            <p className="medical-card-chat-review-help">{medicalCardFlow.reviewHelp}</p>
+            <div className="medical-card-chat-summary">
+              {MEDICAL_CARD_CHAT_STEPS.map((step, index) => <button type="button" key={step.key} disabled={medicalCardChat.phase === "saving"} onClick={() => editMedicalCardField(index)} aria-label={medicalCardFlow.editField.replace("{field}", medicalCardFieldLabels[step.key])}>
+                <span>{medicalCardFieldLabels[step.key]}<small>{step.required ? medicalCardFlow.required : medicalCardFlow.optional}</small></span>
+                <strong dir="auto">{displayMedicalCardValue(step.key, String(medicalCardChat.draft[step.key] || ""))}</strong>
+                <Pencil size={14} />
+              </button>)}
+            </div>
+            <div className="medical-card-chat-review-actions">
+              <Button variant="secondary" onClick={() => cancelMedicalCardCreation()} disabled={medicalCardChat.phase === "saving"}>{medicalCardFlow.cancel}</Button>
+              <Button onClick={() => void saveMedicalCardFromChat()} disabled={medicalCardChat.phase === "saving"}><BadgeCheck size={17} />{medicalCardChat.phase === "saving" ? medicalCardFlow.saving : medicalCardFlow.save}</Button>
+            </div>
+          </>}
+          <p className="medical-card-chat-privacy"><ShieldCheck size={14} />{medicalCardFlow.privacy}</p>
+        </section>}
         {journeyStep === "companion" && companionDecision === "pending" && <section className="companion-decision-card" aria-labelledby="companion-decision-title">
           <div><NaruPose pose={11} className="companion-decision-naru" /><span><small>{companionFlow.journeyLabel}</small><strong id="companion-decision-title">{companionFlow.decisionTitle}</strong></span></div>
           <p>{companionFlow.decisionDesc}</p>
@@ -473,8 +684,8 @@ export function AgentPage({
         </section>}
         {busy && <div className="typing"><i /><i /><i /></div>}
       </div>
-      {!card && <div className="prompt-suggestions"><span>{t("quickServices")}</span><button onClick={() => send(t("promptUnwell"))}>{t("promptUnwell")}</button><button onClick={onCard}>{t("promptCard")}</button><button onClick={() => send(t("promptCompanion"))}>{t("promptCompanion")}</button></div>}
-      <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); void send(); }}><input ref={inputRef} dir="auto" value={input} onChange={(event) => setInput(event.target.value)} placeholder={t("inputPlaceholder")} disabled={historyLoading || clearingHistory} /><button aria-label={t("sendMessage")} disabled={historyLoading || clearingHistory}><ArrowRight /></button></form>
+      {!card && !medicalCardChat && <div className="prompt-suggestions"><span>{t("quickServices")}</span><button onClick={() => send(t("promptUnwell"))}>{t("promptUnwell")}</button><button onClick={() => startMedicalCardCreation()}>{t("promptCard")}</button><button onClick={() => send(t("promptCompanion"))}>{t("promptCompanion")}</button></div>}
+      <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); void send(); }}><input ref={inputRef} dir="auto" value={input} onChange={(event) => setInput(event.target.value)} placeholder={medicalCardChat?.phase === "collect" ? medicalCardFlow.answerPlaceholder : t("inputPlaceholder")} disabled={historyLoading || clearingHistory || busy || Boolean(medicalCardChat && medicalCardChat.phase !== "collect")} /><button aria-label={t("sendMessage")} disabled={historyLoading || clearingHistory || busy || Boolean(medicalCardChat && medicalCardChat.phase !== "collect")}><ArrowRight /></button></form>
     </Panel>
     <Panel className="agent-status">
       <h3>{t("currentStatus")}</h3>
@@ -486,14 +697,14 @@ export function AgentPage({
       <button className="quick-link" onClick={() => card ? onCompanion() : setGate(true)}>{t("companion")}<span>{card ? "→" : t("locked")}</span></button>
       <div className="agent-naru-card"><NaruPose pose={6} className="agent-side-naru" /></div>
     </Panel>
-    {gate && <div className="modal-backdrop" role="dialog" aria-modal="true"><div className="gate-modal"><NaruPose pose={6} className="gate-naru-pose" /><h2>{t("cardMissingShort")}</h2><p>{t("cardRequired")}</p><div><Button onClick={() => { setGate(false); onCard(); }}>{t("createCardNow")}</Button><Button variant="danger" onClick={() => { setGate(false); onEmergency(t("unknown")); }}>{t("urgentCall119")}</Button></div><button className="modal-close" onClick={() => setGate(false)}>×</button><small>{t("cardGateHint")}</small></div></div>}
+    {gate && <div className="modal-backdrop" role="dialog" aria-modal="true"><div className="gate-modal"><NaruPose pose={6} className="gate-naru-pose" /><h2>{t("cardMissingShort")}</h2><p>{t("cardRequired")}</p><div><Button onClick={() => startMedicalCardCreation()}>{medicalCardFlow.startAction}</Button><Button variant="danger" onClick={() => { setGate(false); onEmergency(t("unknown")); }}>{t("urgentCall119")}</Button></div><button className="modal-close" onClick={() => setGate(false)}>×</button><small>{t("cardGateHint")}</small></div></div>}
   </div>;
 }
 
 export function HospitalsPage({
   location, hospitals, loading, selected, confirmed, appointmentPreference, appointmentDecision, appointmentBooking,
   appointmentComplete, needsCompanionDecision, canRoute, onSelect, onAppointmentPreference, onBookAppointment,
-  onSkipAppointment, onCancelAppointment, onFlow, onCompanion, onRoute, onRefresh,
+  onSkipAppointment, onCancelAppointment, onFlow, onCompanion, onRoute, onLocationPick, onRefresh,
 }: {
   location: LocationState;
   hospitals: Hospital[];
@@ -514,6 +725,7 @@ export function HospitalsPage({
   onFlow: () => void;
   onCompanion: () => void;
   onRoute: () => void;
+  onLocationPick: (lat: number, lng: number) => Promise<void>;
   onRefresh: () => void;
 }) {
   const { locale, t } = useI18n();
@@ -523,6 +735,7 @@ export function HospitalsPage({
   const [now, setNow] = useState(() => new Date());
   const [onlyMatching, setOnlyMatching] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState("");
+  const [manualPoint, setManualPoint] = useState<[number, number]>(() => [location.lat, location.lng]);
   const hospitalScrollRef = useRef<HTMLDivElement>(null);
   const selectionSourceRef = useRef<"map" | "list" | null>(null);
   const today = useMemo(() => {
@@ -572,6 +785,7 @@ export function HospitalsPage({
     const timer = window.setInterval(() => setNow(new Date()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
+  useEffect(() => { setManualPoint([location.lat, location.lng]); }, [location.lat, location.lng]);
   useEffect(() => {
     if (!selected || selectionSourceRef.current !== "map") return;
     const selectedItem = hospitalScrollRef.current?.querySelector<HTMLElement>(".hospital-item.selected");
@@ -583,8 +797,8 @@ export function HospitalsPage({
   }, [appointmentPreference.date, appointmentPreference.endTime, appointmentPreference.startTime, selected?.id, selectedAvailability?.matchingSlots]);
 
   return <Panel className="hospital-panel">
-    <InfoBanner title={t("analysisResult")} action={<NaruPose pose={5} className="hospital-banner-naru" />}><strong>{t("hospitalNotice")}</strong></InfoBanner>
-    <section className="appointment-preference" aria-labelledby="appointment-preference-title">
+    <InfoBanner title={location.verified ? t("analysisResult") : t("currentLocation")} action={<NaruPose pose={5} className="hospital-banner-naru" />}><strong>{location.verified ? t("hospitalNotice") : t("locationDenied")}</strong></InfoBanner>
+    {location.verified && <section className="appointment-preference" aria-labelledby="appointment-preference-title">
       <div className="appointment-preference-copy"><small>{appointmentCopy.demoLabel}</small><h3 id="appointment-preference-title">{appointmentCopy.preferenceTitle}</h3><p>{appointmentCopy.preferenceDesc}</p></div>
       <div className="appointment-time-fields">
         <label><span>{appointmentCopy.date}</span><input type="date" min={today} value={appointmentPreference.date} onChange={(event) => updatePreference("date", event.target.value)} /></label>
@@ -593,11 +807,14 @@ export function HospitalsPage({
       </div>
       <label className="appointment-match-toggle"><input type="checkbox" checked={onlyMatching} onChange={(event) => setOnlyMatching(event.target.checked)} /><span><Check size={14} /></span>{appointmentCopy.onlyMatching}</label>
       <strong className="appointment-match-count">{appointmentCopy.matchCount.replace("{count}", String(matchingCount))}</strong>
-    </section>
+    </section>}
     <div className="hospital-layout">
-      <div className="map-card"><div className="map-location"><MapPin size={17} />{t("currentLocation")} · {location.address}</div><InteractiveMap center={[location.lat, location.lng]} hospitals={visibleHospitals} selected={selected} onSelect={selectFromMap} /></div>
+      <div className={`map-card ${location.verified ? "" : "manual-location-card"}`}><div className="map-location"><MapPin size={17} />{t("currentLocation")}{location.verified ? ` · ${location.address}` : ""}</div>{location.verified
+        ? <InteractiveMap center={[location.lat, location.lng]} hospitals={visibleHospitals} selected={selected} onSelect={selectFromMap} />
+        : <div className="hospital-location-picker"><LocationPickerMap center={manualPoint} onPick={(lat, lng) => setManualPoint([lat, lng])} className="hospital-manual-picker" /><div className="hospital-location-picker-actions"><p>{t("mapPickerHelp")}</p><Button onClick={() => void onLocationPick(manualPoint[0], manualPoint[1])} disabled={loading}><MapPin size={16} />{loading ? t("locating") : t("findHospital")}</Button></div></div>}
+      </div>
       <div className="hospital-list"><div className="section-heading"><h3>{t("nearbyAccepting")}</h3><button onClick={onRefresh}><LocateFixed size={16} />{t("refreshLocation")}</button></div><div className="hospital-scroll" ref={hospitalScrollRef}>
-        {loading ? <div className="empty-hospitals"><LocateFixed /><strong>{t("locating")}</strong><p>{t("loading")}</p></div> : !hospitals.length ? <div className="empty-hospitals"><AlertTriangle /><strong>{t("noHospitalsFound")}</strong><p>{t("hospitalSearchFailed")}</p></div> : onlyMatching && !visibleHospitals.length ? <div className="empty-hospitals"><CalendarOff /><strong>{appointmentCopy.noMatchedHospitals}</strong></div> : null}
+        {loading ? <div className="empty-hospitals"><LocateFixed /><strong>{t("locating")}</strong><p>{t("loading")}</p></div> : !location.verified ? <div className="empty-hospitals"><MapPin /><strong>{t("locationDenied")}</strong><p>{t("mapPickerHelp")}</p><Button variant="secondary" onClick={onRefresh}><LocateFixed size={16} />{t("useCurrentLocation")}</Button></div> : !hospitals.length ? <div className="empty-hospitals"><AlertTriangle /><strong>{t("noHospitalsFound")}</strong><p>{t("hospitalSearchFailed")}</p></div> : onlyMatching && !visibleHospitals.length ? <div className="empty-hospitals"><CalendarOff /><strong>{appointmentCopy.noMatchedHospitals}</strong></div> : null}
         {visibleHospitals.map((hospital) => {
           const schedule = evaluateOpeningHours(hospital.openingHours, now);
           const isOpen = typeof hospital.openNow === "boolean" ? hospital.openNow : schedule.isOpen;

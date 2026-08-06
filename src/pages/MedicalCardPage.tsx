@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { BadgeCheck, Languages, LocateFixed, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Languages, LocateFixed, MapPin, ShieldCheck } from "lucide-react";
 import { api } from "../api";
 import { Button, InfoBanner, LocationPickerMap, NaruPose, Panel } from "../components";
 import { countryKoreanName, countryOptions, findCountry } from "../countries";
 import { localeOptions, useI18n } from "../i18n";
 import { formatAccuracy, requestFastAccurateLocation, type PreciseLocationFix } from "../location";
-import type { MedicalCard } from "../types";
+import type { LocationState, MedicalCard } from "../types";
 
 type CardField = "name" | "nationality" | "address" | "age" | "gender" | "documentType" | "documentNumber" | "insurance" | "conditions" | "medications" | "surgeries" | "symptoms" | "notes" | "language";
 
@@ -27,7 +27,7 @@ function koreanLanguageName(value: string) {
   catch { return localeOptions.find((item) => item.code === value)?.englishName || value; }
 }
 
-export function MedicalCardPage({ card, onSaved }: { card: MedicalCard | null; onSaved: (card: MedicalCard) => void }) {
+export function MedicalCardPage({ card, location, onSaved }: { card: MedicalCard | null; location: LocationState; onSaved: (card: MedicalCard) => void }) {
   const { locale, t } = useI18n();
   const [form, setForm] = useState<MedicalCard>(() => card ? { ...emptyCard(card.language || locale), ...card } : emptyCard(locale));
   const [saving, setSaving] = useState(false);
@@ -125,6 +125,26 @@ export function MedicalCardPage({ card, onSaved }: { card: MedicalCard | null; o
     finally { setLocating(false); }
   }, [t]);
 
+  const useCurrentLocation = useCallback(() => {
+    beginEditing();
+    addressEdited.current = false;
+    if (!location.verified) {
+      void locateAddress(true);
+      return;
+    }
+    locationRequest.current += 1;
+    bestLocationAccuracy.current = location.accuracy ?? Number.POSITIVE_INFINITY;
+    setLocationError("");
+    setForm((current) => ({
+      ...current,
+      address: location.address,
+      latitude: location.lat,
+      longitude: location.lng,
+      locationAccuracy: location.accuracy,
+      korean: current.korean ? { ...current.korean, address: location.address } : current.korean,
+    }));
+  }, [beginEditing, locateAddress, location]);
+
   useEffect(() => { if (!card?.address) void locateAddress(false); }, []);
 
   const pickMapLocation = useCallback((lat: number, lng: number) => {
@@ -199,7 +219,17 @@ export function MedicalCardPage({ card, onSaved }: { card: MedicalCard | null; o
             {legacyCountry && <option value={legacyCountry}>{legacyCountry}</option>}
             {countryOptions.map((country) => <option key={country.code} value={country.code}>{country.flag} {country.nativeName}</option>)}
           </select> : options ? <select value={value} disabled={!editing} onChange={(event) => setForm({ ...form, [key]: event.target.value })}>{options.map(([optionValue, label]) => <option key={optionValue} value={optionValue}>{label}</option>)}</select> : "multiline" in field && field.multiline ? <textarea dir="auto" value={value} disabled={!editing} onChange={(event) => { if (key === "address") { addressEdited.current = true; addressRevision.current += 1; } setForm({ ...form, [key]: event.target.value }); }} placeholder={("placeholder" in field && field.placeholder) || ""} required={"required" in field && field.required} /> : <input dir="auto" type={("type" in field && field.type) || "text"} min={key === "age" ? 0 : undefined} max={key === "age" ? 120 : undefined} value={value} disabled={!editing} onChange={(event) => setForm({ ...form, [key]: event.target.value })} placeholder={("placeholder" in field && field.placeholder) || ""} required={"required" in field && field.required} />}
-          {key === "address" && <><Button type="button" variant="secondary" className="locate-address" onClick={() => { beginEditing(); addressEdited.current = false; void locateAddress(true); }} disabled={locating}><LocateFixed size={16} />{locating ? t("locating") : t("useCurrentLocation")}</Button><small className="address-help">{t("addressHelp")}{form.locationAccuracy ? ` · ${t("locationAccuracy", { accuracy: formatAccuracy(form.locationAccuracy) })}` : ""}</small><LocationPickerMap center={[form.latitude ?? 37.5665, form.longitude ?? 126.978]} accuracy={form.locationAccuracy} disabled={!editing} onPick={pickMapLocation} /><small className="address-help map-picker-help">{t("mapPickerHelp")}</small>{locationError && <small className="form-error" role="alert">{locationError}</small>}</>}
+          {key === "address" && <>
+            <div className={`card-location-status ${location.verified ? "is-verified" : "is-approximate"}`}>
+              <MapPin size={18} />
+              <span><small>{t("currentLocation")}</small><strong dir="auto">{location.address}</strong>{location.verified && location.accuracy ? <em>{t("locationAccuracy", { accuracy: formatAccuracy(location.accuracy) })}</em> : null}</span>
+            </div>
+            <Button type="button" variant="secondary" className="locate-address" onClick={useCurrentLocation} disabled={locating}><LocateFixed size={16} />{locating ? t("locating") : t("useCurrentLocation")}</Button>
+            <small className="address-help">{t("addressHelp")}{form.locationAccuracy ? ` · ${t("locationAccuracy", { accuracy: formatAccuracy(form.locationAccuracy) })}` : ""}</small>
+            <LocationPickerMap center={[form.latitude ?? location.lat, form.longitude ?? location.lng]} accuracy={form.locationAccuracy} disabled={!editing} onPick={pickMapLocation} />
+            <small className="address-help map-picker-help">{t("mapPickerHelp")}</small>
+            {locationError && <small className="form-error" role="alert">{locationError}</small>}
+          </>}
           {key === "symptoms" && <small className="address-help">{t("symptomsAutoFill")}</small>}
           {saved && locale !== "ko" && <small className="korean-preview"><BadgeCheck size={13} />{form.korean?.[key] || localKoreanValue(key, value)}</small>}
         </label>;

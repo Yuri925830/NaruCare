@@ -990,7 +990,7 @@ async function route(request: Request, url: URL, env: Env) {
 }
 
 async function mapsConfig(request: Request, env: Env) {
-  await requireUser(request, env);
+  void request;
   const kakaoJavaScriptKey = envSecret(env, "KAKAO_JAVASCRIPT_KEY");
   return json({ kakaoJavaScriptKey, dynamicMap: Boolean(kakaoJavaScriptKey) });
 }

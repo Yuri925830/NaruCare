@@ -633,7 +633,7 @@ function AppInner() {
 
   const renderView = (target: View): ReactNode => {
     switch (target) {
-      case "card": return <MedicalCardPage card={user.card} onSaved={(card) => { const wasNew = !user.card; setUser({ ...user, card }); if (wasNew) goBack(); }} />;
+      case "card": return <MedicalCardPage card={user.card} location={location} onSaved={(card) => { const wasNew = !user.card; setUser({ ...user, card }); if (wasNew) goBack(); }} />;
       case "agent": return <AgentPage
         key={`visit-${visitSessionVersion}`}
         card={user.card}
@@ -642,6 +642,11 @@ function AppInner() {
         selectedHospital={selectedHospital}
         appointmentPreference={appointmentPreference}
         onCard={() => goTo("card")}
+        onSaveCard={async (card) => {
+          const saved = await api.saveCard(card);
+          setUser((current) => current ? { ...current, card: saved } : current);
+          return saved;
+        }}
         onEmergency={(value) => { const verifiedSymptoms = extractReportableSymptoms(value); void captureSymptoms(verifiedSymptoms); void beginEmergencyRecord(verifiedSymptoms); setSymptoms(verifiedSymptoms); goTo("emergency-confirm"); }}
         onHospitals={openHospitals}
         onSymptoms={captureSymptoms}
@@ -701,6 +706,22 @@ function AppInner() {
           if (!selectedHospital || visitJourneyStepIndex(journeyStep) < visitJourneyStepIndex("navigation")) return;
           void updateCurrentRecord({ hospital: selectedHospital.name, status: "navigating" });
           goTo("navigation");
+        }}
+        onLocationPick={async (lat, lng) => {
+          setHospitalsLoading(true);
+          setHospitalConfirmed(false);
+          setAppointmentDecision("pending");
+          setAppointmentBooking(null);
+          setCompanionDecision("pending");
+          setJourneyStep("hospital");
+          try {
+            const address = await api.reverseGeocode(lat, lng);
+            const next: LocationState = { lat, lng, address, verified: true };
+            setLocation(next);
+            const results = await api.hospitals(lat, lng, symptoms, locale);
+            setHospitals(results);
+            setSelectedHospital(results[0] || null);
+          } finally { setHospitalsLoading(false); }
         }}
         onRefresh={async () => {
           setHospitalsLoading(true);
