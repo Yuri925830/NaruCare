@@ -3,15 +3,16 @@ import { mkdir, readdir, unlink } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 const mobileWidth = Number(process.env.MOBILE_WIDTH || 430);
-const output = new URL(`../.visual-check/mobile-${mobileWidth}/`, import.meta.url);
+const mobileHeight = Number(process.env.MOBILE_HEIGHT || 932);
+const output = new URL(`../.visual-check/mobile-${mobileWidth}x${mobileHeight}/`, import.meta.url);
 await mkdir(output, { recursive: true });
 for (const entry of await readdir(output, { withFileTypes: true })) {
   if (entry.isFile() && entry.name.endsWith(".png")) await unlink(new URL(entry.name, output));
 }
 const shot = (name) => fileURLToPath(new URL(name, output));
 const baseUrl = process.env.VISUAL_BASE_URL || "http://127.0.0.1:5173/";
-const mobileViewport = { width: mobileWidth, height: 932 };
-const desktopViewport = { width: 1440, height: 900 };
+const mobileViewport = { width: mobileWidth, height: mobileHeight };
+const mobileUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1";
 
 const browser = await chromium.launch({
   executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
@@ -20,6 +21,11 @@ const browser = await chromium.launch({
 });
 const context = await browser.newContext({
   viewport: mobileViewport,
+  screen: mobileViewport,
+  userAgent: mobileUserAgent,
+  deviceScaleFactor: 3,
+  isMobile: true,
+  hasTouch: true,
   permissions: ["geolocation", "microphone"],
   geolocation: { latitude: 37.5665, longitude: 126.978 },
 });
@@ -114,6 +120,8 @@ await page.locator(".agent-grid").filter({ visible: true }).waitFor({ timeout: 1
 await auditMobile("agent", ".agent-grid", false);
 
 // The visit-flow information card must be independently accessible.
+const mobileNavCount = await page.locator(".bottom-nav button").count();
+if (mobileNavCount !== 6) throw new Error(`mobile navigation: expected 6 independent entries, received ${mobileNavCount}`);
 await page.locator(".bottom-nav button").nth(2).click();
 await auditMobile("visit-flow", ".visit-flow-panel");
 const flowPanel = page.locator(".visit-flow-panel").filter({ visible: true });
@@ -128,7 +136,12 @@ const characterStyle = await flowPanel.locator(".naru-pose").first().evaluate((e
   filter: getComputedStyle(element.querySelector("img")).filter,
 }));
 if (characterStyle.overflow !== "visible" || characterStyle.filter !== "none") throw new Error(`visit-flow: character artwork is clipped into a rectangular shadow ${JSON.stringify(characterStyle)}`);
-await flowPanel.locator(".visit-tips-action").click();
+const [toolbarWidth, tipsActionWidth] = await Promise.all([
+  flowPanel.locator(".visit-flow-toolbar").evaluate((element) => element.getBoundingClientRect().width),
+  flowPanel.locator(".visit-tips-action").evaluate((element) => element.getBoundingClientRect().width),
+]);
+if (tipsActionWidth < toolbarWidth - 2) throw new Error(`visit-flow: tips action is not full width ${JSON.stringify({ toolbarWidth, tipsActionWidth })}`);
+await page.locator(".bottom-nav button").nth(3).click();
 await auditMobile("visit-tips", ".visit-tips-panel");
 const tipsPanel = page.locator(".visit-tips-panel").filter({ visible: true });
 const [tipsWidth, prepWidth] = await Promise.all([
@@ -137,13 +150,13 @@ const [tipsWidth, prepWidth] = await Promise.all([
 ]);
 if (prepWidth < tipsWidth - 2) throw new Error("visit-tips: cards are squeezed instead of using the available width");
 
-await page.locator(".bottom-nav button").nth(3).click();
+await page.locator(".bottom-nav button").nth(4).click();
 await auditMobile("emergency-confirm", ".emergency-confirm-panel", false);
 await page.locator(".emergency-copy > .button-danger").click();
 await auditMobile("emergency-calling", ".emergency-calling-panel", false);
 await page.locator(".bottom-nav button").nth(1).click();
 
-await page.locator(".bottom-nav button").nth(4).click();
+await page.locator(".bottom-nav button").nth(5).click();
 await auditMobile("profile", ".profile-panel");
 await page.locator(".profile-grid button").nth(1).click();
 await auditMobile("records-empty", ".records-panel");
@@ -155,9 +168,8 @@ await page.locator(".page-header .language-button").click();
 await auditMobile("in-app-language", ".in-app-language", false);
 await page.locator(".in-app-language .language-continue").click();
 
-// Desktop-only side navigation opens auxiliary pages; each page is then audited at mobile width.
-await page.setViewportSize(desktopViewport);
-await page.locator(".side-nav button").nth(2).click();
+// Dispatch the hidden side-navigation action without leaving mobile/touch mode.
+await page.locator(".side-nav button").nth(2).evaluate((button) => button.click());
 await page.locator(".hospital-item").first().waitFor({ timeout: 15_000 });
 await page.locator(".hospital-item").first().click();
 await auditMobile("hospitals", ".hospital-panel");
@@ -171,8 +183,8 @@ const hospitalGeometry = await page.locator(".hospital-panel").filter({ visible:
     });
   return { viewport: window.innerWidth, panelWidth: panelRect.width, innerRects };
 });
-if (hospitalGeometry.panelWidth < hospitalGeometry.viewport - 20) throw new Error(`hospitals: panel is still visibly narrower than the phone ${JSON.stringify(hospitalGeometry)}`);
-if (hospitalGeometry.innerRects.some(({ left, right }) => left < 9 || right < 9)) throw new Error(`hospitals: inner cards touch the panel frame ${JSON.stringify(hospitalGeometry)}`);
+if (hospitalGeometry.panelWidth < hospitalGeometry.viewport - 1) throw new Error(`hospitals: panel is still visibly narrower than the phone ${JSON.stringify(hospitalGeometry)}`);
+if (hospitalGeometry.innerRects.some(({ left, right }) => left < 15 || right < 15)) throw new Error(`hospitals: inner cards touch the panel frame ${JSON.stringify(hospitalGeometry)}`);
 const routeButton = page.locator(".hospital-actions .button-mint");
 if (await routeButton.isDisabled()) throw new Error("hospitals: route button is disabled after selecting a hospital");
 await routeButton.click();
@@ -180,8 +192,7 @@ await auditMobile("navigation", ".navigation-panel");
 await page.locator(".route-info > .button-secondary").click();
 await auditMobile("translation", ".translation-panel");
 
-await page.setViewportSize(desktopViewport);
-await page.locator(".side-nav button").nth(5).click();
+await page.locator(".side-nav button").nth(5).evaluate((button) => button.click());
 await auditMobile("companion-notice", ".companion-notice-panel");
 await page.locator(".agree-check input").check();
 await page.locator(".notice-actions > .button").click();

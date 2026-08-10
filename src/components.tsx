@@ -84,6 +84,7 @@ const bottomNav = [
   { id: "card" as View, key: "navCard" as const, Icon: CreditCard },
   { id: "agent" as View, key: "navNaru" as const, Icon: MessageCircleMore },
   { id: "visit-flow" as View, key: "navFlow" as const, Icon: ListTree },
+  { id: "visit-tips" as View, key: "visitTipsCard" as const, Icon: Sparkles },
   { id: "emergency-confirm" as View, key: "navEmergency" as const, Icon: AlertCircle, emergency: true },
   { id: "profile" as View, key: "navProfile" as const, Icon: CircleUserRound },
 ];
@@ -93,11 +94,11 @@ const sideNav = [
   bottomNav[1],
   { id: "hospitals" as View, key: "findHospital" as const, Icon: HospitalIcon, emergency: false },
   bottomNav[2],
-  { id: "visit-tips" as View, key: "visitTipsCard" as const, Icon: Sparkles, emergency: false },
+  bottomNav[3],
   { id: "companions-notice" as View, key: "companion" as const, Icon: UserRound, emergency: false },
   { id: "translation" as View, key: "translation" as const, Icon: Languages, emergency: false },
-  bottomNav[3],
   bottomNav[4],
+  bottomNav[5],
 ];
 
 interface AppShellProps {
@@ -121,7 +122,6 @@ export function AppShell({ view, title, user, onNavigate, onLanguage, onBack, ca
     || (id === "emergency-confirm" && view === "emergency-calling")
     || (id === "profile" && ["records", "companion-orders"].includes(view));
   const isBottomActive = (id: View) => id === view
-    || (id === "visit-flow" && view === "visit-tips")
     || (id === "agent" && ["hospitals", "navigation", "translation", "companions", "companions-notice", "companions-filter", "companion-detail", "companion-chat", "companion-waiting", "companion-payment", "companion-arrived", "companion-service", "companion-finished"].includes(view))
     || (id === "emergency-confirm" && view === "emergency-calling")
     || (id === "profile" && ["records", "companion-orders"].includes(view));

@@ -384,11 +384,11 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(143, 106,
   .app-layout { grid-template-columns: 190px minmax(0,1fr); gap: 20px; }.brand strong { font-size: 18px; }.brand small { font-size: 10px; }.side-nav button { font-size: 14px; }.agent-grid { grid-template-columns: minmax(0,1fr) 290px; }.filter-layout { grid-template-columns: minmax(0,1fr) 290px; }.navigation-layout { grid-template-columns: minmax(0,1fr) 290px; }.companion-list article { grid-template-columns: 70px minmax(160px,1fr) 150px 125px; gap: 10px; }.person-avatar { width: 62px; height: 62px; }.companion-detail-panel { grid-template-columns: 340px minmax(0,1fr); }.notice-actions > .button { min-width: 300px; }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 1024px), (hover: none) and (pointer: coarse) {
   body { background: linear-gradient(160deg, #fbfaf8, #eee9e3); }
   .app-layout { display: block; min-height: 100vh; padding: 0; }
   .sidebar { display: none; }
-  .app-main { padding: 0 16px 100px; }
+  .app-main { --mobile-page-extra: 32px; --mobile-page-negative-gutter: -16px; padding: 0 16px 100px; }
   .page-header { height: 72px; border-bottom: 1px solid var(--line); }
   .page-header h1 { font-size: 24px; }
   .page-header .status-pill { display: none; }
@@ -396,12 +396,12 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(143, 106,
   .page-content, .page-content > .panel, .agent-grid, .filter-layout, .companion-chat-layout { min-height: calc(100vh - 173px); }
   .page-content > .panel { padding: 16px; }
   .panel { border-radius: 21px; }
-  .bottom-nav { position: fixed; z-index: 900; left: 10px; right: 10px; bottom: max(10px, env(safe-area-inset-bottom)); height: 72px; padding: 7px 8px; display: grid; grid-template-columns: repeat(5,1fr); border: 1px solid white; border-radius: 20px; background: rgba(255,253,250,.94); box-shadow: 0 12px 35px rgba(68,48,38,.2), inset 0 0 0 1px var(--line); backdrop-filter: blur(15px); }
-  .bottom-nav button { border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #71655f; }
-  .bottom-nav button > span { width: 47px; height: 31px; display: grid; place-items: center; border-radius: 999px; }
+  .bottom-nav { position: fixed; z-index: 900; left: 8px; right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); height: 74px; padding: 7px 5px; display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); border: 1px solid white; border-radius: 20px; background: rgba(255,253,250,.94); box-shadow: 0 12px 35px rgba(68,48,38,.2), inset 0 0 0 1px var(--line); backdrop-filter: blur(15px); }
+  .bottom-nav button { min-width: 0; padding: 0; border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #71655f; }
+  .bottom-nav button > span { width: min(44px, 100%); height: 31px; display: grid; place-items: center; border-radius: 999px; }
   .bottom-nav button.active > span { background: var(--cream); color: var(--brown-dark); box-shadow: inset 0 0 0 1px white; }
   .bottom-nav button.emergency-nav.active > span { background: var(--red-soft); color: var(--red); }
-  .bottom-nav small { font-size: 9px; }
+  .bottom-nav small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 8px; }
   .bottom-nav button.active small { color: var(--brown-dark); font-weight: 700; }
   .button { min-height: 55px; padding: 0 18px; }
   .info-banner { padding: 15px; gap: 13px; }
@@ -445,7 +445,7 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(143, 106,
 .service-main > [role="alert"] .info-banner { width: 100%; }
 
 @media (max-width: 390px) {
-  .app-main { padding-inline: 12px; }.page-header h1 { font-size: 21px; }.language-button { padding: 0 10px; }.language-button span { max-width: 58px !important; }.hospital-actions .button { font-size: 9px; }.call-actions { grid-template-columns: 1fr; }.travel-tabs button { font-size: 11px; }.waiting-contact { grid-template-columns: 1fr; }
+  .app-main { --mobile-page-extra: 24px; --mobile-page-negative-gutter: -12px; padding-inline: 12px; }.page-header h1 { font-size: 21px; }.language-button { padding: 0 10px; }.language-button span { max-width: 58px !important; }.hospital-actions .button { font-size: 9px; }.call-actions { grid-template-columns: 1fr; }.travel-tabs button { font-size: 11px; }.waiting-contact { grid-template-columns: 1fr; }
 }
 
 /* Naru IP character sheet decorations */
@@ -882,7 +882,7 @@ body {
 .waiting-clock .naru-standard.companion-waiting-naru { position: absolute; width: 104px; top: -65px; right: -18px; }
 .companion-notice-accent { width: 34px; margin-left: -12px; opacity: .72; }
 
-@media (max-width: 760px) {
+@media (max-width: 1024px), (hover: none) and (pointer: coarse) {
   .view-preserver, .preserved-view, .preserved-view > .panel { min-height: calc(100dvh - 173px); }
   .agent-journey-mobile { display: block; flex: 0 0 auto; padding: 7px 1px 0; }
   .visit-journey-progress.compact { grid-template-columns: repeat(8, minmax(70px, 1fr)); gap: 4px; overflow-x: auto; padding: 1px 1px 6px; scrollbar-width: thin; }
@@ -898,7 +898,7 @@ body {
   .medical-card-form label[data-field="address"], .medical-card-form label[data-field="symptoms"] { grid-row: auto; }
   .location-picker { height: 210px; margin-top: 9px; }
   .flow-choice-actions { display: grid; grid-template-columns: 1fr; }
-  .visit-flow-toolbar { display: grid; margin: 14px 0 22px; }
+  .visit-flow-toolbar { display: grid; grid-template-columns: minmax(0, 1fr); justify-content: stretch; margin: 14px 0 22px; }
   .visit-flow-toolbar .button { width: 100%; min-width: 0; }
   .translation-finish .button { width: 100%; min-width: 0; }
   .service-panel { grid-template-columns: minmax(0, 1fr); }
@@ -906,12 +906,14 @@ body {
   .service-main > .status-pill { width: 100%; white-space: normal; line-height: 1.45; text-align: start; }
   .service-actions { grid-template-columns: minmax(0, 1fr); }
 
-  .hospital-panel { width: calc(100% + 16px); max-width: none; margin-inline: -8px; padding: 12px !important; overflow: hidden; }
+  .hospital-panel { width: calc(100% + var(--mobile-page-extra)); max-width: none; margin-inline: var(--mobile-page-negative-gutter); padding: 16px !important; overflow: hidden; border-inline: 0 !important; border-radius: 0; }
   .hospital-panel > .info-banner { margin-bottom: 12px; }
   .hospital-panel .appointment-preference { margin: 0 0 12px; padding: 15px 12px; border: 1px solid rgba(215,193,176,.78); border-radius: 18px; background: rgba(255,255,255,.55); }
   .hospital-panel .hospital-layout { gap: 12px; margin-top: 0; }
   .hospital-panel .map-card, .hospital-panel .hospital-list { border-radius: 18px; }
-  .hospital-panel .hospital-actions { margin-top: 12px; padding: 10px; border: 1px solid rgba(215,193,176,.75); border-radius: 18px; background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(238,226,216,.94)); box-shadow: inset 0 2px 2px #fff, 0 9px 24px rgba(75,51,40,.16); }
+  .hospital-panel .hospital-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 12px; padding: 10px; border: 1px solid rgba(215,193,176,.75); border-radius: 18px; background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(238,226,216,.94)); box-shadow: inset 0 2px 2px #fff, 0 9px 24px rgba(75,51,40,.16); }
+  .hospital-panel .hospital-actions > .button:first-child, .hospital-panel .hospital-actions > a.button { grid-column: 1 / -1; }
+  .hospital-panel .hospital-actions .button { min-width: 0; font-size: 10px; }
   .hospital-layout { height: auto; min-height: 0; grid-template-rows: 280px 430px; }
   .hospital-layout .map-card { height: 280px; }
   .hospital-layout .hospital-list { height: 430px; padding: 10px; border: 1px solid rgba(255,255,255,.9); border-radius: 20px; background: rgba(255,255,255,.54); box-shadow: inset 0 0 0 1px var(--line); }
@@ -1024,7 +1026,7 @@ body {
 .order-manage-actions { min-width: 170px; display: grid; gap: 10px; }
 .order-manage-actions .button { width: 100%; padding: 0 14px; }
 
-@media (max-width: 760px) {
+@media (max-width: 1024px), (hover: none) and (pointer: coarse) {
   .emergency-illustration { min-height: 340px; gap: 14px; }
   .emergency-illustration > div { width: 145px; height: 145px; }
   .emergency-illustration .emergency-confirm-naru { width: 128px; }
