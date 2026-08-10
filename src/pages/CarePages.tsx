@@ -747,7 +747,7 @@ export function AgentPage({
           : "";
   const journeyActionCard = journeyActionLabel ? <section className="journey-action-card" aria-label={t("nextStep")}>
     <span><small>{t("nextStep")}</small><strong>{currentJourneyPrompt()}</strong></span>
-    <Button onClick={openCurrentJourneyStep} disabled={busy}>{journeyActionLabel}<ArrowRight size={17} /></Button>
+    <Button onClick={() => openCurrentJourneyStep()} disabled={busy}>{journeyActionLabel}<ArrowRight size={17} /></Button>
   </section> : null;
 
   return <div className="agent-grid">
