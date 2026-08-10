@@ -447,7 +447,9 @@
     "otherServices": "Otros servicios",
     "selectHospitalFirst": "Seleccione un hospital para continuar",
     "prepareSelectedHospital": "Prepárate para este hospital",
-    "confirmPreparationItems": "Verifique cada elemento de preparación antes de iniciar la navegación."
+    "confirmPreparationItems": "Verifique cada elemento de preparación antes de iniciar la navegación.",
+    "endServiceConfirmTitle": "¿Finalizar el servicio de acompañante?",
+    "endServiceConfirmDesc": "Se guardarán el tiempo transcurrido y la grabación, y se calculará el saldo final."
   },
   "fr": {
     "brandSub": "Assistant de visite médicale IA agentique",
@@ -897,7 +899,9 @@
     "otherServices": "Autres prestations",
     "selectHospitalFirst": "Sélectionnez un hôpital pour continuer",
     "prepareSelectedHospital": "Préparez-vous pour cet hôpital",
-    "confirmPreparationItems": "Vérifiez chaque élément de préparation avant de commencer la navigation."
+    "confirmPreparationItems": "Vérifiez chaque élément de préparation avant de commencer la navigation.",
+    "endServiceConfirmTitle": "Mettre fin au service compagnon ?",
+    "endServiceConfirmDesc": "Votre temps écoulé et votre enregistrement seront enregistrés et le solde final sera calculé."
   },
   "de": {
     "brandSub": "Agentischer KI-Assistent für medizinische Besuche",
@@ -1347,7 +1351,9 @@
     "otherServices": "Sonstige Dienstleistungen",
     "selectHospitalFirst": "Wählen Sie ein Krankenhaus aus, um fortzufahren",
     "prepareSelectedHospital": "Bereiten Sie sich auf dieses Krankenhaus vor",
-    "confirmPreparationItems": "Überprüfen Sie alle Vorbereitungspunkte, bevor Sie mit der Navigation beginnen."
+    "confirmPreparationItems": "Überprüfen Sie alle Vorbereitungspunkte, bevor Sie mit der Navigation beginnen.",
+    "endServiceConfirmTitle": "Begleitservice beenden?",
+    "endServiceConfirmDesc": "Ihre verstrichene Zeit und Aufzeichnung werden gespeichert und der Endsaldo wird berechnet."
   },
   "pt-BR": {
     "brandSub": "Assistente de visita médica Agentic AI",
@@ -1797,7 +1803,9 @@
     "otherServices": "Outros serviços",
     "selectHospitalFirst": "Selecione um hospital para continuar",
     "prepareSelectedHospital": "Prepare-se para este hospital",
-    "confirmPreparationItems": "Verifique todos os itens de preparação antes de iniciar a navegação."
+    "confirmPreparationItems": "Verifique todos os itens de preparação antes de iniciar a navegação.",
+    "endServiceConfirmTitle": "Encerrar o serviço complementar?",
+    "endServiceConfirmDesc": "O tempo decorrido e a gravação serão salvos e o saldo final será calculado."
   },
   "ru": {
     "brandSub": "Агент-помощник по посещению врача с искусственным интеллектом",
@@ -2247,7 +2255,9 @@
     "otherServices": "Другие услуги",
     "selectHospitalFirst": "Выберите больницу, чтобы продолжить",
     "prepareSelectedHospital": "Готовьтесь к этой больнице",
-    "confirmPreparationItems": "Перед началом навигации проверьте каждый пункт подготовки."
+    "confirmPreparationItems": "Перед началом навигации проверьте каждый пункт подготовки.",
+    "endServiceConfirmTitle": "Завершить службу сопутствующего сервиса?",
+    "endServiceConfirmDesc": "Прошедшее время и запись будут сохранены, и будет рассчитан окончательный баланс."
   },
   "ar": {
     "brandSub": "مساعد الزيارة الطبية للوكيل AI",
@@ -2697,7 +2707,9 @@
     "otherServices": "خدمات أخرى",
     "selectHospitalFirst": "اختر المستشفى للمتابعة",
     "prepareSelectedHospital": "الاستعداد لهذا المستشفى",
-    "confirmPreparationItems": "تحقق من كل عنصر تحضير قبل بدء التنقل."
+    "confirmPreparationItems": "تحقق من كل عنصر تحضير قبل بدء التنقل.",
+    "endServiceConfirmTitle": "هل تريد إنهاء خدمة المرافق؟",
+    "endServiceConfirmDesc": "سيتم حفظ الوقت المنقضي والتسجيل، وسيتم حساب الرصيد النهائي."
   },
   "hi": {
     "brandSub": "एजेंट एआई मेडिकल विजिट सहायक",
@@ -3147,7 +3159,9 @@
     "otherServices": "अन्य सेवाएँ",
     "selectHospitalFirst": "जारी रखने के लिए एक अस्पताल का चयन करें",
     "prepareSelectedHospital": "इस अस्पताल के लिए तैयारी करें",
-    "confirmPreparationItems": "नेविगेशन शुरू करने से पहले प्रत्येक तैयारी आइटम की जाँच करें।"
+    "confirmPreparationItems": "नेविगेशन शुरू करने से पहले प्रत्येक तैयारी आइटम की जाँच करें।",
+    "endServiceConfirmTitle": "साथी सेवा समाप्त करें?",
+    "endServiceConfirmDesc": "आपका बीता हुआ समय और रिकॉर्डिंग सहेज ली जाएगी, और अंतिम शेष की गणना की जाएगी।"
   },
   "id": {
     "brandSub": "Asisten kunjungan medis AI agen",
@@ -3597,7 +3611,9 @@
     "otherServices": "Layanan lainnya",
     "selectHospitalFirst": "Pilih rumah sakit untuk melanjutkan",
     "prepareSelectedHospital": "Bersiaplah untuk rumah sakit ini",
-    "confirmPreparationItems": "Periksa setiap item persiapan sebelum memulai navigasi."
+    "confirmPreparationItems": "Periksa setiap item persiapan sebelum memulai navigasi.",
+    "endServiceConfirmTitle": "Akhiri layanan pendamping?",
+    "endServiceConfirmDesc": "Waktu dan rekaman Anda yang telah berlalu akan disimpan, dan saldo akhir akan dihitung."
   },
   "vi": {
     "brandSub": "Trợ lý thăm khám y tế AI của Agentic",
@@ -4047,7 +4063,9 @@
     "otherServices": "Các dịch vụ khác",
     "selectHospitalFirst": "Chọn bệnh viện để tiếp tục",
     "prepareSelectedHospital": "Chuẩn bị cho bệnh viện này",
-    "confirmPreparationItems": "Kiểm tra mọi mục chuẩn bị trước khi bắt đầu điều hướng."
+    "confirmPreparationItems": "Kiểm tra mọi mục chuẩn bị trước khi bắt đầu điều hướng.",
+    "endServiceConfirmTitle": "Kết thúc dịch vụ đồng hành?",
+    "endServiceConfirmDesc": "Thời gian đã trôi qua và bản ghi của bạn sẽ được lưu lại và số dư cuối cùng sẽ được tính toán."
   },
   "th": {
     "brandSub": "ผู้ช่วยเข้ารับการตรวจทางการแพทย์ Agentic AI",
@@ -4497,7 +4515,9 @@
     "otherServices": "บริการอื่นๆ",
     "selectHospitalFirst": "เลือกโรงพยาบาลเพื่อดำเนินการต่อ",
     "prepareSelectedHospital": "เตรียมความพร้อมสำหรับโรงพยาบาลแห่งนี้",
-    "confirmPreparationItems": "ตรวจสอบทุกรายการเตรียมการก่อนเริ่มการนำทาง"
+    "confirmPreparationItems": "ตรวจสอบทุกรายการเตรียมการก่อนเริ่มการนำทาง",
+    "endServiceConfirmTitle": "สิ้นสุดบริการที่แสดงร่วมไหม",
+    "endServiceConfirmDesc": "เวลาที่ใช้ไปและการบันทึกของคุณจะถูกบันทึกไว้ และยอดคงเหลือสุดท้ายจะถูกคำนวณ"
   },
   "tr": {
     "brandSub": "Ajan AI tıbbi ziyaret asistanı",
@@ -4947,7 +4967,9 @@
     "otherServices": "Diğer hizmetler",
     "selectHospitalFirst": "Devam etmek için bir hastane seçin",
     "prepareSelectedHospital": "Bu hastaneye hazırlanın",
-    "confirmPreparationItems": "Navigasyona başlamadan önce her hazırlık öğesini kontrol edin."
+    "confirmPreparationItems": "Navigasyona başlamadan önce her hazırlık öğesini kontrol edin.",
+    "endServiceConfirmTitle": "Refakatçi hizmeti sonlandırılsın mı?",
+    "endServiceConfirmDesc": "Geçen süreniz ve kaydınız kaydedilecek ve son bakiye hesaplanacaktır."
   },
   "it": {
     "brandSub": "Assistente alla visita medica Agentic AI",
@@ -5397,7 +5419,9 @@
     "otherServices": "Altri servizi",
     "selectHospitalFirst": "Seleziona un ospedale per continuare",
     "prepareSelectedHospital": "Preparati per questo ospedale",
-    "confirmPreparationItems": "Controlla ogni elemento di preparazione prima di iniziare la navigazione."
+    "confirmPreparationItems": "Controlla ogni elemento di preparazione prima di iniziare la navigazione.",
+    "endServiceConfirmTitle": "Terminare il servizio accompagnatore?",
+    "endServiceConfirmDesc": "Il tempo trascorso e la registrazione verranno salvati e verrà calcolato il saldo finale."
   },
   "nl": {
     "brandSub": "Agent AI medische bezoekassistent",
@@ -5847,7 +5871,9 @@
     "otherServices": "Andere diensten",
     "selectHospitalFirst": "Selecteer een ziekenhuis om door te gaan",
     "prepareSelectedHospital": "Bereid je voor op dit ziekenhuis",
-    "confirmPreparationItems": "Controleer elk voorbereidingsitem voordat u met de navigatie begint."
+    "confirmPreparationItems": "Controleer elk voorbereidingsitem voordat u met de navigatie begint.",
+    "endServiceConfirmTitle": "De begeleidingsservice beëindigen?",
+    "endServiceConfirmDesc": "Uw verstreken tijd en opname worden opgeslagen en het eindsaldo wordt berekend."
   },
   "pl": {
     "brandSub": "Asystent wizyty lekarskiej agenta AI",
@@ -6297,7 +6323,9 @@
     "otherServices": "Inne usługi",
     "selectHospitalFirst": "Wybierz szpital, aby kontynuować",
     "prepareSelectedHospital": "Przygotuj się na ten szpital",
-    "confirmPreparationItems": "Przed rozpoczęciem nawigacji sprawdź każdy element przygotowania."
+    "confirmPreparationItems": "Przed rozpoczęciem nawigacji sprawdź każdy element przygotowania.",
+    "endServiceConfirmTitle": "Zakończyć usługę towarzyszącą?",
+    "endServiceConfirmDesc": "Czas, który upłynął i nagranie zostaną zapisane, a saldo końcowe zostanie obliczone."
   },
   "uk": {
     "brandSub": "Медичний помічник Agentic AI",
@@ -6747,7 +6775,9 @@
     "otherServices": "Інші послуги",
     "selectHospitalFirst": "Щоб продовжити, виберіть лікарню",
     "prepareSelectedHospital": "Готуйтеся до цієї лікарні",
-    "confirmPreparationItems": "Перед початком навігації перевірте кожен елемент підготовки."
+    "confirmPreparationItems": "Перед початком навігації перевірте кожен елемент підготовки.",
+    "endServiceConfirmTitle": "Завершити послугу компаньйона?",
+    "endServiceConfirmDesc": "Ваш час і запис буде збережено, а остаточний баланс буде розраховано."
   },
   "ms": {
     "brandSub": "Pembantu lawatan perubatan AI ejen",
@@ -7197,7 +7227,9 @@
     "otherServices": "Perkhidmatan lain",
     "selectHospitalFirst": "Pilih hospital untuk meneruskan",
     "prepareSelectedHospital": "Bersedia untuk hospital ini",
-    "confirmPreparationItems": "Semak setiap item penyediaan sebelum memulakan navigasi."
+    "confirmPreparationItems": "Semak setiap item penyediaan sebelum memulakan navigasi.",
+    "endServiceConfirmTitle": "Tamatkan perkhidmatan teman?",
+    "endServiceConfirmDesc": "Masa dan rakaman anda yang telah berlalu akan disimpan, dan baki akhir akan dikira."
   },
   "tl": {
     "brandSub": "Agent AI medical visit assistant",
@@ -7647,7 +7679,9 @@
     "otherServices": "Iba pang mga serbisyo",
     "selectHospitalFirst": "Pumili ng ospital upang magpatuloy",
     "prepareSelectedHospital": "Maghanda para sa ospital na ito",
-    "confirmPreparationItems": "Suriin ang bawat item sa paghahanda bago simulan ang pag-navigate."
+    "confirmPreparationItems": "Suriin ang bawat item sa paghahanda bago simulan ang pag-navigate.",
+    "endServiceConfirmTitle": "Tapusin ang kasamang serbisyo?",
+    "endServiceConfirmDesc": "Ang iyong lumipas na oras at pag-record ay ise-save, at ang huling balanse ay kakalkulahin."
   },
   "mn": {
     "brandSub": "Agentic AI эмнэлгийн үзлэгийн туслах",
@@ -8097,7 +8131,9 @@
     "otherServices": "Бусад үйлчилгээ",
     "selectHospitalFirst": "Үргэлжлүүлэхийн тулд эмнэлэг сонгоно уу",
     "prepareSelectedHospital": "Энэ эмнэлэгт бэлдээрэй",
-    "confirmPreparationItems": "Навигацыг эхлүүлэхийн өмнө бэлтгэлийн зүйл бүрийг шалгана уу."
+    "confirmPreparationItems": "Навигацыг эхлүүлэхийн өмнө бэлтгэлийн зүйл бүрийг шалгана уу.",
+    "endServiceConfirmTitle": "Хамтрагч үйлчилгээгээ дуусгах уу?",
+    "endServiceConfirmDesc": "Таны өнгөрсөн хугацаа болон бичлэгийг хадгалах бөгөөд эцсийн үлдэгдлийг тооцох болно."
   },
   "uz": {
     "brandSub": "Agentlik AI tibbiy tashrif yordamchisi",
@@ -8547,7 +8583,9 @@
     "otherServices": "Boshqa xizmatlar",
     "selectHospitalFirst": "Davom etish uchun shifoxonani tanlang",
     "prepareSelectedHospital": "Bu kasalxonaga tayyorlaning",
-    "confirmPreparationItems": "Navigatsiyani boshlashdan oldin har bir tayyorgarlik elementini tekshiring."
+    "confirmPreparationItems": "Navigatsiyani boshlashdan oldin har bir tayyorgarlik elementini tekshiring.",
+    "endServiceConfirmTitle": "Hamkorlik xizmati tugatilsinmi?",
+    "endServiceConfirmDesc": "O'tgan vaqtingiz va yozuvingiz saqlanadi va yakuniy balans hisoblab chiqiladi."
   },
   "bn": {
     "brandSub": "এজেন্টিক এআই মেডিকেল ভিজিট সহকারী",
@@ -8997,7 +9035,9 @@
     "otherServices": "অন্যান্য পরিষেবা",
     "selectHospitalFirst": "চালিয়ে যেতে একটি হাসপাতাল নির্বাচন করুন",
     "prepareSelectedHospital": "এই হাসপাতালের জন্য প্রস্তুত করুন",
-    "confirmPreparationItems": "নেভিগেশন শুরু করার আগে প্রতিটি প্রস্তুতি আইটেম পরীক্ষা করুন."
+    "confirmPreparationItems": "নেভিগেশন শুরু করার আগে প্রতিটি প্রস্তুতি আইটেম পরীক্ষা করুন.",
+    "endServiceConfirmTitle": "সঙ্গী সেবা শেষ?",
+    "endServiceConfirmDesc": "আপনার অতিবাহিত সময় এবং রেকর্ডিং সংরক্ষণ করা হবে, এবং চূড়ান্ত ব্যালেন্স গণনা করা হবে."
   },
   "ur": {
     "brandSub": "Agentic AI میڈیکل وزٹ اسسٹنٹ",
@@ -9447,7 +9487,9 @@
     "otherServices": "دیگر خدمات",
     "selectHospitalFirst": "جاری رکھنے کے لیے ہسپتال کا انتخاب کریں۔",
     "prepareSelectedHospital": "اس ہسپتال کی تیاری کرو",
-    "confirmPreparationItems": "نیویگیشن شروع کرنے سے پہلے تیاری کی ہر چیز کو چیک کریں۔"
+    "confirmPreparationItems": "نیویگیشن شروع کرنے سے پہلے تیاری کی ہر چیز کو چیک کریں۔",
+    "endServiceConfirmTitle": "ساتھی سروس ختم کریں؟",
+    "endServiceConfirmDesc": "آپ کا گزرا ہوا وقت اور ریکارڈنگ بچ جائے گی، اور حتمی بیلنس کا حساب لگایا جائے گا۔"
   },
   "fa": {
     "brandSub": "دستیار ویزیت پزشکی عامل هوش مصنوعی",
@@ -9897,7 +9939,9 @@
     "otherServices": "سایر خدمات",
     "selectHospitalFirst": "برای ادامه، بیمارستانی را انتخاب کنید",
     "prepareSelectedHospital": "برای این بیمارستان آماده شوید",
-    "confirmPreparationItems": "قبل از شروع ناوبری، همه موارد آماده سازی را بررسی کنید."
+    "confirmPreparationItems": "قبل از شروع ناوبری، همه موارد آماده سازی را بررسی کنید.",
+    "endServiceConfirmTitle": "خدمات همراه را تمام کنید؟",
+    "endServiceConfirmDesc": "زمان سپری شده و ضبط شما ذخیره می شود و موجودی نهایی محاسبه می شود."
   },
   "ne": {
     "brandSub": "एजेन्टिक एआई मेडिकल भ्रमण सहायक",
@@ -10347,7 +10391,9 @@
     "otherServices": "अन्य सेवाहरू",
     "selectHospitalFirst": "जारी राख्न अस्पताल चयन गर्नुहोस्",
     "prepareSelectedHospital": "यो अस्पतालको लागि तयारी गर्नुहोस्",
-    "confirmPreparationItems": "नेभिगेसन सुरु गर्नु अघि प्रत्येक तयारी वस्तु जाँच गर्नुहोस्।"
+    "confirmPreparationItems": "नेभिगेसन सुरु गर्नु अघि प्रत्येक तयारी वस्तु जाँच गर्नुहोस्।",
+    "endServiceConfirmTitle": "सहयात्री सेवा अन्त्य गर्ने?",
+    "endServiceConfirmDesc": "तपाईंको बितेको समय र रेकर्डिङ बचत हुनेछ, र अन्तिम ब्यालेन्स गणना गरिनेछ।"
   },
   "my": {
     "brandSub": "Agent AI ဆေးဘက်ဆိုင်ရာအလည်အပတ်လက်ထောက်",
@@ -10797,7 +10843,9 @@
     "otherServices": "အခြားဝန်ဆောင်မှုများ",
     "selectHospitalFirst": "ရှေ့ဆက်ရန် ဆေးရုံကို ရွေးချယ်ပါ။",
     "prepareSelectedHospital": "ဒီဆေးရုံအတွက် ပြင်ဆင်ပါ။",
-    "confirmPreparationItems": "လမ်းညွှန်မှုမစတင်မီ ပြင်ဆင်မှုတိုင်းကို စစ်ဆေးပါ။"
+    "confirmPreparationItems": "လမ်းညွှန်မှုမစတင်မီ ပြင်ဆင်မှုတိုင်းကို စစ်ဆေးပါ။",
+    "endServiceConfirmTitle": "အဖော်ဝန်ဆောင်မှုကို အဆုံးသတ်မလား။",
+    "endServiceConfirmDesc": "သင်၏ကုန်သွားသောအချိန်နှင့် မှတ်တမ်းတင်ခြင်းကို သိမ်းဆည်းမည်ဖြစ်ပြီး နောက်ဆုံးလက်ကျန်ငွေကို တွက်ချက်မည်ဖြစ်သည်။"
   },
   "ko": {
     "brandSub": "Agentic AI 의료방문 도우미",
@@ -11247,7 +11295,9 @@
     "otherServices": "기타 서비스",
     "selectHospitalFirst": "계속하려면 병원을 선택하세요",
     "prepareSelectedHospital": "이 병원을 준비하세요",
-    "confirmPreparationItems": "내비게이션을 시작하기 전 모든 준비사항을 확인하세요."
+    "confirmPreparationItems": "내비게이션을 시작하기 전 모든 준비사항을 확인하세요.",
+    "endServiceConfirmTitle": "동반자 서비스를 종료하시겠습니까?",
+    "endServiceConfirmDesc": "경과 시간과 녹음 내용이 저장되고 최종 잔액이 계산됩니다."
   },
   "ja": {
     "brandSub": "Agent AI 訪問アシスタント",
@@ -11697,6 +11747,8 @@
     "otherServices": "その他のサービス",
     "selectHospitalFirst": "続行するには病院を選択してください",
     "prepareSelectedHospital": "この病院に備えてください",
-    "confirmPreparationItems": "ナビゲーションを始める前に、準備事項をすべて確認してください。"
+    "confirmPreparationItems": "ナビゲーションを始める前に、準備事項をすべて確認してください。",
+    "endServiceConfirmTitle": "コンパニオンサービスを終了しますか?",
+    "endServiceConfirmDesc": "経過時間と記録が保存され、最終的な残高が計算されます。"
   }
 }

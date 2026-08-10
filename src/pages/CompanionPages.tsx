@@ -153,7 +153,7 @@ function formatDuration(totalSeconds: number) {
   return [hours, minutes, seconds].map((value) => String(value).padStart(2, "0")).join(":");
 }
 
-export function CompanionServicePage({ order, stream, onExtend, onEnd }: { order: CompanionOrder; stream: MediaStream | null; onExtend: () => void; onEnd: (actualDurationMinutes: number) => void }) {
+export function CompanionServicePage({ order, stream, onExtend, onEnd }: { order: CompanionOrder; stream: MediaStream | null; onExtend: () => void; onEnd: (actualDurationMinutes: number) => Promise<void> }) {
   const { t } = useI18n();
   const initialScheduledMinutes = normalizeCompanionDuration(order.durationMinutes);
   const initialElapsed = Math.min(initialScheduledMinutes * 60, order.serviceStartedAt ? Math.max(0, Math.floor((Date.now() - new Date(order.serviceStartedAt).getTime()) / 1000)) : 0);
@@ -161,6 +161,9 @@ export function CompanionServicePage({ order, stream, onExtend, onEnd }: { order
   const [remaining, setRemaining] = useState(Math.max(0, initialScheduledMinutes * 60 - initialElapsed));
   const [elapsed, setElapsed] = useState(initialElapsed);
   const [recording, setRecording] = useState(false);
+  const [confirmingEnd, setConfirmingEnd] = useState(false);
+  const [ending, setEnding] = useState(false);
+  const [endError, setEndError] = useState("");
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const chunkIndex = useRef(0);
@@ -201,8 +204,24 @@ export function CompanionServicePage({ order, stream, onExtend, onEnd }: { order
     setRemaining((value) => value + (nextDuration - scheduledMinutes) * 60);
     onExtend();
   }
-  function end() { if (recorderRef.current?.state === "recording") recorderRef.current.stop(); setRecording(false); onEnd(actualBillableMinutes(elapsed)); }
-  return <Panel className="service-panel"><div className="service-person"><NaruPose pose={19} className="companion-service-naru" /><span className="person-avatar xl">{order.companion.nativeName.slice(0, 1)}</span><h2>{order.companion.name}</h2><div><MapPinIcon />{order.hospital?.name}</div></div><div className="service-main"><span>{t("timeRemaining")}</span><strong className="service-time">{formatDuration(remaining)}</strong><StatusPill tone={recording ? "red" : "peach"}><Mic size={15} />{recording ? t("recordingProtected") : t("browserCallNote")}</StatusPill>{remaining === 0 && <div role="alert" aria-live="assertive"><InfoBanner tone="peach" title={t("serviceTimeEnded")}>{t(canExtend ? "serviceTimeEndedDesc" : "serviceTimeEndedAtMaximumDesc")}</InfoBanner></div>}<div className="record-info"><ShieldCheck /><div><h3>{t("recordSaved")}</h3><p>{t("recordSavedDesc")}</p><p>{t("emergencyStill")}</p></div></div>{!canExtend && <p className="service-maximum" role="status">{t("serviceMaximumReached")}</p>}<div className="service-actions"><Button variant="secondary" onClick={extend} disabled={!canExtend}>{t("extend30")}</Button><Button variant="danger" onClick={end}>{t("endService")}</Button></div></div></Panel>;
+  async function finishService() {
+    if (ending) return;
+    setEnding(true);
+    setEndError("");
+    try {
+      if (recorderRef.current?.state === "recording") {
+        try { recorderRef.current.stop(); }
+        catch { /* Ending the service must continue if the browser already stopped recording. */ }
+      }
+      stream?.getTracks().forEach((track) => track.stop());
+      setRecording(false);
+      await onEnd(actualBillableMinutes(elapsed));
+    } catch {
+      setEnding(false);
+      setEndError(t("errorGeneric"));
+    }
+  }
+  return <><Panel className="service-panel"><div className="service-person"><NaruPose pose={19} className="companion-service-naru" /><span className="person-avatar xl">{order.companion.nativeName.slice(0, 1)}</span><h2>{order.companion.name}</h2><div><MapPinIcon />{order.hospital?.name}</div></div><div className="service-main"><span>{t("timeRemaining")}</span><strong className="service-time">{formatDuration(remaining)}</strong><StatusPill tone={recording ? "red" : "peach"}><Mic size={15} />{recording ? t("recordingProtected") : t("browserCallNote")}</StatusPill>{remaining === 0 && <div role="alert" aria-live="assertive"><InfoBanner tone="peach" title={t("serviceTimeEnded")}>{t(canExtend ? "serviceTimeEndedDesc" : "serviceTimeEndedAtMaximumDesc")}</InfoBanner></div>}<div className="record-info"><ShieldCheck /><div><h3>{t("recordSaved")}</h3><p>{t("recordSavedDesc")}</p><p>{t("emergencyStill")}</p></div></div>{!canExtend && <p className="service-maximum" role="status">{t("serviceMaximumReached")}</p>}<div className="service-actions"><Button type="button" variant="secondary" onClick={extend} disabled={!canExtend}>{t("extend30")}</Button><Button type="button" variant="danger" onClick={() => { setEndError(""); setConfirmingEnd(true); }}>{t("endService")}</Button></div></div></Panel>{confirmingEnd && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="service-end-title"><div className="gate-modal service-end-dialog"><ShieldCheck /><h2 id="service-end-title">{t("endServiceConfirmTitle")}</h2><p>{t("endServiceConfirmDesc")}</p>{endError && <p className="form-error" role="alert">{endError}</p>}<div><Button type="button" variant="secondary" onClick={() => setConfirmingEnd(false)} disabled={ending}>{t("cancel")}</Button><Button type="button" variant="danger" onClick={() => void finishService()} disabled={ending}>{ending ? t("loading") : t("endService")}</Button></div></div></div>}</>;
 }
 
 function MapPinIcon() { return <span aria-hidden="true">✚</span>; }

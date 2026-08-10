@@ -522,10 +522,13 @@ function AppInner() {
   async function endService(actualDurationMinutes: number) {
     if (!order) return;
     const updated = { ...order, status: "completed" as const, actualDurationMinutes };
+    const result = await api.updateOrder(order.id, "completed", { actualDurationMinutes });
+    if (!result.ok) throw new Error("Unable to complete companion service");
+    recordingStream?.getTracks().forEach((track) => track.stop());
+    setRecordingStream(null);
     setOrder(updated); goTo("companion-finished");
     setOrdersVersion((value) => value + 1);
-    await api.updateOrder(order.id, "completed", { actualDurationMinutes });
-    await updateCurrentRecord({ status: "completed", hospital: order.hospital?.name || t("hospital"), symptoms: extractReportableSymptoms(symptoms || user?.card?.symptoms || "") || t("unknown"), details: orderRecordDetails(updated) });
+    void updateCurrentRecord({ status: "completed", hospital: order.hospital?.name || t("hospital"), symptoms: extractReportableSymptoms(symptoms || user?.card?.symptoms || "") || t("unknown"), details: orderRecordDetails(updated) });
   }
 
   async function submitCompanionReview(rating: number, review: string) {
@@ -775,7 +778,7 @@ function AppInner() {
       case "companion-waiting": return order ? <CompanionWaitingPage person={order.companion} onAccepted={() => void acceptOrder()} onMessage={() => goTo("companion-chat")} onCancel={() => { void api.updateOrder(order.id, "cancelled"); setOrder(null); goTo("companions"); }} /> : <Panel />;
       case "companion-payment": return order ? <CompanionPaymentPage order={order} onPay={(method) => void payDeposit(method)} /> : <Panel />;
       case "companion-arrived": return order ? <CompanionArrivedPage order={order} onMet={startCompanionService} onProblem={() => goTo("companion-chat")} /> : <Panel />;
-      case "companion-service": return order ? <CompanionServicePage order={order} stream={recordingStream} onExtend={extendCompanionService} onEnd={(minutes) => void endService(minutes)} /> : <Panel />;
+      case "companion-service": return order ? <CompanionServicePage order={order} stream={recordingStream} onExtend={extendCompanionService} onEnd={endService} /> : <Panel />;
       case "companion-finished": return order ? <CompanionFinishedPage order={order} onPayBalance={payCompanionBalance} onReview={(rating, review) => void submitCompanionReview(rating, review)} /> : <Panel />;
       case "companion-orders": return <CompanionOrdersPage version={ordersVersion} onResume={resumeOrder} onDeleted={companionOrderDeleted} onCountChange={setOrdersCount} />;
       case "emergency-confirm": return <EmergencyConfirmPage hasCard={Boolean(user.card)} onCall={() => { void refreshLocation(); goTo("emergency-calling"); }} onDecline={() => user.card ? void openHospitals(extractReportableSymptoms(symptoms || user.card.symptoms || "")) : goTo("card")} />;
