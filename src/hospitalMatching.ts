@@ -29,13 +29,36 @@ export function hospitalCategory(symptoms: string): HospitalCategory {
   const value = symptoms.normalize("NFKC").toLowerCase();
   if (/(肚子|腹痛|腹泻|拉肚子|呕吐|恶心|胃|肠|diarr|vomit|nause|abdominal|stomach|설사|구토|복통|메스꺼|下痢|嘔吐|腹痛)/u.test(value)) return "gastro";
   if (/(呼吸|咳嗽|发烧|发热|喉咙|鼻|breath|cough|fever|throat|호흡|기침|발열|목이|呼吸|咳|発熱)/u.test(value)) return "respiratory";
+  if (/(骨|关节|脚踝|踝|手腕|膝|肩|扭伤|骨折|腰|back pain|joint|fracture|sprain|ankle|wrist|knee|elbow|shoulder|足首|手首|捻挫|정형|골절|관절|발목|손목|무릎|팔꿈치|어깨|접질|삐끗|염좌|타박)/u.test(value)) return "orthopedic";
   if (/(头晕|头痛|麻木|无力|眩晕|headache|dizz|numb|weak|두통|어지|저림|頭痛|めまい)/u.test(value)) return "neurology";
   if (/(眼|视力|看不清|vision|eye|시야|눈|目|見え)/u.test(value)) return "ophthalmology";
   if (/(牙|齿|口腔|tooth|dental|치아|치과|歯)/u.test(value)) return "dental";
   if (/(皮疹|皮肤|rash|skin|피부|発疹)/u.test(value)) return "dermatology";
-  if (/(骨|关节|扭伤|骨折|腰|back pain|joint|fracture|sprain|정형|골절|관절)/u.test(value)) return "orthopedic";
   if (/(抑郁|焦虑|失眠|精神|depress|anxiety|insomnia|mental|우울|불안|불면|정신)/u.test(value)) return "mental";
   return "general";
+}
+
+export function hospitalCategoryAffinity(
+  name: string,
+  tags: Record<string, string>,
+  category: HospitalCategory,
+) {
+  const descriptor = `${name} ${Object.values(tags).join(" ")}`.normalize("NFKC").toLowerCase();
+  const generalHospital = /(종합병원|상급종합|대학병원|대학교\s*병원|의료원|general\s*hospital|university\s*hospital|medical\s*center)/u.test(descriptor);
+  const specialtySignals: Partial<Record<HospitalCategory, RegExp>> = {
+    gastro: /(소화기내과|내과|gastro|internal\s*medicine)/u,
+    respiratory: /(호흡기내과|이비인후과|내과|respirat|pulmon|ent|internal\s*medicine)/u,
+    neurology: /(신경과|신경외과|neurolog|neurosurg)/u,
+    orthopedic: /(정형외과|재활의학과|신경외과|orthop|rehabilitation|physical\s*medicine|neurosurg)/u,
+    ophthalmology: /(안과|ophthalm|eye\s*clinic)/u,
+    mental: /(정신건강의학과|정신과|psychi|mental\s*health)/u,
+    dental: /(치과|dental|dentist)/u,
+    dermatology: /(피부과|dermat|skin\s*clinic)/u,
+  };
+  if (category === "general") return generalHospital ? 3 : 0;
+  if (specialtySignals[category]?.test(descriptor)) return 3;
+  if (generalHospital) return 2;
+  return 1;
 }
 
 export function matchesHospitalCategory(

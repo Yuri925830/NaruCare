@@ -11,6 +11,7 @@ import {
 } from "../../src/hiraHospital";
 import {
   hospitalCategory,
+  hospitalCategoryAffinity,
   hospitalSearchQueries,
   matchesHospitalCategory,
   type HospitalCategory,
@@ -805,7 +806,7 @@ async function nearbyHospitals(url: URL, env: Env, ctx: ExecutionContext) {
   const cache = caches.default;
   const hasScheduleProvider = Boolean(envSecret(env, "GOOGLE_PLACES_API_KEY"));
   const hasHiraProvider = Boolean(hiraServiceKey(env));
-  const cacheKey = new Request(`https://narucare.internal/hospitals?v=10&lat=${lat.toFixed(3)}&lng=${lng.toFixed(3)}&locale=${localeCode}&category=${category}&schedule=${hasScheduleProvider ? "google" : "none"}&official=${hasHiraProvider ? "hira" : "none"}`);
+  const cacheKey = new Request(`https://narucare.internal/hospitals?v=11&lat=${lat.toFixed(3)}&lng=${lng.toFixed(3)}&locale=${localeCode}&category=${category}&schedule=${hasScheduleProvider ? "google" : "none"}&official=${hasHiraProvider ? "hira" : "none"}`);
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
   let hospitals: HospitalPayload[] = [];
@@ -832,6 +833,17 @@ async function nearbyHospitals(url: URL, env: Env, ctx: ExecutionContext) {
   }
   const hiraFacilities = hasHiraProvider ? await hiraFacilitiesForHospitals(env, hospitals, ctx) : [];
   if (hiraFacilities.length) hospitals = await enrichHospitalsWithHira(env, hospitals, hiraFacilities, ctx);
+  hospitals.sort((left, right) => {
+    const leftAffinity = hospitalCategoryAffinity(left.name, {
+      type: left.type,
+      officialSpecialties: left.officialSpecialties?.join(" ") || "",
+    }, category);
+    const rightAffinity = hospitalCategoryAffinity(right.name, {
+      type: right.type,
+      officialSpecialties: right.officialSpecialties?.join(" ") || "",
+    }, category);
+    return rightAffinity - leftAffinity || left.distance - right.distance;
+  });
   const result = json({ hospitals });
   const verifiedScheduleCount = hospitals.filter((hospital) => Boolean(hospital.openingHours)).length;
   const officialProviderReady = !hasHiraProvider || hiraFacilities.length > 0;

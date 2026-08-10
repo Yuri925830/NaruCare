@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hospitalCategory, hospitalSearchQueries, matchesHospitalCategory } from "./hospitalMatching";
+import { hospitalCategory, hospitalCategoryAffinity, hospitalSearchQueries, matchesHospitalCategory } from "./hospitalMatching";
 
 describe("hospital symptom relevance", () => {
   it("classifies the user's cake-related abdominal pain as gastrointestinal", () => {
@@ -10,6 +10,18 @@ describe("hospital symptom relevance", () => {
   it("includes safe primary and general-care alternatives for headaches", () => {
     expect(hospitalCategory("두통 있어요")).toBe("neurology");
     expect(hospitalSearchQueries("neurology")).toEqual(["신경과", "신경외과", "내과", "종합병원"]);
+  });
+
+  it("prioritizes a reported ankle injury over explicitly negated dizziness", () => {
+    const symptoms = "오른쪽 발목을 접질려 붓고 아프지만 숨이 차거나 어지럽지는 않습니다.";
+    expect(hospitalCategory(symptoms)).toBe("orthopedic");
+    expect(hospitalSearchQueries(hospitalCategory(symptoms))).toEqual(["정형외과"]);
+  });
+
+  it("ranks matching specialists above compatible but unrelated clinics", () => {
+    expect(hospitalCategoryAffinity("현명신경외과의원", { specialties: "신경외과 정형외과" }, "orthopedic")).toBe(3);
+    expect(hospitalCategoryAffinity("서울대학교병원", { type: "종합병원" }, "orthopedic")).toBe(2);
+    expect(hospitalCategoryAffinity("사랑담은내과의원", { specialties: "내과" }, "orthopedic")).toBe(1);
   });
 
   it("keeps general hospitals but excludes clearly unrelated specialties", () => {
