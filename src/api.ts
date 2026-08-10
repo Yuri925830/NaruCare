@@ -145,9 +145,9 @@ export const api = {
   },
   async mapsConfig() {
     try {
-      return await request<{ kakaoJavaScriptKey: string; dynamicMap: boolean }>("/api/maps/config", {}, 5_000);
+      return await request<{ naverMapsClientId: string; dynamicMap: boolean }>("/api/maps/config", {}, 5_000);
     } catch {
-      return { kakaoJavaScriptKey: "", dynamicMap: false };
+      return { naverMapsClientId: "", dynamicMap: false };
     }
   },
   async route(origin: [number, number], destination: [number, number], mode: "walking" | "driving" = "walking") {

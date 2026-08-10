@@ -986,7 +986,6 @@ Create local Worker secrets in `worker/.dev.vars` or configure encrypted product
 OPENAI_API_KEY
 OPENAI_MODEL
 KAKAO_REST_API_KEY
-KAKAO_JAVASCRIPT_KEY
 GOOGLE_PLACES_API_KEY
 HIRA_SERVICE_KEY
 NAVER_MAPS_CLIENT_ID
@@ -999,7 +998,7 @@ Frontend production variable:
 VITE_API_URL
 ```
 
-The browser receives only the domain-restricted JavaScript key required by the official Kakao Maps Web SDK. `KAKAO_REST_API_KEY` and all other provider credentials remain server-side.
+The browser receives only the domain-restricted client ID required by the official NAVER Maps JavaScript API. `NAVER_MAPS_CLIENT_SECRET`, `KAKAO_REST_API_KEY`, and all other provider credentials remain server-side.
 
 Provider secrets, Directions requests, database access, model execution, and authorization remain behind the Worker boundary.
 
@@ -1027,14 +1026,13 @@ npx wrangler d1 migrations apply narucare --remote --config worker/wrangler.json
 npm run worker:check
 
 npx wrangler secret put KAKAO_REST_API_KEY --config worker/wrangler.jsonc
-npx wrangler secret put KAKAO_JAVASCRIPT_KEY --config worker/wrangler.jsonc
 npx wrangler secret put GOOGLE_PLACES_API_KEY --config worker/wrangler.jsonc
 npx wrangler secret put OPENAI_API_KEY --config worker/wrangler.jsonc
 npx wrangler secret put HIRA_SERVICE_KEY --config worker/wrangler.jsonc
 npx wrangler secret put NAVER_MAPS_CLIENT_ID --config worker/wrangler.jsonc
 npx wrangler secret put NAVER_MAPS_CLIENT_SECRET --config worker/wrangler.jsonc
 
-npx wrangler deploy --config worker/wrangler.jsonc --minify
+npx wrangler deploy --config worker/wrangler.jsonc --minify --keep-vars
 ```
 
 Live health endpoint:

@@ -248,99 +248,98 @@ function LeafletInteractiveMap({ center, hospitals = [], selected, route = [], o
   return <div ref={container} className={`interactive-map ${className}`} aria-label="Interactive map" />;
 }
 
-interface KakaoLatLng {
-  getLat: () => number;
-  getLng: () => number;
+interface NaverLatLng {
+  lat: () => number;
+  lng: () => number;
 }
 
-interface KakaoLatLngBounds {
-  extend: (point: KakaoLatLng) => void;
+interface NaverLatLngBounds {
+  extend: (point: NaverLatLng) => NaverLatLngBounds;
 }
 
-interface KakaoMapInstance {
-  addControl: (control: unknown, position: unknown) => void;
-  getCenter: () => KakaoLatLng;
-  getLevel: () => number;
-  relayout: () => void;
-  setBounds: (bounds: KakaoLatLngBounds, paddingTop?: number, paddingRight?: number, paddingBottom?: number, paddingLeft?: number) => void;
-  setCenter: (center: KakaoLatLng) => void;
-  setLevel: (level: number) => void;
-  setMaxLevel: (level: number) => void;
-  setMinLevel: (level: number) => void;
+interface NaverMapInstance {
+  autoResize: () => void;
+  destroy: () => void;
+  fitBounds: (bounds: NaverLatLngBounds, options?: { top?: number; right?: number; bottom?: number; left?: number; maxZoom?: number }) => void;
+  getCenter: () => NaverLatLng;
+  setCenter: (center: NaverLatLng) => void;
+  setZoom: (zoom: number) => void;
 }
 
-interface KakaoOverlay {
-  setMap: (map: KakaoMapInstance | null) => void;
+interface NaverOverlay {
+  setMap: (map: NaverMapInstance | null) => void;
 }
 
-type KakaoEventHandler = () => void;
-
-interface KakaoListener {
-  target: unknown;
+interface NaverMapEventListener {
   eventName: string;
-  handler: KakaoEventHandler;
+  listener: (...args: unknown[]) => void;
+  listenerId: string;
+  target: unknown;
 }
 
-interface KakaoDomListener {
-  element: HTMLElement;
-  handler: EventListener;
-}
-
-interface KakaoMapsNamespace {
-  load: (callback: () => void) => void;
-  LatLng: new (lat: number, lng: number) => KakaoLatLng;
-  LatLngBounds: new () => KakaoLatLngBounds;
-  Map: new (element: HTMLElement, options: Record<string, unknown>) => KakaoMapInstance;
-  Marker: new (options: Record<string, unknown>) => KakaoOverlay;
-  CustomOverlay: new (options: Record<string, unknown>) => KakaoOverlay;
-  Polyline: new (options: Record<string, unknown>) => KakaoOverlay;
-  ZoomControl: new () => unknown;
-  ControlPosition: { RIGHT: unknown };
-  event: {
-    addListener: (target: unknown, eventName: string, handler: KakaoEventHandler) => void;
-    removeListener: (target: unknown, eventName: string, handler: KakaoEventHandler) => void;
+interface NaverMapsNamespace {
+  LatLng: new (lat: number, lng: number) => NaverLatLng;
+  LatLngBounds: new (southWest: NaverLatLng, northEast: NaverLatLng) => NaverLatLngBounds;
+  Map: new (element: HTMLElement, options: Record<string, unknown>) => NaverMapInstance;
+  Marker: new (options: Record<string, unknown>) => NaverOverlay;
+  Polyline: new (options: Record<string, unknown>) => NaverOverlay;
+  Point: new (x: number, y: number) => unknown;
+  Size: new (width: number, height: number) => unknown;
+  Event: {
+    addListener: (target: unknown, eventName: string, handler: (...args: unknown[]) => void) => NaverMapEventListener;
+    removeListener: (listener: NaverMapEventListener | NaverMapEventListener[]) => void;
   };
 }
 
 declare global {
-  interface Window { kakao?: { maps?: KakaoMapsNamespace } }
+  interface Window {
+    naver?: { maps?: NaverMapsNamespace };
+    navermap_authFailure?: () => void;
+  }
 }
 
-let kakaoMapsLoader: Promise<KakaoMapsNamespace> | null = null;
+let naverMapsLoader: Promise<NaverMapsNamespace> | null = null;
 
-function loadKakaoMaps(javaScriptKey: string) {
-  const ready = window.kakao?.maps;
+function loadNaverMaps(clientId: string) {
+  const ready = window.naver?.maps;
   if (ready && typeof ready.Map === "function") return Promise.resolve(ready);
-  if (kakaoMapsLoader) return kakaoMapsLoader;
-  kakaoMapsLoader = new Promise<KakaoMapsNamespace>((resolve, reject) => {
+  if (naverMapsLoader) return naverMapsLoader;
+  naverMapsLoader = new Promise<NaverMapsNamespace>((resolve, reject) => {
     const script = document.createElement("script");
-    script.async = true;
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=${encodeURIComponent(javaScriptKey)}`;
-    script.dataset.narucareKakaoMap = "true";
-    script.onload = () => {
-      const maps = window.kakao?.maps;
-      if (!maps) {
-        reject(new Error("Kakao Maps SDK did not initialize"));
-        return;
-      }
-      maps.load(() => {
-        const loaded = window.kakao?.maps;
-        if (loaded && typeof loaded.Map === "function") resolve(loaded);
-        else reject(new Error("Kakao Maps SDK did not finish loading"));
-      });
+    const previousAuthFailure = window.navermap_authFailure;
+    let settled = false;
+    const finish = (maps?: NaverMapsNamespace, error?: Error) => {
+      if (settled) return;
+      settled = true;
+      if (window.navermap_authFailure === authFailure) window.navermap_authFailure = previousAuthFailure;
+      if (maps) resolve(maps);
+      else reject(error || new Error("NAVER Maps SDK could not be loaded"));
     };
-    script.onerror = () => reject(new Error("Kakao Maps SDK could not be loaded"));
+    const authFailure = () => {
+      finish(undefined, new Error("NAVER Maps client ID or web service URL is not authorized"));
+      previousAuthFailure?.();
+    };
+    window.navermap_authFailure = authFailure;
+    script.async = true;
+    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(clientId)}`;
+    script.dataset.narucareNaverMap = "true";
+    script.onload = () => {
+      const maps = window.naver?.maps;
+      if (maps && typeof maps.Map === "function") finish(maps);
+      else finish(undefined, new Error("NAVER Maps SDK did not initialize"));
+    };
+    script.onerror = () => finish(undefined, new Error("NAVER Maps SDK could not be loaded"));
     document.head.appendChild(script);
   }).catch((error) => {
-    kakaoMapsLoader = null;
+    naverMapsLoader = null;
     throw error;
   });
-  return kakaoMapsLoader;
+  return naverMapsLoader;
 }
 
-function useKakaoMapsSdk() {
-  const initialMaps = window.kakao?.maps;
-  const [maps, setMaps] = useState<KakaoMapsNamespace | null>(initialMaps && typeof initialMaps.Map === "function" ? initialMaps : null);
+function useNaverMapsSdk() {
+  const initialMaps = window.naver?.maps;
+  const [maps, setMaps] = useState<NaverMapsNamespace | null>(initialMaps && typeof initialMaps.Map === "function" ? initialMaps : null);
   const [useFallback, setUseFallback] = useState(false);
 
   useEffect(() => {
@@ -348,11 +347,11 @@ function useKakaoMapsSdk() {
     let active = true;
     void api.mapsConfig().then((config) => {
       if (!active) return;
-      if (!config.dynamicMap || !config.kakaoJavaScriptKey) {
+      if (!config.dynamicMap || !config.naverMapsClientId) {
         setUseFallback(true);
         return;
       }
-      return loadKakaoMaps(config.kakaoJavaScriptKey).then((loaded) => {
+      return loadNaverMaps(config.naverMapsClientId).then((loaded) => {
         if (active) setMaps(loaded);
       });
     }).catch(() => { if (active) setUseFallback(true); });
@@ -362,21 +361,29 @@ function useKakaoMapsSdk() {
   return { maps, useFallback };
 }
 
-function removeKakaoListeners(maps: KakaoMapsNamespace, listeners: KakaoListener[]) {
-  listeners.forEach(({ target, eventName, handler }) => maps.event.removeListener(target, eventName, handler));
+function markerIcon(maps: NaverMapsNamespace, content: HTMLElement, size: number) {
+  return {
+    content,
+    size: new maps.Size(size, size),
+    anchor: new maps.Point(size / 2, size / 2),
+  };
 }
 
-function removeKakaoDomListeners(listeners: KakaoDomListener[]) {
-  listeners.forEach(({ element, handler }) => element.removeEventListener("click", handler));
+function passiveMarker(className: string, label: string, text = "") {
+  const marker = document.createElement("span");
+  marker.className = `map-marker ${className}`;
+  marker.textContent = text;
+  marker.title = label;
+  marker.setAttribute("aria-label", label);
+  return marker;
 }
 
 export function InteractiveMap(props: InteractiveMapProps) {
-  const { maps, useFallback } = useKakaoMapsSdk();
+  const { maps, useFallback } = useNaverMapsSdk();
   const container = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<KakaoMapInstance | null>(null);
-  const overlaysRef = useRef<KakaoOverlay[]>([]);
-  const listenersRef = useRef<KakaoListener[]>([]);
-  const domListenersRef = useRef<KakaoDomListener[]>([]);
+  const mapRef = useRef<NaverMapInstance | null>(null);
+  const overlaysRef = useRef<NaverOverlay[]>([]);
+  const listenersRef = useRef<NaverMapEventListener[]>([]);
   const onSelectRef = useRef(props.onSelect);
   onSelectRef.current = props.onSelect;
 
@@ -385,37 +392,40 @@ export function InteractiveMap(props: InteractiveMapProps) {
     const mapElement = container.current;
     const map = new maps.Map(mapElement, {
       center: new maps.LatLng(props.center[0], props.center[1]),
-      level: 4,
+      zoom: 15,
+      minZoom: 6,
+      maxZoom: 21,
+      zoomControl: true,
     });
-    map.addControl(new maps.ZoomControl(), maps.ControlPosition.RIGHT);
     mapRef.current = map;
-    const resizeTimer = window.setTimeout(() => map.relayout(), 80);
+    const resizeTimer = window.setTimeout(() => map.autoResize(), 80);
     return () => {
       window.clearTimeout(resizeTimer);
-      removeKakaoListeners(maps, listenersRef.current);
+      if (listenersRef.current.length) maps.Event.removeListener(listenersRef.current);
       listenersRef.current = [];
-      removeKakaoDomListeners(domListenersRef.current);
-      domListenersRef.current = [];
       overlaysRef.current.forEach((overlay) => overlay.setMap(null));
       overlaysRef.current = [];
       mapRef.current = null;
-      mapElement.replaceChildren();
+      map.destroy();
     };
   }, [maps]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!maps || !map) return;
-    removeKakaoListeners(maps, listenersRef.current);
+    if (listenersRef.current.length) maps.Event.removeListener(listenersRef.current);
     listenersRef.current = [];
-    removeKakaoDomListeners(domListenersRef.current);
-    domListenersRef.current = [];
     overlaysRef.current.forEach((overlay) => overlay.setMap(null));
-    const overlays: KakaoOverlay[] = [];
-    const bounds = new maps.LatLngBounds();
+    const overlays: NaverOverlay[] = [];
     const origin = new maps.LatLng(props.center[0], props.center[1]);
-    bounds.extend(origin);
-    overlays.push(new maps.Marker({ map, position: origin, title: "Current location", zIndex: 300 }));
+    const bounds = new maps.LatLngBounds(origin, origin);
+    overlays.push(new maps.Marker({
+      map,
+      position: origin,
+      title: "Current location",
+      icon: markerIcon(maps, passiveMarker("user-marker", "Current location"), 23),
+      zIndex: 300,
+    }));
     props.hospitals?.forEach((hospital) => {
       const point = new maps.LatLng(hospital.lat, hospital.lng);
       bounds.extend(point);
@@ -428,19 +438,16 @@ export function InteractiveMap(props: InteractiveMapProps) {
       markerButton.dataset.hospitalId = hospital.id;
       markerButton.setAttribute("aria-label", hospital.name);
       markerButton.setAttribute("aria-pressed", String(isSelected));
-      const marker = new maps.CustomOverlay({
+      const marker = new maps.Marker({
         map,
         position: point,
-        content: markerButton,
-        xAnchor: 0.5,
-        yAnchor: 0.5,
+        title: hospital.name,
+        icon: markerIcon(maps, markerButton, 34),
         clickable: true,
         zIndex: isSelected ? 200 : 100,
       });
       overlays.push(marker);
-      const handler: EventListener = () => onSelectRef.current?.(hospital);
-      markerButton.addEventListener("click", handler);
-      domListenersRef.current.push({ element: markerButton, handler });
+      listenersRef.current.push(maps.Event.addListener(marker, "click", () => onSelectRef.current?.(hospital)));
     });
     if (props.route && props.route.length > 1) {
       const path = props.route.map(([lat, lng]) => {
@@ -448,40 +455,42 @@ export function InteractiveMap(props: InteractiveMapProps) {
         bounds.extend(point);
         return point;
       });
-      overlays.push(new maps.Polyline({ map, path, strokeColor: "#785a4d", strokeWeight: 7, strokeOpacity: 0.92 }));
+      overlays.push(new maps.Polyline({ map, path, strokeColor: "#785a4d", strokeWeight: 7, strokeOpacity: 0.92, strokeLineCap: "round" }));
     }
     overlaysRef.current = overlays;
-    map.relayout();
-    if ((props.hospitals?.length || 0) + (props.route?.length || 0) > 0) map.setBounds(bounds, 64, 38, 38, 38);
-    else { map.setCenter(origin); map.setLevel(4); }
+    map.autoResize();
+    if ((props.hospitals?.length || 0) + (props.route?.length || 0) > 0) map.fitBounds(bounds, { top: 64, right: 38, bottom: 38, left: 38, maxZoom: 16 });
+    else { map.setCenter(origin); map.setZoom(15); }
   }, [maps, props.center[0], props.center[1], props.hospitals, props.selected?.id, props.route]);
 
   if (useFallback) return <LeafletInteractiveMap {...props} />;
-  return <div ref={container} className={`interactive-map kakao-interactive-map ${props.className || ""}`} aria-label="Kakao interactive map" />;
+  return <div ref={container} className={`interactive-map naver-interactive-map ${props.className || ""}`} aria-label="NAVER interactive map" />;
 }
 
-export function KakaoNavigationMap({ center, hospital, route = [], className = "" }: {
+export function NaverNavigationMap({ center, hospital, route = [], className = "" }: {
   center: [number, number];
   hospital: Hospital;
   route?: [number, number][];
   className?: string;
 }) {
   const container = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<KakaoMapInstance | null>(null);
-  const overlaysRef = useRef<KakaoOverlay[]>([]);
-  const { maps, useFallback } = useKakaoMapsSdk();
+  const mapRef = useRef<NaverMapInstance | null>(null);
+  const overlaysRef = useRef<NaverOverlay[]>([]);
+  const { maps, useFallback } = useNaverMapsSdk();
 
   useEffect(() => {
     if (!maps || !container.current || mapRef.current) return;
     const mapElement = container.current;
     const map = new maps.Map(mapElement, {
       center: new maps.LatLng(center[0], center[1]),
-      level: 4,
+      zoom: 15,
+      minZoom: 6,
+      maxZoom: 21,
+      zoomControl: true,
     });
-    map.addControl(new maps.ZoomControl(), maps.ControlPosition.RIGHT);
     mapRef.current = map;
     const resizeTimer = window.setTimeout(() => {
-      map.relayout();
+      map.autoResize();
       map.setCenter(new maps.LatLng(center[0], center[1]));
     }, 80);
     return () => {
@@ -489,7 +498,7 @@ export function KakaoNavigationMap({ center, hospital, route = [], className = "
       overlaysRef.current.forEach((overlay) => overlay.setMap(null));
       overlaysRef.current = [];
       mapRef.current = null;
-      mapElement.replaceChildren();
+      map.destroy();
     };
   }, [maps]);
 
@@ -497,29 +506,28 @@ export function KakaoNavigationMap({ center, hospital, route = [], className = "
     const map = mapRef.current;
     if (!maps || !map) return;
     overlaysRef.current.forEach((overlay) => overlay.setMap(null));
-    const overlays: KakaoOverlay[] = [];
-    const bounds = new maps.LatLngBounds();
+    const overlays: NaverOverlay[] = [];
     const origin = new maps.LatLng(center[0], center[1]);
     const destination = new maps.LatLng(hospital.lat, hospital.lng);
-    bounds.extend(origin);
+    const bounds = new maps.LatLngBounds(origin, destination);
     bounds.extend(destination);
-    overlays.push(new maps.Marker({ map, position: origin, title: "Current location", zIndex: 200 }));
-    overlays.push(new maps.Marker({ map, position: destination, title: hospital.name, zIndex: 100 }));
+    overlays.push(new maps.Marker({ map, position: origin, title: "Current location", icon: markerIcon(maps, passiveMarker("user-marker", "Current location"), 23), zIndex: 200 }));
+    overlays.push(new maps.Marker({ map, position: destination, title: hospital.name, icon: markerIcon(maps, passiveMarker("hospital-marker selected", hospital.name, "+"), 34), zIndex: 100 }));
     if (route.length > 1) {
       const path = route.map(([lat, lng]) => {
         const point = new maps.LatLng(lat, lng);
         bounds.extend(point);
         return point;
       });
-      overlays.push(new maps.Polyline({ map, path, strokeColor: "#785a4d", strokeWeight: 7, strokeOpacity: 0.92 }));
+      overlays.push(new maps.Polyline({ map, path, strokeColor: "#785a4d", strokeWeight: 7, strokeOpacity: 0.92, strokeLineCap: "round" }));
     }
     overlaysRef.current = overlays;
-    map.relayout();
-    map.setBounds(bounds, 72, 38, 38, 38);
+    map.autoResize();
+    map.fitBounds(bounds, { top: 72, right: 38, bottom: 38, left: 38, maxZoom: 16 });
   }, [maps, center[0], center[1], hospital.id, hospital.lat, hospital.lng, hospital.name, route]);
 
   if (useFallback) return <LeafletInteractiveMap center={center} hospitals={[hospital]} selected={hospital} route={route} className={className} />;
-  return <div ref={container} className={`interactive-map kakao-navigation-map ${className}`} aria-label="Kakao interactive map" />;
+  return <div ref={container} className={`interactive-map naver-navigation-map ${className}`} aria-label="NAVER interactive map" />;
 }
 
 function LeafletLocationPickerMap({ center, accuracy, disabled = false, onPick, className = "" }: {
@@ -603,10 +611,10 @@ export function LocationPickerMap({ center, accuracy, disabled = false, onPick, 
   onPick: (lat: number, lng: number) => void;
   className?: string;
 }) {
-  const { maps, useFallback } = useKakaoMapsSdk();
+  const { maps, useFallback } = useNaverMapsSdk();
   const container = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<KakaoMapInstance | null>(null);
-  const listenerRef = useRef<KakaoEventHandler | null>(null);
+  const mapRef = useRef<NaverMapInstance | null>(null);
+  const listenerRef = useRef<NaverMapEventListener | null>(null);
   const onPickRef = useRef(onPick);
   const disabledRef = useRef(disabled);
   const programmaticTarget = useRef<[number, number] | null>(null);
@@ -620,11 +628,11 @@ export function LocationPickerMap({ center, accuracy, disabled = false, onPick, 
     const mapElement = container.current;
     const map = new maps.Map(mapElement, {
       center: new maps.LatLng(center[0], center[1]),
-      level: 2,
+      zoom: 18,
+      minZoom: 6,
+      maxZoom: 21,
+      zoomControl: true,
     });
-    map.setMinLevel(1);
-    map.setMaxLevel(10);
-    map.addControl(new maps.ZoomControl(), maps.ControlPosition.RIGHT);
     mapRef.current = map;
     const markUserGesture = () => { gestureVersion.current += 1; };
     mapElement.addEventListener("pointerdown", markUserGesture, true);
@@ -632,8 +640,8 @@ export function LocationPickerMap({ center, accuracy, disabled = false, onPick, 
     mapElement.addEventListener("wheel", markUserGesture, { capture: true, passive: true });
     const handleIdle = () => {
       const point = map.getCenter();
-      const lat = point.getLat();
-      const lng = point.getLng();
+      const lat = point.lat();
+      const lng = point.lng();
       const target = programmaticTarget.current;
       if (target && Math.abs(target[0] - lat) < 0.0000005 && Math.abs(target[1] - lng) < 0.0000005) {
         programmaticTarget.current = null;
@@ -644,18 +652,17 @@ export function LocationPickerMap({ center, accuracy, disabled = false, onPick, 
       handledGestureVersion.current = gestureVersion.current;
       onPickRef.current(lat, lng);
     };
-    maps.event.addListener(map, "idle", handleIdle);
-    listenerRef.current = handleIdle;
-    const resizeTimer = window.setTimeout(() => map.relayout(), 80);
+    listenerRef.current = maps.Event.addListener(map, "idle", handleIdle);
+    const resizeTimer = window.setTimeout(() => map.autoResize(), 80);
     return () => {
       window.clearTimeout(resizeTimer);
       mapElement.removeEventListener("pointerdown", markUserGesture, true);
       mapElement.removeEventListener("touchstart", markUserGesture, true);
       mapElement.removeEventListener("wheel", markUserGesture, true);
-      if (listenerRef.current) maps.event.removeListener(map, "idle", listenerRef.current);
+      if (listenerRef.current) maps.Event.removeListener(listenerRef.current);
       listenerRef.current = null;
       mapRef.current = null;
-      mapElement.replaceChildren();
+      map.destroy();
     };
   }, [maps]);
 
@@ -663,7 +670,7 @@ export function LocationPickerMap({ center, accuracy, disabled = false, onPick, 
     const map = mapRef.current;
     if (!maps || !map) return;
     const current = map.getCenter();
-    if (Math.abs(current.getLat() - center[0]) < 0.0000005 && Math.abs(current.getLng() - center[1]) < 0.0000005) return;
+    if (Math.abs(current.lat() - center[0]) < 0.0000005 && Math.abs(current.lng() - center[1]) < 0.0000005) return;
     programmaticTarget.current = center;
     map.setCenter(new maps.LatLng(center[0], center[1]));
   }, [maps, center[0], center[1]]);
@@ -675,7 +682,7 @@ export function LocationPickerMap({ center, accuracy, disabled = false, onPick, 
       const map = mapRef.current;
       if (!map) return;
       const current = map.getCenter();
-      map.relayout();
+      map.autoResize();
       map.setCenter(current);
     });
     observer.observe(element);
@@ -683,8 +690,8 @@ export function LocationPickerMap({ center, accuracy, disabled = false, onPick, 
   }, [maps]);
 
   if (useFallback) return <LeafletLocationPickerMap center={center} accuracy={accuracy} disabled={disabled} onPick={onPick} className={className} />;
-  return <div className={`location-picker kakao-location-picker ${disabled ? "is-disabled" : ""} ${className}`}>
-    <div ref={container} className="interactive-map location-picker-map" aria-label="Kakao location picker map" />
+  return <div className={`location-picker naver-location-picker ${disabled ? "is-disabled" : ""} ${className}`}>
+    <div ref={container} className="interactive-map location-picker-map" aria-label="NAVER location picker map" />
     <span className="location-picker-crosshair" aria-hidden="true" />
   </div>;
 }

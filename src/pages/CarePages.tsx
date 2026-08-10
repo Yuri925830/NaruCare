@@ -14,7 +14,7 @@ import {
   type HospitalAppointmentBooking,
   type HospitalAppointmentSlot,
 } from "../hospitalAppointments";
-import { Button, InfoBanner, InteractiveMap, KakaoNavigationMap, LocationPickerMap, NaruPose, Panel, StatusPill, VisitJourneyProgress } from "../components";
+import { Button, InfoBanner, InteractiveMap, LocationPickerMap, NaruPose, NaverNavigationMap, Panel, StatusPill, VisitJourneyProgress } from "../components";
 import { hospitalDemoInsightFor, hospitalDemoLabels, hospitalDemoText } from "../hospitalDemoInsights";
 import { evaluateOpeningHours, formatOpeningSchedule, formatRestDays } from "../hospitalHours";
 import { localeOptions, useI18n } from "../i18n";
@@ -996,7 +996,7 @@ export function NavigationPage({ location, hospital, onArrived, onTranslation }:
   return <Panel className="navigation-panel">
     <div className="travel-tabs">{(["walking", "transit", "driving"] as const).map((item) => <button className={mode === item ? "active" : ""} key={item} onClick={() => setMode(item)}>{item === "walking" ? "🚶" : item === "transit" ? "🚇" : "🚗"}<span>{modeLabels[item]}</span></button>)}</div>
     <div className="navigation-layout">
-      <div className="map-card"><div className="map-location"><MapPin size={17} />{t("currentLocation")} · {location.address}</div><KakaoNavigationMap center={origin} hospital={hospital} route={route} /></div>
+      <div className="map-card"><div className="map-location"><MapPin size={17} />{t("currentLocation")} · {location.address}</div><NaverNavigationMap center={origin} hospital={hospital} route={route} /></div>
       <div className="route-info"><NaruPose pose={14} className="route-naru-pose" /><span>{t("destination")}</span><h2>{hospital.name}</h2><div className="destination-address"><MapPin size={18} /><div><span>{t("hospitalAddress")}</span><strong dir="auto">{destinationAddress}</strong></div><Button type="button" variant="ghost" className={addressCopied ? "copied" : ""} onClick={() => void copyDestinationAddress()} aria-live="polite">{addressCopied ? <Check size={16} /> : <Copy size={16} />}{addressCopied ? t("addressCopied") : t("copyAddress")}</Button></div><strong>{canPreview ? t("routeSummary", { mode: modeLabels[mode], minutes: duration, distance: distance < 1000 ? `${Math.round(distance)}m` : `${(distance / 1000).toFixed(1)}km` }) : t("routePreviewUnavailable")}</strong><hr /><p>{t("estimatedArrival")}<b>{canPreview ? new Date(Date.now() + duration * 60000).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }) : "—"}</b></p><p>{t("routeStatus")}<b>{canPreview ? t("inProgress") : t("externalNavigation")}</b></p>
         <InfoBanner tone="mint" title={t("autoTranslation")}>{t("arrivalTip")}</InfoBanner>
         <div className="taxi-address-tip"><CarFront size={20} /><span><strong>{t("taxiAddressTitle")}</strong><small>{t("taxiAddressTip")}</small></span></div>

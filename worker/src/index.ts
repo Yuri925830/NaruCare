@@ -384,7 +384,7 @@ interface GooglePlace {
   reservable?: boolean;
 }
 
-function envSecret(env: Env, name: "OPENAI_API_KEY" | "OPENAI_MODEL" | "KAKAO_REST_API_KEY" | "KAKAO_JAVASCRIPT_KEY" | "GOOGLE_PLACES_API_KEY" | "HIRA_SERVICE_KEY" | "NAVER_MAPS_CLIENT_ID" | "NAVER_MAPS_CLIENT_SECRET") {
+function envSecret(env: Env, name: "OPENAI_API_KEY" | "OPENAI_MODEL" | "KAKAO_REST_API_KEY" | "GOOGLE_PLACES_API_KEY" | "HIRA_SERVICE_KEY" | "NAVER_MAPS_CLIENT_ID" | "NAVER_MAPS_CLIENT_SECRET") {
   const value = (env as unknown as Record<string, unknown>)[name];
   return typeof value === "string" ? value.trim() : "";
 }
@@ -991,8 +991,8 @@ async function route(request: Request, url: URL, env: Env) {
 
 async function mapsConfig(request: Request, env: Env) {
   void request;
-  const kakaoJavaScriptKey = envSecret(env, "KAKAO_JAVASCRIPT_KEY");
-  return json({ kakaoJavaScriptKey, dynamicMap: Boolean(kakaoJavaScriptKey) });
+  const naverMapsClientId = envSecret(env, "NAVER_MAPS_CLIENT_ID");
+  return json({ naverMapsClientId, dynamicMap: Boolean(naverMapsClientId) });
 }
 
 function aiText(value: unknown) {
