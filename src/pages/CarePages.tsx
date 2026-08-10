@@ -31,7 +31,16 @@ import {
 } from "../medicalCardConversation";
 import { assessMedicalIntent, extractReportableSymptoms, isAffirmativeResponse, isNaruCapabilityQuestion, isNaruIdentityQuestion, isNegativeResponse, isSymptomsResolvedStatement } from "../triage";
 import type { ChatHistoryEntry, Hospital, LocationState, MedicalCard, MedicalEvidenceSource, TranslationRecordEntry } from "../types";
-import { companionDecisionFromText, journeyChatActionFromText, visitJourneyStepIndex, type CompanionDecision, type VisitJourneyStep } from "../visitJourney";
+import {
+  companionDecisionFromText,
+  isJourneyChatActionAllowed,
+  journeyChatActionFromText,
+  journeyChatActionRequiresHighConfidence,
+  visitJourneyStepIndex,
+  type CompanionDecision,
+  type JourneyChatAction,
+  type VisitJourneyStep,
+} from "../visitJourney";
 
 interface Message { id: string; role: "naru" | "user" | "status"; text: string; detail?: string; sources?: MedicalEvidenceSource[] }
 
@@ -418,6 +427,60 @@ export function AgentPage({
     return maskMedicalCardChatValue(field, value);
   };
 
+  const performJourneyAction = async (
+    action: JourneyChatAction,
+    modelReply: string,
+    confidence: "high" | "medium" | "low",
+    deterministicFallback = false,
+  ) => {
+    const allowed = isJourneyChatActionAllowed(journeyStep, action);
+    const confident = deterministicFallback || !journeyChatActionRequiresHighConfidence(action) || confidence === "high";
+    if (!allowed || !confident) return false;
+
+    const reply = action === "explain_current_step" && modelReply.trim()
+      ? modelReply.trim()
+      : action === "change_hospital"
+        ? t("journeyHospitalPrompt")
+        : action === "confirm_arrival"
+          ? t("journeyTranslationPrompt")
+          : action === "complete_visit"
+            ? t("journeyCompletePrompt")
+            : currentJourneyPrompt();
+    if (action === "explain_current_step") {
+      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
+      window.setTimeout(() => inputRef.current?.focus(), 0);
+      return true;
+    }
+    if (action === "skip_appointment") {
+      completeAppointmentSkip(false);
+      return true;
+    }
+    if (action === "use_companion" || action === "skip_companion") {
+      completeCompanionDecision(action === "use_companion" ? "use" : "skip", false);
+      return true;
+    }
+    if (action === "change_hospital") {
+      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
+      setBusy(true);
+      try { await onHospitals(extractReportableSymptoms(card?.symptoms || "")); }
+      finally { setBusy(false); }
+      return true;
+    }
+    if (action === "confirm_arrival") {
+      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
+      onArrived();
+      return true;
+    }
+    if (action === "complete_visit") {
+      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
+      await onCompleteVisit();
+      return true;
+    }
+    setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
+    openCurrentJourneyStep();
+    return true;
+  };
+
   const send = async (text = input) => {
     const clean = text.trim();
     if (!clean || busy || historyLoading || clearingHistory) return;
@@ -509,41 +572,7 @@ export function AgentPage({
         return;
       }
     }
-    const journeyAction = journeyChatActionFromText(journeyStep, clean);
-    if (journeyAction) {
-      const reply = currentJourneyPrompt();
-      if (journeyAction === "explain_current_step") {
-        setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
-        void api.rememberChat(clean, reply, journeyStep);
-        window.setTimeout(() => inputRef.current?.focus(), 0);
-        return;
-      }
-      if (journeyAction === "change_hospital") {
-        setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: t("journeyHospitalPrompt") }]);
-        void api.rememberChat(clean, t("journeyHospitalPrompt"), "hospital");
-        setBusy(true);
-        try { await onHospitals(extractReportableSymptoms(card.symptoms || "")); }
-        finally { setBusy(false); }
-        return;
-      }
-      if (journeyAction === "confirm_arrival") {
-        const arrivalReply = t("journeyTranslationPrompt");
-        setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: arrivalReply }]);
-        void api.rememberChat(clean, arrivalReply, "translation");
-        onArrived();
-        return;
-      }
-      if (journeyAction === "complete_visit") {
-        const completeReply = t("journeyCompletePrompt");
-        setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: completeReply }]);
-        void api.rememberChat(clean, completeReply, "complete");
-        await onCompleteVisit();
-        return;
-      }
-      void api.rememberChat(clean, reply, journeyStep);
-      openCurrentJourneyStep();
-      return;
-    }
+    const heuristicJourneyAction = journeyChatActionFromText(journeyStep, clean);
     if (isSymptomsResolvedStatement(clean)) {
       setPendingHospitalSymptoms(null);
       await onSymptomsResolved?.();
@@ -587,25 +616,6 @@ export function AgentPage({
     if (localTriage.intent === "card") {
       if (card) { void api.rememberChat(clean, "", "card"); onCard(); }
       else startMedicalCardCreation(clean, false);
-      return;
-    }
-    if (localTriage.intent === "flow") {
-      const reply = currentJourneyPrompt();
-      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
-      void api.rememberChat(clean, reply, "flow");
-      openCurrentJourneyStep();
-      return;
-    }
-    if (localTriage.intent === "translation") {
-      if (visitJourneyStepIndex(journeyStep) >= visitJourneyStepIndex("translation")) {
-        void api.rememberChat(clean, "", "translation");
-        onTranslation?.();
-      } else {
-        const reply = currentJourneyPrompt();
-        setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
-        void api.rememberChat(clean, reply, "translation");
-        openCurrentJourneyStep();
-      }
       return;
     }
     if (localTriage.intent === "companion") {
@@ -658,6 +668,22 @@ export function AgentPage({
         setPendingHospitalSymptoms(null);
         return onEmergency(responseSymptoms || extractReportableSymptoms(card.symptoms || "") || extractReportableSymptoms(clean));
       }
+      const modelAction: JourneyChatAction | null = response.action && response.action !== "none" ? response.action : null;
+      const fallbackAction = response.reasoningTier === "fallback" ? heuristicJourneyAction : null;
+      const requestedAction = modelAction || fallbackAction;
+      if (requestedAction) {
+        const handled = await performJourneyAction(
+          requestedAction,
+          response.reply,
+          response.confidence || "low",
+          Boolean(!modelAction && fallbackAction),
+        );
+        if (handled) return;
+        const stepPrompt = currentJourneyPrompt();
+        const reply = response.reply && response.reply !== stepPrompt ? `${response.reply}\n\n${stepPrompt}` : stepPrompt;
+        setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
+        return;
+      }
       if (response.intent === "hospital") {
         if (visitJourneyStepIndex(journeyStep) >= visitJourneyStepIndex("appointment") && journeyStep !== "complete") {
           const stepPrompt = currentJourneyPrompt();
@@ -677,8 +703,11 @@ export function AgentPage({
         return;
       }
       if (response.intent === "card") return onCard();
-      if (response.intent === "flow") return onFlow?.();
-      if (response.intent === "translation") return onTranslation?.();
+      if (response.intent === "flow" || response.intent === "translation") {
+        const reply = response.reply || currentJourneyPrompt();
+        setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
+        return;
+      }
       if (response.intent === "companion") {
         if (journeyStep === "companion" && companionDecision === "pending") return completeCompanionDecision("use", false);
         return onCompanion();

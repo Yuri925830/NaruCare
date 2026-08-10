@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   companionDecisionFromText,
   furthestVisitJourneyStep,
+  isJourneyChatActionAllowed,
+  journeyChatActionRequiresHighConfidence,
   isVisitJourneyStepUnlocked,
   journeyChatActionFromText,
   visitJourneyStepIndex,
@@ -58,5 +60,23 @@ describe("visit journey", () => {
     expect(journeyChatActionFromText("companion", "next")).toBe("explain_current_step");
     expect(journeyChatActionFromText("appointment", "다른 병원으로 바꿔줘")).toBe("change_hospital");
     expect(journeyChatActionFromText("complete", "다음")).toBeNull();
+  });
+
+  it("allows model actions only at their matching state-machine step", () => {
+    expect(isJourneyChatActionAllowed("appointment", "skip_appointment")).toBe(true);
+    expect(isJourneyChatActionAllowed("hospital", "skip_appointment")).toBe(false);
+    expect(isJourneyChatActionAllowed("companion", "use_companion")).toBe(true);
+    expect(isJourneyChatActionAllowed("prepare", "use_companion")).toBe(false);
+    expect(isJourneyChatActionAllowed("navigation", "confirm_arrival")).toBe(true);
+    expect(isJourneyChatActionAllowed("prepare", "confirm_arrival")).toBe(false);
+    expect(isJourneyChatActionAllowed("translation", "complete_visit")).toBe(true);
+    expect(isJourneyChatActionAllowed("navigation", "complete_visit")).toBe(false);
+  });
+
+  it("requires high confidence before model actions can change visit state", () => {
+    expect(journeyChatActionRequiresHighConfidence("confirm_arrival")).toBe(true);
+    expect(journeyChatActionRequiresHighConfidence("skip_companion")).toBe(true);
+    expect(journeyChatActionRequiresHighConfidence("open_current_step")).toBe(false);
+    expect(journeyChatActionRequiresHighConfidence("explain_current_step")).toBe(false);
   });
 });

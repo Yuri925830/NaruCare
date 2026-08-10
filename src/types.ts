@@ -1,3 +1,5 @@
+import type { JourneyModelAction } from "./visitJourney";
+
 export type View =
   | "agent"
   | "card"
@@ -64,6 +66,8 @@ export interface ChatResponse {
   intent: "emergency" | "hospital" | "recovery" | "card" | "flow" | "translation" | "companion" | "education" | "general";
   symptoms?: string;
   symptomStatus?: "none" | "new" | "ongoing" | "improving" | "resolved" | "unknown";
+  action?: JourneyModelAction;
+  confidence?: "high" | "medium" | "low";
   sources?: MedicalEvidenceSource[];
   reasoningTier?: "deterministic" | "light" | "deep" | "fallback";
 }

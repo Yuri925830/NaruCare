@@ -18,8 +18,13 @@ export type JourneyChatAction =
   | "open_current_step"
   | "explain_current_step"
   | "change_hospital"
+  | "skip_appointment"
+  | "use_companion"
+  | "skip_companion"
   | "confirm_arrival"
   | "complete_visit";
+
+export type JourneyModelAction = "none" | JourneyChatAction;
 
 export function visitJourneyStepIndex(step: VisitJourneyStep) {
   return visitJourneySteps.indexOf(step);
@@ -31,6 +36,20 @@ export function furthestVisitJourneyStep(current: VisitJourneyStep, candidate: V
 
 export function isVisitJourneyStepUnlocked(current: VisitJourneyStep, target: VisitJourneyStep) {
   return visitJourneyStepIndex(target) <= visitJourneyStepIndex(current);
+}
+
+export function isJourneyChatActionAllowed(step: VisitJourneyStep, action: JourneyChatAction) {
+  if (action === "explain_current_step") return true;
+  if (action === "open_current_step") return step !== "complete";
+  if (action === "change_hospital") return step !== "symptoms" && step !== "complete";
+  if (action === "skip_appointment") return step === "appointment";
+  if (action === "use_companion" || action === "skip_companion") return step === "companion";
+  if (action === "confirm_arrival") return step === "navigation";
+  return step === "translation";
+}
+
+export function journeyChatActionRequiresHighConfidence(action: JourneyChatAction) {
+  return action !== "open_current_step" && action !== "explain_current_step";
 }
 
 export function companionDecisionFromText(value: string): Exclude<CompanionDecision, "pending"> | null {

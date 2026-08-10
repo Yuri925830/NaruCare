@@ -196,15 +196,15 @@ export const api = {
   ): Promise<ChatResponse> {
     const previousUserMessages = history.filter((entry) => entry.role === "user").map((entry) => entry.content);
     const local = assessMedicalIntent(message, previousUserMessages, hasCard);
-    const deterministicAction = local.intent === "emergency" || local.intent === "recovery" || local.reason === "hospital_request" || local.reason === "card_request" || local.reason === "service_request";
-    if (deterministicAction) return { reply: "", intent: local.intent, symptoms: local.symptoms, symptomStatus: local.intent === "recovery" ? "resolved" : local.symptoms ? "ongoing" : "none" };
+    const deterministicAction = local.intent === "emergency" || local.intent === "recovery" || local.reason === "hospital_request" || local.reason === "card_request" || (local.reason === "service_request" && !journeyContext.journeyStep);
+    if (deterministicAction) return { reply: "", intent: local.intent, symptoms: local.symptoms, symptomStatus: local.intent === "recovery" ? "resolved" : local.symptoms ? "ongoing" : "none", action: "none", confidence: "high", reasoningTier: "deterministic" };
     try {
       return await request<ChatResponse>("/api/chat", {
         method: "POST",
         body: JSON.stringify({ message, locale, hasCard, history: history.slice(-30), journeyContext }),
       }, 70_000);
     } catch {
-      return { reply: "", intent: local.intent, symptoms: local.symptoms, symptomStatus: "unknown" };
+      return { reply: "", intent: local.intent, symptoms: local.symptoms, symptomStatus: "unknown", action: "none", confidence: "low", reasoningTier: "fallback" };
     }
   },
   async chatHistory(): Promise<ChatHistoryEntry[]> {

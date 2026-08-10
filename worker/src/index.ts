@@ -1024,9 +1024,10 @@ const NARU_RESPONSE_SCHEMA = {
     symptomStatus: { type: "string", enum: ["none", "new", "ongoing", "improving", "resolved", "unknown"] },
     searchQuery: { type: "string" },
     confidence: { type: "string", enum: ["high", "medium", "low"] },
+    action: { type: "string", enum: ["none", "open_current_step", "explain_current_step", "change_hospital", "skip_appointment", "use_companion", "skip_companion", "confirm_arrival", "complete_visit"] },
     reply: { type: "string" },
   },
-  required: ["intent", "symptoms", "symptomStatus", "searchQuery", "confidence", "reply"],
+  required: ["intent", "symptoms", "symptomStatus", "searchQuery", "confidence", "action", "reply"],
   additionalProperties: false,
 };
 
@@ -1195,6 +1196,10 @@ function parseTriageModelOutput(value: string) {
     if (symptomStatus !== "none" && symptomStatus !== "new" && symptomStatus !== "ongoing" && symptomStatus !== "improving" && symptomStatus !== "resolved" && symptomStatus !== "unknown") return null;
     const confidence = record.confidence;
     if (confidence !== "high" && confidence !== "medium" && confidence !== "low") return null;
+    const action = record.action;
+    if (action !== "none" && action !== "open_current_step" && action !== "explain_current_step" && action !== "change_hospital"
+      && action !== "skip_appointment" && action !== "use_companion" && action !== "skip_companion"
+      && action !== "confirm_arrival" && action !== "complete_visit") return null;
     return {
       intent: intent as MedicalIntent,
       reply: typeof record.reply === "string" ? record.reply.trim().slice(0, 4_000) : "",
@@ -1202,6 +1207,7 @@ function parseTriageModelOutput(value: string) {
       symptomStatus: symptomStatus as SymptomStatus,
       searchQuery: typeof record.searchQuery === "string" ? record.searchQuery.trim().slice(0, 300) : "",
       confidence: confidence as "high" | "medium" | "low",
+      action: action as "none" | "open_current_step" | "explain_current_step" | "change_hospital" | "skip_appointment" | "use_companion" | "skip_companion" | "confirm_arrival" | "complete_visit",
     };
   } catch { return null; }
 }
@@ -1394,7 +1400,7 @@ async function chat(request: Request, env: Env) {
   const history = clientHistory.length >= storedHistory.length ? clientHistory : storedHistory;
   const userHistory = history.filter((entry) => entry.role === "user").map((entry) => entry.content);
   const deterministic = assessMedicalIntent(message, userHistory, hasCard);
-  const deterministicAction = deterministic.intent === "emergency" || deterministic.intent === "recovery" || deterministic.reason === "hospital_request" || deterministic.reason === "card_request" || deterministic.reason === "service_request";
+  const deterministicAction = deterministic.intent === "emergency" || deterministic.intent === "recovery" || deterministic.reason === "hospital_request" || deterministic.reason === "card_request" || (deterministic.reason === "service_request" && !journeyStep);
   if (deterministicAction) {
     await rememberChatExchange(env, userId, message, "", deterministic.intent);
     return json({
@@ -1402,6 +1408,7 @@ async function chat(request: Request, env: Env) {
       intent: deterministic.intent,
       symptoms: deterministic.symptoms,
       symptomStatus: deterministic.intent === "recovery" ? "resolved" : deterministic.symptoms ? "ongoing" : "none",
+      action: "none",
       source: "safety_rules",
       reasoningTier: "deterministic",
     });
@@ -1442,6 +1449,17 @@ Classify the user's current purpose precisely:
 - companion: the latest user message explicitly requests a human medical companion or escort. Do not use companion for general anxiety about visiting a hospital, a first-time hospital visit, or the word "companion" appearing only in an earlier assistant message.
 
 Set confidence honestly because it controls whether Naru performs a deeper reasoning pass. Use high only when intent, symptom state, and requested action are clear; medium when the likely meaning is clear but one detail is missing; low when multiple interpretations, contradictions, unusual wording, or unresolved references could materially change the answer. Never inflate confidence just to avoid asking for clarification.
+
+Set action to exactly one structured UI action:
+- none: no workflow action was requested.
+- open_current_step: open the screen for the current step without completing it.
+- explain_current_step: explain what must be done at the current step; use this for a vague “next” when a required choice is still missing.
+- change_hospital: only when the user explicitly asks to replace the selected hospital.
+- skip_appointment: only at appointment, only when the user explicitly wants walk-in/no reservation. The UI will reject this for hospitals that require reservations.
+- use_companion or skip_companion: only at companion, and only for an explicit choice.
+- confirm_arrival: only at navigation, and only when the user explicitly says they have arrived at the hospital.
+- complete_visit: only at translation, and only when the user explicitly says the consultation/visit is finished.
+Never infer a state-changing action from politeness, “yes”, a symptom description, or an ambiguous “next”. If the requested action does not match the current step, use explain_current_step. The frontend state machine validates every action before execution.
 
 Set symptomStatus precisely:
 - none: no personal active symptom is being described.
@@ -1498,10 +1516,14 @@ The symptoms field is state, not a transcript. It must contain a concise summary
       intent,
       symptoms: intent === "hospital" ? deterministic.symptoms : "",
       symptomStatus: intent === "hospital" ? "unknown" : "none",
+      action: "none",
       sources: [],
       source: "safe_fallback",
       reasoningTier: "fallback",
     });
+  }
+  if (!journeyStep || ["emergency", "recovery", "card", "education"].includes(classified.intent)) {
+    classified.action = "none";
   }
   console.log(JSON.stringify({
     level: "info",
@@ -1509,6 +1531,7 @@ The symptoms field is state, not a transcript. It must contain a concise summary
     tier: reasoningTier,
     reasons: reasoningReasons,
     intent: classified.intent,
+    action: classified.action,
     confidence: classified.confidence,
     historyMessages: history.length,
   }));
@@ -1556,6 +1579,7 @@ The symptoms field is state, not a transcript. It must contain a concise summary
       symptoms: classified.symptoms,
       symptomStatus: classified.symptomStatus,
       confidence: classified.confidence,
+      action: classified.action,
       sources: sources.map(({ title, url, year }) => ({ title, url, year })),
       source: sources.length ? "ai_retrieval" : "ai_triage",
       reasoningTier,
