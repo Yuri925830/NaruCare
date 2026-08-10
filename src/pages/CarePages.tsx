@@ -180,13 +180,14 @@ export function AgentPage({
     if (journeyStep === "translation") return t("journeyTranslationPrompt");
     return t("journeyCompletePrompt");
   }, [appointmentFlow.journeyPrompt, companionFlow.journeyPrompt, journeyStep, t]);
-  const openCurrentJourneyStep = useCallback(() => {
+  const openCurrentJourneyStep = useCallback((symptomsOverride = "") => {
     if (journeyStep === "symptoms") {
       inputRef.current?.focus();
       return;
     }
     if (journeyStep === "hospital") {
-      void onHospitals(extractReportableSymptoms(card?.symptoms || ""));
+      const currentSymptoms = extractReportableSymptoms(symptomsOverride) || extractReportableSymptoms(card?.symptoms || "");
+      void onHospitals(currentSymptoms);
       return;
     }
     if (journeyStep === "appointment") {
@@ -432,6 +433,7 @@ export function AgentPage({
     modelReply: string,
     confidence: "high" | "medium" | "low",
     deterministicFallback = false,
+    actionSymptoms = "",
   ) => {
     const allowed = isJourneyChatActionAllowed(journeyStep, action);
     const confident = deterministicFallback || !journeyChatActionRequiresHighConfidence(action) || confidence === "high";
@@ -462,7 +464,8 @@ export function AgentPage({
     if (action === "change_hospital") {
       setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
       setBusy(true);
-      try { await onHospitals(extractReportableSymptoms(card?.symptoms || "")); }
+      const currentSymptoms = extractReportableSymptoms(actionSymptoms) || extractReportableSymptoms(card?.symptoms || "");
+      try { await onHospitals(currentSymptoms); }
       finally { setBusy(false); }
       return true;
     }
@@ -477,7 +480,7 @@ export function AgentPage({
       return true;
     }
     setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
-    openCurrentJourneyStep();
+    openCurrentJourneyStep(actionSymptoms);
     return true;
   };
 
@@ -677,6 +680,7 @@ export function AgentPage({
           response.reply,
           response.confidence || "low",
           Boolean(!modelAction && fallbackAction),
+          responseSymptoms,
         );
         if (handled) return;
         const stepPrompt = currentJourneyPrompt();
