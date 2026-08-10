@@ -1,4 +1,5 @@
 import { companions, fallbackHospitals, matchCompanions } from "./data";
+import type { AgentJourneyObservation } from "./agentWorkflow";
 import { hospitalCategory, hospitalCategoryAffinity } from "./hospitalMatching";
 import { assessMedicalIntent } from "./triage";
 import type { ChatHistoryEntry, ChatResponse, Companion, CompanionFilters, CompanionOrder, Hospital, MedicalCard, SessionUser, TranslationRecordEntry, VisitRecord } from "./types";
@@ -204,11 +205,12 @@ export const api = {
     locale: string,
     hasCard: boolean,
     history: ChatHistoryEntry[] = [],
-    journeyContext: { journeyStep?: string; selectedHospital?: string; companionDecision?: string } = {},
+    journeyContext: Partial<AgentJourneyObservation> = {},
   ): Promise<ChatResponse> {
     const previousUserMessages = history.filter((entry) => entry.role === "user").map((entry) => entry.content);
     const local = assessMedicalIntent(message, previousUserMessages, hasCard);
-    const deterministicAction = local.intent === "emergency" || local.intent === "recovery" || local.reason === "hospital_request" || local.reason === "card_request" || (local.reason === "service_request" && !journeyContext.journeyStep);
+    const deterministicAction = local.intent === "emergency" || local.intent === "recovery" || local.reason === "card_request"
+      || ((local.reason === "hospital_request" || local.reason === "service_request") && !journeyContext.journeyStep);
     if (deterministicAction) return { reply: "", intent: local.intent, symptoms: local.symptoms, symptomStatus: local.intent === "recovery" ? "resolved" : local.symptoms ? "ongoing" : "none", action: "none", confidence: "high", reasoningTier: "deterministic" };
     try {
       return await request<ChatResponse>("/api/chat", {

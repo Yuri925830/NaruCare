@@ -1002,7 +1002,9 @@ The browser receives only the domain-restricted client ID required by the offici
 
 Provider secrets, Directions requests, database access, model execution, and authorization remain behind the Worker boundary.
 
-When `OPENAI_API_KEY` is configured, NaruCare sends chatbot text reasoning to the OpenAI Responses API with response storage disabled and defaults to the cost-optimized `gpt-5.6-luna`. Set `OPENAI_MODEL` to override the model. Without the key, the Worker falls back to its Cloudflare AI binding. Translation and speech transcription continue to use their dedicated Cloudflare models.
+When `OPENAI_API_KEY` is configured, NaruCare uses the OpenAI Responses API with native function calling and defaults to the cost-optimized `gpt-5.6-luna`. The agent can request hospital search, appointment, companion, preparation, navigation, arrival, translation, and completion tools. The Worker validates every requested tool against the current visit state, returns the tool result with its matching `call_id`, and permits at most three reasoning iterations before failing closed. A final UI action is accepted only when it matches a verified function call.
+
+The current chat, recent chat history, and a bounded workflow observation are sent with `store: false`. NaruCare does not add precise coordinates or medical-card identity fields to the agent observation. Set `OPENAI_MODEL` to override the model. Without the key, the Worker falls back to its structured Cloudflare AI path and applies the same server and client state checks. Translation and speech transcription continue to use their dedicated Cloudflare models.
 
 ---
 

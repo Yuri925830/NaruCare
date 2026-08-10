@@ -1,4 +1,5 @@
 import type { JourneyModelAction } from "./visitJourney";
+import type { AgentToolDecision } from "./agentWorkflow";
 
 export type View =
   | "agent"
@@ -70,6 +71,7 @@ export interface ChatResponse {
   confidence?: "high" | "medium" | "low";
   sources?: MedicalEvidenceSource[];
   reasoningTier?: "deterministic" | "light" | "deep" | "fallback";
+  agent?: AgentToolDecision;
 }
 
 export interface Hospital {

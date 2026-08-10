@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { AlertTriangle, ArrowRight, BadgeCheck, CalendarCheck2, CalendarOff, CarFront, Check, Clock3, Copy, Languages, LocateFixed, Map, MapPin, Mic, Navigation, Pencil, Send, ShieldCheck, Square, Star, Stethoscope, Trash2, UserRound, Volume2 } from "lucide-react";
 import { api } from "../api";
+import { verifyAgentToolCall, type AgentJourneyObservation } from "../agentWorkflow";
 import { findAppointmentSlotFromText, parseAppointmentPreference } from "../appointmentConversation";
 import { companionFlowCopy } from "../companionFlow";
 import { conversationCopy } from "../conversationCopy";
@@ -33,9 +34,7 @@ import { assessMedicalIntent, extractReportableSymptoms, isAffirmativeResponse, 
 import type { ChatHistoryEntry, Hospital, LocationState, MedicalCard, MedicalEvidenceSource, TranslationRecordEntry } from "../types";
 import {
   companionDecisionFromText,
-  isJourneyChatActionAllowed,
   journeyChatActionFromText,
-  journeyChatActionRequiresHighConfidence,
   visitJourneyStepIndex,
   type CompanionDecision,
   type JourneyChatAction,
@@ -71,16 +70,20 @@ function WelcomeMessage({ text }: { text: string }) {
 }
 
 export function AgentPage({
-  card, journeyStep, companionDecision, selectedHospital, appointmentPreference,
+  card, symptoms, hospitalResultCount, hospitalConfirmed, journeyStep, companionDecision, selectedHospital, appointmentPreference, appointmentDecision,
   onCard, onSaveCard, onEmergency, onHospitals, onSymptoms, onSymptomsResolved, onCompanion,
   onCompanionDecision, onAppointmentPreference, onBookAppointment, onSkipAppointment,
   onOpenAppointments, onFlow, onTranslation, onArrived, onCompleteVisit, onJourneyStep, onRestartJourney, onRecords, gateSignal,
 }: {
   card: MedicalCard | null;
+  symptoms: string;
+  hospitalResultCount: number;
+  hospitalConfirmed: boolean;
   journeyStep: VisitJourneyStep;
   companionDecision: CompanionDecision;
   selectedHospital: Hospital | null;
   appointmentPreference: AppointmentPreference;
+  appointmentDecision: AppointmentDecision;
   onCard: () => void;
   onSaveCard: (card: MedicalCard) => Promise<MedicalCard>;
   onEmergency: (symptoms: string) => void;
@@ -166,6 +169,21 @@ export function AgentPage({
       : null,
     [appointmentPreference, journeyStep, selectedHospital],
   );
+  const agentObservation = useMemo<AgentJourneyObservation>(() => ({
+    journeyStep,
+    hasCard: Boolean(card),
+    symptoms: extractReportableSymptoms(symptoms || card?.symptoms || ""),
+    hospitalResultCount,
+    selectedHospital: selectedHospital?.name || "",
+    hospitalConfirmed,
+    appointmentDecision,
+    appointmentCanSkip: Boolean(chatAppointmentAvailability && chatAppointmentAvailability.policy !== "required"),
+    appointmentSlotCount: chatAppointmentAvailability?.matchingSlots.length || 0,
+    companionDecision,
+    preparationComplete: visitJourneyStepIndex(journeyStep) >= visitJourneyStepIndex("navigation"),
+    arrived: visitJourneyStepIndex(journeyStep) >= visitJourneyStepIndex("translation"),
+    translationActive: journeyStep === "translation",
+  }), [appointmentDecision, card, chatAppointmentAvailability, companionDecision, hospitalConfirmed, hospitalResultCount, journeyStep, selectedHospital, symptoms]);
   const formatAppointmentDate = useCallback(
     (value: string) => new Date(`${value}T00:00:00`).toLocaleDateString(locale, { month: "short", day: "numeric", weekday: "short" }),
     [locale],
@@ -435,9 +453,8 @@ export function AgentPage({
     deterministicFallback = false,
     actionSymptoms = "",
   ) => {
-    const allowed = isJourneyChatActionAllowed(journeyStep, action);
-    const confident = deterministicFallback || !journeyChatActionRequiresHighConfidence(action) || confidence === "high";
-    if (!allowed || !confident) return false;
+    const verification = verifyAgentToolCall(agentObservation, action, deterministicFallback ? "high" : confidence);
+    if (verification.status === "blocked" || verification.acceptedAction !== action) return false;
 
     const reply = action === "explain_current_step" && modelReply.trim()
       ? modelReply.trim()
@@ -654,9 +671,7 @@ export function AgentPage({
     setBusy(true);
     try {
       const response = await api.chat(clean, locale, true, history, {
-        journeyStep,
-        selectedHospital: selectedHospital?.name || "",
-        companionDecision,
+        ...agentObservation,
       });
       const responseSymptoms = extractReportableSymptoms(response.symptoms || reportedSymptoms);
       if ((response.intent === "hospital" || response.intent === "emergency") && responseSymptoms) await onSymptoms?.(responseSymptoms);

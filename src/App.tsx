@@ -648,10 +648,14 @@ function AppInner() {
       case "agent": return <AgentPage
         key={`visit-${visitSessionVersion}`}
         card={user.card}
+        symptoms={symptoms}
+        hospitalResultCount={hospitals.length}
+        hospitalConfirmed={hospitalConfirmed}
         journeyStep={journeyStep}
         companionDecision={companionDecision}
         selectedHospital={selectedHospital}
         appointmentPreference={appointmentPreference}
+        appointmentDecision={appointmentDecision}
         onCard={() => goTo("card")}
         onSaveCard={async (card) => {
           const saved = await api.saveCard(card);

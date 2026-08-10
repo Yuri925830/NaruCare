@@ -18,6 +18,17 @@ import {
 } from "../../src/hospitalMatching";
 import { buildMedicalTranslationPrompt, isMedicalTranslationLocale } from "./medicalTranslation";
 import { buildNaruPersonaPrompt } from "./naruPersona";
+import {
+  agentToolNames,
+  finalizeAgentToolDecision,
+  journeyActionForAgentTool,
+  normalizeAgentJourneyObservation,
+  verifyAgentToolCall,
+  type AgentJourneyObservation,
+  type AgentToolDecision,
+  type AgentToolName,
+  type AgentToolTrace,
+} from "../../src/agentWorkflow";
 
 const SESSION_DAYS = 30;
 // Cloudflare Workers currently caps PBKDF2 at 100,000 iterations.
@@ -1043,6 +1054,50 @@ const NARU_RESPONSE_SCHEMA = {
   additionalProperties: false,
 };
 
+const NARU_TOOL_CONFIDENCE = {
+  type: "string",
+  enum: ["high", "medium", "low"],
+  description: "Confidence that the latest user message explicitly requests this tool and matches the current workflow step.",
+};
+
+function naruFunctionTool(name: AgentToolName, description: string, properties: JsonObject = {}, required: string[] = []) {
+  return {
+    type: "function",
+    name,
+    description,
+    parameters: {
+      type: "object",
+      properties: {
+        confidence: NARU_TOOL_CONFIDENCE,
+        explicitUserRequest: {
+          type: "boolean",
+          description: "True only when the latest user message explicitly requests or confirms this action.",
+        },
+        ...properties,
+      },
+      required: ["confidence", "explicitUserRequest", ...required],
+      additionalProperties: false,
+    },
+    strict: true,
+  };
+}
+
+const NARU_FUNCTION_TOOLS = [
+  naruFunctionTool("search_hospitals", "Open nearby hospital search for the active symptoms. Use only at the hospital step."),
+  naruFunctionTool("open_appointment_slots", "Open appointment options for the confirmed hospital. Use only at the appointment step."),
+  naruFunctionTool("skip_appointment", "Request walk-in or continuation without booking. The application will reject this when booking is required."),
+  naruFunctionTool("set_companion_preference", "Record the user's explicit choice to use or skip a human medical companion.", {
+    decision: { type: "string", enum: ["use", "skip"] },
+  }, ["decision"]),
+  naruFunctionTool("open_preparation", "Open the visit preparation checklist after appointment and companion decisions are complete."),
+  naruFunctionTool("open_navigation", "Open directions after visit preparation is complete."),
+  naruFunctionTool("start_translation", "Open two-way medical translation after arrival is confirmed."),
+  naruFunctionTool("change_hospital", "Restart hospital search when the user explicitly asks for another hospital."),
+  naruFunctionTool("confirm_arrival", "Confirm arrival only when the user explicitly states that they arrived at the selected hospital."),
+  naruFunctionTool("complete_visit", "Complete visit assistance only when the user explicitly states that the consultation or hospital visit is finished."),
+  naruFunctionTool("explain_current_step", "Explain the single missing action required at the current workflow step without changing state."),
+];
+
 const OPENAI_DEFAULT_MODEL = "gpt-5.6-luna";
 
 function openAiModel(env: Env) {
@@ -1063,6 +1118,46 @@ function openAiResponseText(value: unknown) {
   return text.join("\n").trim();
 }
 
+function openAiResponseOutput(value: unknown) {
+  if (!value || typeof value !== "object" || !("output" in value) || !Array.isArray(value.output)) return [] as unknown[];
+  return value.output;
+}
+
+interface OpenAiFunctionCall {
+  type: "function_call";
+  call_id: string;
+  name: string;
+  arguments: string;
+}
+
+function openAiFunctionCalls(value: unknown): OpenAiFunctionCall[] {
+  return openAiResponseOutput(value).filter((item): item is OpenAiFunctionCall => Boolean(
+    item && typeof item === "object"
+    && "type" in item && item.type === "function_call"
+    && "call_id" in item && typeof item.call_id === "string"
+    && "name" in item && typeof item.name === "string"
+    && "arguments" in item && typeof item.arguments === "string",
+  ));
+}
+
+async function createOpenAiResponse(apiKey: string, body: JsonObject, timeoutMs: number) {
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${apiKey}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) throw new ApiException(502, "openai_auth_error", "OpenAI API key was rejected");
+    if (response.status === 429) throw new ApiException(503, "openai_rate_limited", "OpenAI API rate limit reached");
+    throw new ApiException(502, "openai_provider_error", `OpenAI API request failed with status ${response.status}`);
+  }
+  return response.json() as Promise<unknown>;
+}
+
 async function runOpenAiTextModel(
   env: Env,
   apiKey: string,
@@ -1072,47 +1167,133 @@ async function runOpenAiTextModel(
   reasoningEffort: "low" | "medium",
   timeoutMs: number,
 ) {
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json",
+  const output = await createOpenAiResponse(apiKey, {
+    model: openAiModel(env),
+    input: messages.map(({ role, content }) => ({ role: role === "system" ? "developer" : role, content })),
+    max_output_tokens: maxCompletionTokens,
+    reasoning: { effort: reasoningEffort },
+    store: false,
+    text: {
+      verbosity: "low",
+      ...(structured ? {
+        format: {
+          type: "json_schema",
+          name: "naru_response",
+          strict: true,
+          schema: NARU_RESPONSE_SCHEMA,
+        },
+      } : {}),
     },
-    body: JSON.stringify({
-      model: openAiModel(env),
-      input: messages.map(({ role, content }) => ({ role: role === "system" ? "developer" : role, content })),
-      max_output_tokens: maxCompletionTokens,
-      reasoning: { effort: reasoningEffort },
-      store: false,
-      text: {
-        verbosity: "low",
-        ...(structured ? {
-          format: {
-            type: "json_schema",
-            name: "naru_response",
-            strict: true,
-            schema: NARU_RESPONSE_SCHEMA,
-          },
-        } : {}),
-      },
-    }),
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  if (!response.ok) {
-    if (response.status === 401 || response.status === 403) throw new ApiException(502, "openai_auth_error", "OpenAI API key was rejected");
-    if (response.status === 429) throw new ApiException(503, "openai_rate_limited", "OpenAI API rate limit reached");
-    throw new ApiException(502, "openai_provider_error", `OpenAI API request failed with status ${response.status}`);
-  }
-  const output: unknown = await response.json();
+  }, timeoutMs);
   const text = openAiResponseText(output);
   if (!text) throw new ApiException(502, "ai_response_invalid", "OpenAI returned an empty response");
   return text;
 }
 
-async function runTextModel(env: Env, messages: AiMessage[], maxCompletionTokens: number, _temperature: number, structured = false, model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast" | "@cf/meta/llama-3.1-8b-instruct-fast" = env.AI_MODEL, timeoutMs = 30_000) {
+interface OpenAiNaruAgentResult {
+  text: string;
+  trace: AgentToolTrace[];
+}
+
+function invalidAgentToolDecision(tool: AgentToolName): AgentToolDecision {
+  return {
+    requestedAction: "explain_current_step",
+    acceptedAction: "explain_current_step",
+    tool,
+    status: "blocked",
+    reason: "invalid_tool_arguments",
+    missingRequirements: ["valid_tool_arguments"],
+    requiresConfirmation: false,
+  };
+}
+
+function executeNaruFunctionCall(observation: AgentJourneyObservation, call: OpenAiFunctionCall) {
+  const tool = agentToolNames.includes(call.name as AgentToolName) ? call.name as AgentToolName : "explain_current_step";
+  let argumentsValue: Record<string, unknown> = {};
+  try {
+    const parsed: unknown = JSON.parse(call.arguments);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) argumentsValue = parsed as Record<string, unknown>;
+  } catch { /* Strict tool schemas should prevent malformed arguments. */ }
+  const companionChoice = argumentsValue.decision === "use" || argumentsValue.decision === "skip" ? argumentsValue.decision : undefined;
+  const action = journeyActionForAgentTool(tool, companionChoice);
+  const confidence = argumentsValue.confidence === "high" || argumentsValue.confidence === "medium" ? argumentsValue.confidence : "low";
+  const explicitUserRequest = argumentsValue.explicitUserRequest === true;
+  const decision = action
+    ? verifyAgentToolCall(observation, action, explicitUserRequest ? confidence : "low")
+    : invalidAgentToolDecision(tool);
+  const output = JSON.stringify({
+    status: decision.status,
+    acceptedAction: decision.acceptedAction,
+    reason: decision.reason,
+    missingRequirements: decision.missingRequirements,
+    instruction: decision.status === "ready"
+      ? "Return the accepted action in the final structured response. The NaruCare client will execute it after receiving the response."
+      : "Do not claim that the action happened. Return explain_current_step and tell the user the one missing requirement.",
+  });
+  return { decision, output };
+}
+
+async function runOpenAiNaruAgent(
+  env: Env,
+  apiKey: string,
+  messages: AiMessage[],
+  maxCompletionTokens: number,
+  reasoningEffort: "low" | "medium",
+  timeoutMs: number,
+  observation: AgentJourneyObservation,
+): Promise<OpenAiNaruAgentResult> {
+  const input: unknown[] = messages.map(({ role, content }) => ({ role: role === "system" ? "developer" : role, content }));
+  const trace: AgentToolTrace[] = [];
+  for (let iteration = 1; iteration <= 3; iteration += 1) {
+    const output = await createOpenAiResponse(apiKey, {
+      model: openAiModel(env),
+      input,
+      tools: NARU_FUNCTION_TOOLS,
+      tool_choice: iteration === 3 ? "none" : "auto",
+      parallel_tool_calls: false,
+      max_output_tokens: maxCompletionTokens,
+      reasoning: { effort: reasoningEffort },
+      store: false,
+      text: {
+        verbosity: "low",
+        format: {
+          type: "json_schema",
+          name: "naru_response",
+          strict: true,
+          schema: NARU_RESPONSE_SCHEMA,
+        },
+      },
+    }, timeoutMs);
+    const outputItems = openAiResponseOutput(output);
+    input.push(...outputItems);
+    const functionCalls = openAiFunctionCalls(output);
+    if (!functionCalls.length) {
+      const text = openAiResponseText(output);
+      if (!text) throw new ApiException(502, "ai_response_invalid", "OpenAI returned neither a tool call nor a final response");
+      return { text, trace };
+    }
+    for (const call of functionCalls) {
+      const execution = executeNaruFunctionCall(observation, call);
+      trace.push({
+        iteration,
+        tool: execution.decision.tool,
+        requestedAction: execution.decision.requestedAction,
+        acceptedAction: execution.decision.acceptedAction,
+        status: execution.decision.status,
+        reason: execution.decision.reason,
+        missingRequirements: execution.decision.missingRequirements,
+        requiresConfirmation: execution.decision.requiresConfirmation,
+      });
+      input.push({ type: "function_call_output", call_id: call.call_id, output: execution.output });
+    }
+  }
+  throw new ApiException(502, "ai_tool_loop_exhausted", "OpenAI tool loop did not produce a final response");
+}
+
+async function runTextModel(env: Env, messages: AiMessage[], maxCompletionTokens: number, _temperature: number, structured = false, model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast" | "@cf/meta/llama-3.1-8b-instruct-fast" = env.AI_MODEL, timeoutMs = 30_000, preferOpenAi = true) {
   try {
     const openAiKey = envSecret(env, "OPENAI_API_KEY");
-    if (openAiKey) {
+    if (preferOpenAi && openAiKey) {
       const reasoningEffort = model === "@cf/meta/llama-3.3-70b-instruct-fp8-fast" ? "medium" : "low";
       return await runOpenAiTextModel(env, openAiKey, messages, maxCompletionTokens, structured, reasoningEffort, timeoutMs);
     }
@@ -1231,21 +1412,55 @@ function ensureWarmNonEmergencyReply(reply: string, intent: MedicalIntent) {
   return `${reply} ${intent === "education" ? "🩺 🌿" : "💙"}`;
 }
 
-type TriageModelOutput = NonNullable<ReturnType<typeof parseTriageModelOutput>>;
+type TriageModelOutput = NonNullable<ReturnType<typeof parseTriageModelOutput>> & {
+  agentRuntime?: { runtime: "openai_function_call" | "structured_fallback"; trace: AgentToolTrace[] };
+};
 
-async function runNaruUnderstandingPass(env: Env, messages: AiMessage[], tier: ReasoningTier): Promise<TriageModelOutput> {
+async function runNaruUnderstandingPass(
+  env: Env,
+  messages: AiMessage[],
+  tier: ReasoningTier,
+  observation: AgentJourneyObservation,
+): Promise<TriageModelOutput> {
+  const maxCompletionTokens = tier === "deep" ? 900 : 700;
+  const timeoutMs = tier === "deep" ? 18_000 : 10_000;
+  const openAiKey = envSecret(env, "OPENAI_API_KEY");
+  if (openAiKey) {
+    try {
+      const result = await runOpenAiNaruAgent(
+        env,
+        openAiKey,
+        messages,
+        maxCompletionTokens,
+        tier === "deep" ? "medium" : "low",
+        timeoutMs,
+        observation,
+      );
+      const parsed = parseTriageModelOutput(result.text);
+      if (!parsed) throw new ApiException(502, "ai_response_invalid", `${tier} reasoning returned invalid structured output`);
+      return { ...parsed, agentRuntime: { runtime: "openai_function_call", trace: result.trace } };
+    } catch (error) {
+      console.warn(JSON.stringify({
+        level: "warn",
+        event: "openai_agent_fallback",
+        tier,
+        message: error instanceof Error ? error.message : "unknown",
+      }));
+    }
+  }
   const output = await runTextModel(
     env,
     messages,
-    tier === "deep" ? 900 : 700,
+    maxCompletionTokens,
     tier === "deep" ? 0.15 : 0.1,
     true,
     tier === "deep" ? env.AI_MODEL : "@cf/meta/llama-3.1-8b-instruct-fast",
-    tier === "deep" ? 18_000 : 10_000,
+    timeoutMs,
+    false,
   );
   const parsed = parseTriageModelOutput(output);
   if (!parsed) throw new ApiException(502, "ai_response_invalid", `${tier} reasoning returned invalid structured output`);
-  return parsed;
+  return { ...parsed, agentRuntime: { runtime: "structured_fallback", trace: [] } };
 }
 
 interface ChatMessageRow { role: "user" | "assistant"; content: string }
@@ -1393,13 +1608,11 @@ async function chat(request: Request, env: Env) {
     ? body.journeyContext as Record<string, unknown>
     : {};
   const journeySteps = new Set(["symptoms", "hospital", "appointment", "companion", "prepare", "navigation", "translation", "complete"]);
-  const journeyStep = typeof rawJourneyContext.journeyStep === "string" && journeySteps.has(rawJourneyContext.journeyStep)
-    ? rawJourneyContext.journeyStep
-    : "";
-  const selectedHospital = typeof rawJourneyContext.selectedHospital === "string" ? rawJourneyContext.selectedHospital.trim().slice(0, 120) : "";
-  const companionDecision = rawJourneyContext.companionDecision === "use" || rawJourneyContext.companionDecision === "skip" || rawJourneyContext.companionDecision === "pending"
-    ? rawJourneyContext.companionDecision
-    : "";
+  const hasJourneyContext = typeof rawJourneyContext.journeyStep === "string" && journeySteps.has(rawJourneyContext.journeyStep);
+  const journeyObservation = normalizeAgentJourneyObservation({ ...rawJourneyContext, hasCard });
+  const journeyStep = hasJourneyContext ? journeyObservation.journeyStep : "";
+  const selectedHospital = journeyObservation.selectedHospital;
+  const companionDecision = journeyObservation.companionDecision;
   const clientHistory: AiMessage[] = Array.isArray(body.history) ? body.history.flatMap<AiMessage>((entry) => {
     if (typeof entry === "string" && entry.trim()) return [{ role: "user", content: entry.trim().slice(0, 1_000) }];
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
@@ -1412,7 +1625,8 @@ async function chat(request: Request, env: Env) {
   const history = clientHistory.length >= storedHistory.length ? clientHistory : storedHistory;
   const userHistory = history.filter((entry) => entry.role === "user").map((entry) => entry.content);
   const deterministic = assessMedicalIntent(message, userHistory, hasCard);
-  const deterministicAction = deterministic.intent === "emergency" || deterministic.intent === "recovery" || deterministic.reason === "hospital_request" || deterministic.reason === "card_request" || (deterministic.reason === "service_request" && !journeyStep);
+  const deterministicAction = deterministic.intent === "emergency" || deterministic.intent === "recovery" || deterministic.reason === "card_request"
+    || ((deterministic.reason === "hospital_request" || deterministic.reason === "service_request") && !journeyStep);
   if (deterministicAction) {
     await rememberChatExchange(env, userId, message, "", deterministic.intent);
     return json({
@@ -1423,6 +1637,7 @@ async function chat(request: Request, env: Env) {
       action: "none",
       source: "safety_rules",
       reasoningTier: "deterministic",
+      agent: finalizeAgentToolDecision(journeyObservation, "none", "high", "deterministic"),
     });
   }
 
@@ -1440,11 +1655,19 @@ async function chat(request: Request, env: Env) {
 
 Current NaruCare workflow state (this is the source of truth):
 - current step: ${journeyStep}
+- active symptoms captured: ${journeyObservation.symptoms ? "yes" : "no"}
+- hospital results loaded: ${journeyObservation.hospitalResultCount}
 - selected hospital: ${selectedHospital || "none"}
+- hospital selection confirmed: ${journeyObservation.hospitalConfirmed ? "yes" : "no"}
+- appointment decision: ${journeyObservation.appointmentDecision}
+- matching appointment slots: ${journeyObservation.appointmentSlotCount}
 - companion decision: ${companionDecision || "not applicable"}
+- visit preparation complete: ${journeyObservation.preparationComplete ? "yes" : "no"}
+- arrival confirmed: ${journeyObservation.arrived ? "yes" : "no"}
+- translation active: ${journeyObservation.translationActive ? "yes" : "no"}
 - required next action: ${workflowRequirement[journeyStep]}
 
-Keep the reply aligned with this current step. Do not send the user back to an already completed step unless they explicitly ask to change it. Do not claim that a screen action, booking, checklist, arrival, translation, or completion happened unless the app state says it did. When the user wants to continue, state the one concrete action required at the current step.` : "";
+Treat these values as tool observations. Keep the reply aligned with this current step. Do not send the user back to an already completed step unless they explicitly ask to change it. Do not claim that a screen action, booking, checklist, arrival, translation, or completion happened unless the observation says it did. Select only an action whose prerequisites are present. When the user wants to continue, state the one concrete action required at the current step.` : "";
   const intelligenceMessages: AiMessage[] = [
       { role: "system", content: `${buildNaruPersonaPrompt(locale)}
 ${workflowContext}
@@ -1471,6 +1694,7 @@ Set action to exactly one structured UI action:
 - use_companion or skip_companion: only at companion, and only for an explicit choice.
 - confirm_arrival: only at navigation, and only when the user explicitly says they have arrived at the hospital.
 - complete_visit: only at translation, and only when the user explicitly says the consultation/visit is finished.
+When OpenAI function tools are available, every non-none workflow action must come from exactly one matching function call before the final response. Do not bypass a function by writing a non-none action directly. After receiving a function result, copy its acceptedAction into the final action. If the function result is blocked, use explain_current_step and do not claim the requested action occurred.
 Never infer a state-changing action from politeness, “yes”, a symptom description, or an ambiguous “next”. If the requested action does not match the current step, use explain_current_step. The frontend state machine validates every action before execution.
 
 Set symptomStatus precisely:
@@ -1489,7 +1713,7 @@ The symptoms field is state, not a transcript. It must contain a concise summary
   let reasoningTier: ReasoningTier = "light";
   let reasoningReasons: string[] = [];
   try {
-    const lightAssessment = await runNaruUnderstandingPass(env, intelligenceMessages, "light");
+    const lightAssessment = await runNaruUnderstandingPass(env, intelligenceMessages, "light", journeyObservation);
     const decision = selectReasoningTier({
       message,
       history: history.slice(-12).map((entry) => entry.content),
@@ -1501,7 +1725,7 @@ The symptoms field is state, not a transcript. It must contain a concise summary
     reasoningReasons = semanticConflict ? [...decision.reasons, "local_model_semantic_conflict"] : decision.reasons;
     if (reasoningTier === "deep") {
       try {
-        classified = await runNaruUnderstandingPass(env, intelligenceMessages, "deep");
+        classified = await runNaruUnderstandingPass(env, intelligenceMessages, "deep", journeyObservation);
       } catch (deepError) {
         console.warn(JSON.stringify({ level: "warn", event: "deep_reasoning_unavailable", message: deepError instanceof Error ? deepError.message : "unknown" }));
         classified = lightAssessment;
@@ -1514,7 +1738,7 @@ The symptoms field is state, not a transcript. It must contain a concise summary
     reasoningTier = "deep";
     reasoningReasons = ["light_model_fallback"];
     try {
-      classified = await runNaruUnderstandingPass(env, intelligenceMessages, "deep");
+      classified = await runNaruUnderstandingPass(env, intelligenceMessages, "deep", journeyObservation);
     } catch (deepError) {
       console.warn(JSON.stringify({ level: "warn", event: "reasoning_cascade_unavailable", message: deepError instanceof Error ? deepError.message : "unknown" }));
     }
@@ -1532,27 +1756,20 @@ The symptoms field is state, not a transcript. It must contain a concise summary
       sources: [],
       source: "safe_fallback",
       reasoningTier: "fallback",
+      agent: finalizeAgentToolDecision(journeyObservation, "none", "low", "structured_fallback"),
     });
   }
   if (!journeyStep || ["emergency", "recovery", "card", "education"].includes(classified.intent)) {
     classified.action = "none";
   }
-  console.log(JSON.stringify({
-    level: "info",
-    event: "reasoning_route",
-    tier: reasoningTier,
-    reasons: reasoningReasons,
-    intent: classified.intent,
-    action: classified.action,
-    confidence: classified.confidence,
-    historyMessages: history.length,
-  }));
   if (deterministic.intent === "education" && classified.intent !== "emergency") classified.intent = "education";
-  if (deterministic.intent === "hospital" && deterministic.reason === "symptoms" && deterministic.symptoms
+  if (deterministic.intent === "hospital" && (deterministic.reason === "symptoms" || deterministic.reason === "hospital_request")
     && classified.intent !== "emergency" && classified.intent !== "recovery") {
     classified.intent = "hospital";
-    classified.symptoms ||= deterministic.symptoms;
-    if (classified.symptomStatus === "none") classified.symptomStatus = "new";
+    classified.symptoms ||= journeyObservation.symptoms || deterministic.symptoms;
+    if (classified.symptoms && classified.symptomStatus === "none") {
+      classified.symptomStatus = deterministic.reason === "symptoms" ? "new" : "ongoing";
+    }
   }
     if ((classified.intent === "hospital" || classified.intent === "emergency") && !classified.symptoms) {
       if (deterministic.intent === "hospital" && deterministic.symptoms) {
@@ -1573,6 +1790,37 @@ The symptoms field is state, not a transcript. It must contain a concise summary
       classified.symptoms = "";
       classified.symptomStatus = "none";
     }
+    const workflowActionAllowed = Boolean(journeyStep) && !["emergency", "recovery", "card", "education"].includes(classified.intent);
+    if (!workflowActionAllowed) classified.action = "none";
+    const agentRuntime = classified.agentRuntime?.runtime || "structured_fallback";
+    const agentTrace = classified.agentRuntime?.trace || [];
+    const agentIterations = agentTrace.reduce((highest, entry) => Math.max(highest, entry.iteration), 0);
+    const toolDecision = workflowActionAllowed
+      ? finalizeAgentToolDecision(journeyObservation, classified.action, classified.confidence, agentRuntime, agentTrace)
+      : {
+        ...verifyAgentToolCall(journeyObservation, "none", classified.confidence),
+        runtime: agentRuntime,
+        iterations: agentIterations,
+        trace: agentTrace,
+      };
+    classified.action = toolDecision.acceptedAction;
+    if (toolDecision.status === "blocked") classified.reply = "";
+    console.log(JSON.stringify({
+      level: "info",
+      event: "reasoning_route",
+      tier: reasoningTier,
+      reasons: reasoningReasons,
+      intent: classified.intent,
+      action: classified.action,
+      requestedAction: toolDecision.requestedAction,
+      tool: toolDecision.tool,
+      toolStatus: toolDecision.status,
+      toolReason: toolDecision.reason,
+      runtime: toolDecision.runtime,
+      toolIterations: toolDecision.iterations,
+      confidence: classified.confidence,
+      historyMessages: history.length,
+    }));
     if ((classified.intent === "general" || classified.intent === "education") && !classified.reply) classified.reply = localizedThinkingFallback(locale);
     let sources: MedicalEvidenceSource[] = [];
     if (classified.intent === "education" && classified.searchQuery) {
@@ -1595,6 +1843,7 @@ The symptoms field is state, not a transcript. It must contain a concise summary
       sources: sources.map(({ title, url, year }) => ({ title, url, year })),
       source: sources.length ? "ai_retrieval" : "ai_triage",
       reasoningTier,
+      agent: toolDecision,
     });
 }
 
