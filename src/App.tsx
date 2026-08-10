@@ -388,18 +388,6 @@ function AppInner() {
       void openHospitals(extractReportableSymptoms(symptoms || user.card?.symptoms || ""));
       return;
     }
-    if (next === "visit-flow") {
-      if (!selectedHospital || !hospitalConfirmed) {
-        void openHospitals(extractReportableSymptoms(symptoms || user.card?.symptoms || ""));
-      } else if (!appointmentDecisionComplete(selectedHospital, appointmentDecision, appointmentBooking)) {
-        goTo("hospitals");
-      } else if (companionDecision === "pending") {
-        goTo("agent");
-      } else {
-        goTo("visit-flow");
-      }
-      return;
-    }
     if (next === "emergency-confirm") void beginEmergencyRecord(extractReportableSymptoms(symptoms || user.card?.symptoms || ""));
     goTo(next);
   }
@@ -666,7 +654,7 @@ function AppInner() {
         onHospitals={openHospitals}
         onSymptoms={captureSymptoms}
         onSymptomsResolved={clearCurrentSymptoms}
-        onFlow={() => openJourneyStep("prepare")}
+        onFlow={() => goTo("visit-flow")}
         onTranslation={() => openJourneyStep("translation")}
         onArrived={confirmHospitalArrival}
         onCompleteVisit={finishVisitAssistance}
@@ -692,7 +680,6 @@ function AppInner() {
         appointmentBooking={appointmentBooking}
         appointmentComplete={Boolean(selectedHospital && appointmentDecisionComplete(selectedHospital, appointmentDecision, appointmentBooking))}
         needsCompanionDecision={Boolean(selectedHospital && appointmentDecisionComplete(selectedHospital, appointmentDecision, appointmentBooking) && companionDecision === "pending")}
-        canRoute={visitJourneyStepIndex(journeyStep) >= visitJourneyStepIndex("navigation")}
         onSelect={(hospital) => {
           const changed = selectedHospital?.id !== hospital.id || !hospitalConfirmed;
           setSelectedHospital(hospital);
@@ -720,7 +707,8 @@ function AppInner() {
         }}
         onCompanion={() => goTo("companions-notice")}
         onRoute={() => {
-          if (!selectedHospital || visitJourneyStepIndex(journeyStep) < visitJourneyStepIndex("navigation")) return;
+          if (!selectedHospital || !hospitalConfirmed) return;
+          advanceJourney("navigation");
           void updateCurrentRecord({ hospital: selectedHospital.name, status: "navigating" });
           goTo("navigation");
         }}

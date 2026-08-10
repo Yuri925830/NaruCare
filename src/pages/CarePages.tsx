@@ -870,7 +870,7 @@ export function AgentPage({
 
 export function HospitalsPage({
   location, hospitals, loading, selected, confirmed, appointmentPreference, appointmentDecision, appointmentBooking,
-  appointmentComplete, needsCompanionDecision, canRoute, onSelect, onAppointmentPreference, onBookAppointment,
+  appointmentComplete, needsCompanionDecision, onSelect, onAppointmentPreference, onBookAppointment,
   onSkipAppointment, onCancelAppointment, onFlow, onCompanion, onRoute, onLocationPick, onRefresh,
 }: {
   location: LocationState;
@@ -883,7 +883,6 @@ export function HospitalsPage({
   appointmentBooking: HospitalAppointmentBooking | null;
   appointmentComplete: boolean;
   needsCompanionDecision: boolean;
-  canRoute: boolean;
   onSelect: (hospital: Hospital) => void;
   onAppointmentPreference: (preference: AppointmentPreference) => void;
   onBookAppointment: (slot: HospitalAppointmentSlot) => void;
@@ -1023,7 +1022,7 @@ export function HospitalsPage({
           </div>}
       {appointmentDecision === "skip" && <p className="appointment-skipped"><Check size={14} />{selectedAvailability.policy === "walk_in" ? appointmentCopy.continueWalkIn : appointmentCopy.continueWithoutBooking}</p>}
     </section>}
-    <div className="hospital-actions"><Button onClick={onFlow} disabled={!selected || !confirmed || !appointmentComplete}>{!confirmed ? t("selectHospitalFirst") : !appointmentComplete ? appointmentCopy.completeFirst : needsCompanionDecision ? companionFlow.decideCompanion : t("prepareSelectedHospital")}</Button><Button variant="secondary" onClick={onCompanion}>{t("companion")}</Button><Button variant="mint" onClick={onRoute} disabled={!selected || !canRoute}><Navigation size={18} />{t("route")}</Button>{selected?.sourceUrl && <a className="button button-ghost" href={selected.sourceUrl} target="_blank" rel="noreferrer">{t("hospitalDataSource", { source: selected.dataSource || "OpenStreetMap" })}</a>}</div>
+    <div className="hospital-actions"><Button onClick={onFlow} disabled={!selected || !confirmed || !appointmentComplete}>{!confirmed ? t("selectHospitalFirst") : !appointmentComplete ? appointmentCopy.completeFirst : needsCompanionDecision ? companionFlow.decideCompanion : t("prepareSelectedHospital")}</Button><Button variant="secondary" onClick={onCompanion}>{t("companion")}</Button><Button variant="mint" onClick={onRoute} disabled={!selected || !confirmed}><Navigation size={18} />{t("route")}</Button>{selected?.sourceUrl && <a className="button button-ghost" href={selected.sourceUrl} target="_blank" rel="noreferrer">{t("hospitalDataSource", { source: selected.dataSource || "OpenStreetMap" })}</a>}</div>
   </Panel>;
 }
 
