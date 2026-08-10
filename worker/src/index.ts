@@ -1371,6 +1371,17 @@ async function chat(request: Request, env: Env) {
   const userId = await requireUser(request, env);
   const body = await readJson(request);
   const message = assertString(body.message, "message", 1, 2_000); const locale = assertString(body.locale, "locale", 2, 20); const hasCard = body.hasCard === true;
+  const rawJourneyContext = body.journeyContext && typeof body.journeyContext === "object" && !Array.isArray(body.journeyContext)
+    ? body.journeyContext as Record<string, unknown>
+    : {};
+  const journeySteps = new Set(["symptoms", "hospital", "appointment", "companion", "prepare", "navigation", "translation", "complete"]);
+  const journeyStep = typeof rawJourneyContext.journeyStep === "string" && journeySteps.has(rawJourneyContext.journeyStep)
+    ? rawJourneyContext.journeyStep
+    : "";
+  const selectedHospital = typeof rawJourneyContext.selectedHospital === "string" ? rawJourneyContext.selectedHospital.trim().slice(0, 120) : "";
+  const companionDecision = rawJourneyContext.companionDecision === "use" || rawJourneyContext.companionDecision === "skip" || rawJourneyContext.companionDecision === "pending"
+    ? rawJourneyContext.companionDecision
+    : "";
   const clientHistory: AiMessage[] = Array.isArray(body.history) ? body.history.flatMap<AiMessage>((entry) => {
     if (typeof entry === "string" && entry.trim()) return [{ role: "user", content: entry.trim().slice(0, 1_000) }];
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
@@ -1396,8 +1407,28 @@ async function chat(request: Request, env: Env) {
     });
   }
 
+  const workflowRequirement: Record<string, string> = {
+    symptoms: "Collect the main symptom, onset, and severity before offering hospital search.",
+    hospital: "Help the user open nearby hospital results and select one hospital.",
+    appointment: "The selected hospital must have an appointment slot booked or an allowed walk-in/skip decision.",
+    companion: "The user must explicitly choose whether to use a human companion.",
+    prepare: "Open the preparation checklist; all items must be checked in the UI before navigation.",
+    navigation: "Open directions. Only an explicit arrival statement may confirm arrival and unlock translation.",
+    translation: "Open two-way translation. Only an explicit statement that the visit is finished may complete assistance.",
+    complete: "The visit is complete; offer the saved record or a new visit without silently clearing history.",
+  };
+  const workflowContext = journeyStep ? `
+
+Current NaruCare workflow state (this is the source of truth):
+- current step: ${journeyStep}
+- selected hospital: ${selectedHospital || "none"}
+- companion decision: ${companionDecision || "not applicable"}
+- required next action: ${workflowRequirement[journeyStep]}
+
+Keep the reply aligned with this current step. Do not send the user back to an already completed step unless they explicitly ask to change it. Do not claim that a screen action, booking, checklist, arrival, translation, or completion happened unless the app state says it did. When the user wants to continue, state the one concrete action required at the current step.` : "";
   const intelligenceMessages: AiMessage[] = [
       { role: "system", content: `${buildNaruPersonaPrompt(locale)}
+${workflowContext}
 
 Classify the user's current purpose precisely:
 - general: casual conversation, identity, capabilities, thanks, non-medical chat, or situational worry about using an unfamiliar hospital when no current health symptom is reported. Give a natural, useful reply. Saying that a first Korean hospital visit feels scary is general, not a symptom and not a request to search for a hospital.

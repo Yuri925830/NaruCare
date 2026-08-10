@@ -31,7 +31,7 @@ import {
 } from "../medicalCardConversation";
 import { assessMedicalIntent, extractReportableSymptoms, isAffirmativeResponse, isNaruCapabilityQuestion, isNaruIdentityQuestion, isNegativeResponse, isSymptomsResolvedStatement } from "../triage";
 import type { ChatHistoryEntry, Hospital, LocationState, MedicalCard, MedicalEvidenceSource, TranslationRecordEntry } from "../types";
-import { companionDecisionFromText, type CompanionDecision, type VisitJourneyStep } from "../visitJourney";
+import { companionDecisionFromText, journeyChatActionFromText, visitJourneyStepIndex, type CompanionDecision, type VisitJourneyStep } from "../visitJourney";
 
 interface Message { id: string; role: "naru" | "user" | "status"; text: string; detail?: string; sources?: MedicalEvidenceSource[] }
 
@@ -65,7 +65,7 @@ export function AgentPage({
   card, journeyStep, companionDecision, selectedHospital, appointmentPreference,
   onCard, onSaveCard, onEmergency, onHospitals, onSymptoms, onSymptomsResolved, onCompanion,
   onCompanionDecision, onAppointmentPreference, onBookAppointment, onSkipAppointment,
-  onOpenAppointments, onFlow, onTranslation, onJourneyStep, onRestartJourney, onRecords, gateSignal,
+  onOpenAppointments, onFlow, onTranslation, onArrived, onCompleteVisit, onJourneyStep, onRestartJourney, onRecords, gateSignal,
 }: {
   card: MedicalCard | null;
   journeyStep: VisitJourneyStep;
@@ -86,6 +86,8 @@ export function AgentPage({
   onOpenAppointments: () => void;
   onFlow?: () => void;
   onTranslation?: () => void;
+  onArrived: () => void;
+  onCompleteVisit: () => void | Promise<void>;
   onJourneyStep: (step: VisitJourneyStep) => void;
   onRestartJourney: () => void;
   onRecords: () => void;
@@ -159,6 +161,39 @@ export function AgentPage({
     (value: string) => new Date(`${value}T00:00:00`).toLocaleDateString(locale, { month: "short", day: "numeric", weekday: "short" }),
     [locale],
   );
+  const currentJourneyPrompt = useCallback(() => {
+    if (journeyStep === "symptoms") return t("journeyNeedSymptoms");
+    if (journeyStep === "hospital") return t("journeyHospitalPrompt");
+    if (journeyStep === "appointment") return appointmentFlow.journeyPrompt;
+    if (journeyStep === "companion") return companionFlow.journeyPrompt;
+    if (journeyStep === "prepare") return t("journeyPreparePrompt");
+    if (journeyStep === "navigation") return t("journeyNavigationPrompt");
+    if (journeyStep === "translation") return t("journeyTranslationPrompt");
+    return t("journeyCompletePrompt");
+  }, [appointmentFlow.journeyPrompt, companionFlow.journeyPrompt, journeyStep, t]);
+  const openCurrentJourneyStep = useCallback(() => {
+    if (journeyStep === "symptoms") {
+      inputRef.current?.focus();
+      return;
+    }
+    if (journeyStep === "hospital") {
+      void onHospitals(extractReportableSymptoms(card?.symptoms || ""));
+      return;
+    }
+    if (journeyStep === "appointment") {
+      onOpenAppointments();
+      return;
+    }
+    if (journeyStep === "prepare") {
+      onFlow?.();
+      return;
+    }
+    if (journeyStep === "navigation") {
+      onJourneyStep("navigation");
+      return;
+    }
+    if (journeyStep === "translation") onTranslation?.();
+  }, [card?.symptoms, journeyStep, onFlow, onHospitals, onJourneyStep, onOpenAppointments, onTranslation]);
 
   useEffect(() => {
     setMessages((current) => current[0]?.id === "welcome"
@@ -474,6 +509,41 @@ export function AgentPage({
         return;
       }
     }
+    const journeyAction = journeyChatActionFromText(journeyStep, clean);
+    if (journeyAction) {
+      const reply = currentJourneyPrompt();
+      if (journeyAction === "explain_current_step") {
+        setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
+        void api.rememberChat(clean, reply, journeyStep);
+        window.setTimeout(() => inputRef.current?.focus(), 0);
+        return;
+      }
+      if (journeyAction === "change_hospital") {
+        setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: t("journeyHospitalPrompt") }]);
+        void api.rememberChat(clean, t("journeyHospitalPrompt"), "hospital");
+        setBusy(true);
+        try { await onHospitals(extractReportableSymptoms(card.symptoms || "")); }
+        finally { setBusy(false); }
+        return;
+      }
+      if (journeyAction === "confirm_arrival") {
+        const arrivalReply = t("journeyTranslationPrompt");
+        setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: arrivalReply }]);
+        void api.rememberChat(clean, arrivalReply, "translation");
+        onArrived();
+        return;
+      }
+      if (journeyAction === "complete_visit") {
+        const completeReply = t("journeyCompletePrompt");
+        setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: completeReply }]);
+        void api.rememberChat(clean, completeReply, "complete");
+        await onCompleteVisit();
+        return;
+      }
+      void api.rememberChat(clean, reply, journeyStep);
+      openCurrentJourneyStep();
+      return;
+    }
     if (isSymptomsResolvedStatement(clean)) {
       setPendingHospitalSymptoms(null);
       await onSymptomsResolved?.();
@@ -519,14 +589,38 @@ export function AgentPage({
       else startMedicalCardCreation(clean, false);
       return;
     }
-    if (localTriage.intent === "flow") { void api.rememberChat(clean, "", "flow"); onFlow?.(); return; }
-    if (localTriage.intent === "translation") { void api.rememberChat(clean, "", "translation"); onTranslation?.(); return; }
+    if (localTriage.intent === "flow") {
+      const reply = currentJourneyPrompt();
+      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
+      void api.rememberChat(clean, reply, "flow");
+      openCurrentJourneyStep();
+      return;
+    }
+    if (localTriage.intent === "translation") {
+      if (visitJourneyStepIndex(journeyStep) >= visitJourneyStepIndex("translation")) {
+        void api.rememberChat(clean, "", "translation");
+        onTranslation?.();
+      } else {
+        const reply = currentJourneyPrompt();
+        setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
+        void api.rememberChat(clean, reply, "translation");
+        openCurrentJourneyStep();
+      }
+      return;
+    }
     if (localTriage.intent === "companion") {
       if (journeyStep === "companion" && companionDecision === "pending") completeCompanionDecision("use", false);
       else { void api.rememberChat(clean, "", "companion"); onCompanion(); }
       return;
     }
     if (localTriage.intent === "hospital" && localTriage.reason === "hospital_request") {
+      if (visitJourneyStepIndex(journeyStep) >= visitJourneyStepIndex("appointment") && journeyStep !== "complete") {
+        const reply = currentJourneyPrompt();
+        setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
+        void api.rememberChat(clean, reply, journeyStep);
+        openCurrentJourneyStep();
+        return;
+      }
       if (!reportedSymptoms) {
         setPendingHospitalSymptoms(null);
         const reply = t("journeyNeedSymptoms");
@@ -546,7 +640,11 @@ export function AgentPage({
     }
     setBusy(true);
     try {
-      const response = await api.chat(clean, locale, true, history);
+      const response = await api.chat(clean, locale, true, history, {
+        journeyStep,
+        selectedHospital: selectedHospital?.name || "",
+        companionDecision,
+      });
       const responseSymptoms = extractReportableSymptoms(response.symptoms || reportedSymptoms);
       if ((response.intent === "hospital" || response.intent === "emergency") && responseSymptoms) await onSymptoms?.(responseSymptoms);
       if (response.intent === "recovery" || response.symptomStatus === "resolved") {
@@ -561,6 +659,13 @@ export function AgentPage({
         return onEmergency(responseSymptoms || extractReportableSymptoms(card.symptoms || "") || extractReportableSymptoms(clean));
       }
       if (response.intent === "hospital") {
+        if (visitJourneyStepIndex(journeyStep) >= visitJourneyStepIndex("appointment") && journeyStep !== "complete") {
+          const stepPrompt = currentJourneyPrompt();
+          const reply = response.reply && response.reply !== stepPrompt ? `${response.reply}\n\n${stepPrompt}` : stepPrompt;
+          setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
+          void api.rememberChat(clean, reply, journeyStep);
+          return;
+        }
         if (!responseSymptoms) {
           setPendingHospitalSymptoms(null);
           setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: t("journeyNeedSymptoms") }]);
@@ -598,6 +703,19 @@ export function AgentPage({
     <Button variant="secondary" onClick={onRecords}>{t("journeyRecords")}</Button>
     <Button onClick={onRestartJourney}>{t("journeyRestart")}</Button>
   </div>;
+  const journeyActionLabel = journeyStep === "hospital"
+    ? t("findHospital")
+    : journeyStep === "prepare"
+      ? t("viewVisitFlow")
+      : journeyStep === "navigation"
+        ? t("route")
+        : journeyStep === "translation"
+          ? t("translation")
+          : "";
+  const journeyActionCard = journeyActionLabel ? <section className="journey-action-card" aria-label={t("nextStep")}>
+    <span><small>{t("nextStep")}</small><strong>{currentJourneyPrompt()}</strong></span>
+    <Button onClick={openCurrentJourneyStep} disabled={busy}>{journeyActionLabel}<ArrowRight size={17} /></Button>
+  </section> : null;
 
   return <div className="agent-grid">
     <Panel className="chat-panel">
@@ -682,6 +800,7 @@ export function AgentPage({
             <Button variant="ghost" onClick={onOpenAppointments}>{appointmentFlow.chatOpenHospitals}</Button>
           </div>
         </section>}
+        {journeyActionCard}
         {busy && <div className="typing"><i /><i /><i /></div>}
       </div>
       {!card && !medicalCardChat && <div className="prompt-suggestions"><span>{t("quickServices")}</span><button onClick={() => send(t("promptUnwell"))}>{t("promptUnwell")}</button><button onClick={() => startMedicalCardCreation()}>{t("promptCard")}</button><button onClick={() => send(t("promptCompanion"))}>{t("promptCompanion")}</button></div>}

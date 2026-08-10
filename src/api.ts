@@ -187,13 +187,22 @@ export const api = {
     }, 45_000);
     return data.text.trim();
   },
-  async chat(message: string, locale: string, hasCard: boolean, history: ChatHistoryEntry[] = []): Promise<ChatResponse> {
+  async chat(
+    message: string,
+    locale: string,
+    hasCard: boolean,
+    history: ChatHistoryEntry[] = [],
+    journeyContext: { journeyStep?: string; selectedHospital?: string; companionDecision?: string } = {},
+  ): Promise<ChatResponse> {
     const previousUserMessages = history.filter((entry) => entry.role === "user").map((entry) => entry.content);
     const local = assessMedicalIntent(message, previousUserMessages, hasCard);
     const deterministicAction = local.intent === "emergency" || local.intent === "recovery" || local.reason === "hospital_request" || local.reason === "card_request" || local.reason === "service_request";
     if (deterministicAction) return { reply: "", intent: local.intent, symptoms: local.symptoms, symptomStatus: local.intent === "recovery" ? "resolved" : local.symptoms ? "ongoing" : "none" };
     try {
-      return await request<ChatResponse>("/api/chat", { method: "POST", body: JSON.stringify({ message, locale, hasCard, history: history.slice(-30) }) }, 70_000);
+      return await request<ChatResponse>("/api/chat", {
+        method: "POST",
+        body: JSON.stringify({ message, locale, hasCard, history: history.slice(-30), journeyContext }),
+      }, 70_000);
     } catch {
       return { reply: "", intent: local.intent, symptoms: local.symptoms, symptomStatus: "unknown" };
     }

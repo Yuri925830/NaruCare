@@ -611,6 +611,13 @@ function AppInner() {
     goTo("agent", { replace: true });
   }
 
+  function confirmHospitalArrival() {
+    if (!selectedHospital || visitJourneyStepIndex(journeyStep) < visitJourneyStepIndex("navigation")) return;
+    void updateCurrentRecord({ status: "arrived" });
+    advanceJourney("translation");
+    goTo("translation");
+  }
+
   const titles: Record<View, string> = {
     agent: "Naru", card: t("createCard"), hospitals: t("nearbyHospitals"), "visit-flow": t("navFlow"), navigation: t("navigationRoute"), translation: t("translationConversation"),
     "companions-notice": t("companionsNotice"), "companions-filter": t("companionConditions"), companions: t("companionsTitle"), "companion-detail": t("companionDetail"), "companion-chat": t("companionChat"),
@@ -654,6 +661,8 @@ function AppInner() {
         onSymptomsResolved={clearCurrentSymptoms}
         onFlow={() => openJourneyStep("prepare")}
         onTranslation={() => openJourneyStep("translation")}
+        onArrived={confirmHospitalArrival}
+        onCompleteVisit={finishVisitAssistance}
         onCompanion={() => goTo("companions-notice")}
         onCompanionDecision={decideCompanion}
         onAppointmentPreference={changeAppointmentPreference}
@@ -756,11 +765,7 @@ function AppInner() {
         void updateCurrentRecord({ hospital: selectedHospital.name, status: "navigating" });
         goTo("navigation");
       }} onReturn={() => goBack()} />;
-      case "navigation": return selectedHospital ? <NavigationPage location={location} hospital={selectedHospital} onArrived={() => {
-        void updateCurrentRecord({ status: "arrived" });
-        advanceJourney("translation");
-        goTo("translation");
-      }} onTranslation={() => goTo("translation")} /> : <Panel><p>{t("noHospitalsFound")}</p></Panel>;
+      case "navigation": return selectedHospital ? <NavigationPage location={location} hospital={selectedHospital} onArrived={confirmHospitalArrival} onTranslation={() => goTo("translation")} /> : <Panel><p>{t("noHospitalsFound")}</p></Panel>;
       case "translation": return <TranslationPage userLanguage={user.card?.language || locale} active={view === "translation"} onRecorded={(entry) => { if (currentRecordId) void api.appendRecordTranslation(currentRecordId, entry).then(() => setRecordsVersion((value) => value + 1)); }} onComplete={visitJourneyStepIndex(journeyStep) >= visitJourneyStepIndex("translation") ? () => void finishVisitAssistance() : undefined} />;
       case "companions-notice": return <CompanionNoticePage onContinue={() => goTo("companions-filter")} />;
       case "companions-filter": return <CompanionFilterPage filters={filters} onChange={setFilters} onMatch={() => void match()} />;
