@@ -139,6 +139,19 @@ describe("medical triage", () => {
     expect(hasMedicalSymptoms("谢谢你，Naru")).toBe(false);
   });
 
+  it("starts a new symptom episode after an explicit recovery update", () => {
+    const result = assessMedicalIntent("Please find a hospital", [
+      "I had a severe cough yesterday",
+      "I'm fine now",
+      "My right ankle is swollen after I twisted it",
+    ]);
+
+    expect(result.intent).toBe("hospital");
+    expect(result.symptoms).toContain("ankle");
+    expect(result.symptoms).not.toContain("cough");
+    expect(result.symptoms).not.toContain("fine now");
+  });
+
   it.each([
     "失眠吃安眠药可以根治吗",
     "什么是失眠",

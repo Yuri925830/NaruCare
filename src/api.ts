@@ -1,4 +1,5 @@
 import { companions, fallbackHospitals, matchCompanions } from "./data";
+import { hospitalCategory, hospitalCategoryAffinity } from "./hospitalMatching";
 import { assessMedicalIntent } from "./triage";
 import type { ChatHistoryEntry, ChatResponse, Companion, CompanionFilters, CompanionOrder, Hospital, MedicalCard, SessionUser, TranslationRecordEntry, VisitRecord } from "./types";
 
@@ -127,11 +128,22 @@ export const api = {
   async hospitals(lat: number, lng: number, symptom: string, locale = "en"): Promise<Hospital[]> {
     try {
       const params = new URLSearchParams({ lat: String(lat), lng: String(lng), symptom, locale });
-      const data = await request<{ hospitals: Hospital[] }>(`/api/hospitals?${params}`, {}, 8_000);
+      const data = await request<{ hospitals: Hospital[] }>(`/api/hospitals?${params}`, {}, 15_000);
       return data.hospitals;
     } catch {
       const nearSeoul = Math.abs(lat - 37.5665) < 0.45 && Math.abs(lng - 126.978) < 0.55;
-      return nearSeoul ? fallbackHospitals.map((hospital, index) => ({ ...hospital, distance: hospital.distance + index * 160 })) : [];
+      const category = hospitalCategory(symptom);
+      return nearSeoul ? fallbackHospitals
+        .map((hospital, index) => ({ ...hospital, distance: hospital.distance + index * 160 }))
+        .sort((a, b) => hospitalCategoryAffinity(b.name, {
+          type: b.type,
+          source: b.dataSource || "",
+          specialties: b.officialSpecialties?.join(" ") || "",
+        }, category) - hospitalCategoryAffinity(a.name, {
+          type: a.type,
+          source: a.dataSource || "",
+          specialties: a.officialSpecialties?.join(" ") || "",
+        }, category) || a.distance - b.distance) : [];
     }
   },
   async reverseGeocode(lat: number, lng: number): Promise<string> {

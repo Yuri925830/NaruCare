@@ -115,6 +115,15 @@ function symptomSummary(current: string, previous: string[]) {
   return [...new Set(candidates)].join("；").slice(0, 1_000);
 }
 
+function activeSymptomHistory(previous: string[]) {
+  const normalized = previous.map(normalize);
+  let lastRecoveryIndex = -1;
+  normalized.forEach((value, index) => {
+    if (isSymptomsResolvedStatement(value)) lastRecoveryIndex = index;
+  });
+  return normalized.slice(lastRecoveryIndex + 1);
+}
+
 function stripServiceCommands(value: string) {
   const servicePatterns = [HOSPITAL_REQUEST, EMERGENCY_REQUEST, CARD_REQUEST, FLOW_REQUEST, TRANSLATION_REQUEST, COMPANION_REQUEST];
   return servicePatterns
@@ -151,10 +160,11 @@ export function assessMedicalIntent(message: string, previousUserMessages: strin
   const asksForHospital = HOSPITAL_REQUEST.test(current) && !asksForKnowledge;
   const currentHasSymptoms = hasMedicalSymptoms(current);
   const isFollowUp = FOLLOW_UP.test(current);
-  const priorSymptoms = previousUserMessages.map(normalize).filter((value) => !isMedicalKnowledgeQuestion(value) && (hasMedicalSymptoms(value) || RED_FLAG.test(removeCommonNegations(value)))).slice(-6);
+  const activeHistory = activeSymptomHistory(previousUserMessages);
+  const priorSymptoms = activeHistory.filter((value) => !isSymptomsResolvedStatement(value) && !isMedicalKnowledgeQuestion(value) && (hasMedicalSymptoms(value) || RED_FLAG.test(removeCommonNegations(value)))).slice(-6);
   const includeHistory = asksForHospital || isFollowUp || (currentHasSymptoms && !asksForKnowledge);
   const relevant = removeCommonNegations(includeHistory ? [...priorSymptoms, current].join("；") : current);
-  const symptoms = symptomSummary(current, previousUserMessages);
+  const symptoms = symptomSummary(current, activeHistory);
 
   const redFlag = EMERGENCY_REQUEST.test(current)
     || (!asksForKnowledge && (RED_FLAG.test(relevant)
