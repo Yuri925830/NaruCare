@@ -1,3 +1,4 @@
+import { findCountry } from "./countries";
 import type { MedicalCard } from "./types";
 
 export type MedicalCardChatField =
@@ -19,12 +20,12 @@ export type MedicalCardChatField =
 export interface MedicalCardChatStep {
   key: MedicalCardChatField;
   required: boolean;
-  kind: "text" | "age" | "gender" | "language" | "document" | "insurance";
+  kind: "text" | "nationality" | "age" | "gender" | "language" | "document" | "insurance";
 }
 
 export const MEDICAL_CARD_CHAT_STEPS: readonly MedicalCardChatStep[] = [
   { key: "name", required: true, kind: "text" },
-  { key: "nationality", required: true, kind: "text" },
+  { key: "nationality", required: true, kind: "nationality" },
   { key: "age", required: true, kind: "age" },
   { key: "gender", required: true, kind: "gender" },
   { key: "language", required: true, kind: "language" },
@@ -39,7 +40,7 @@ export const MEDICAL_CARD_CHAT_STEPS: readonly MedicalCardChatStep[] = [
   { key: "notes", required: false, kind: "text" },
 ];
 
-export type MedicalCardAnswerError = "required" | "invalidAge" | "invalidChoice";
+export type MedicalCardAnswerError = "required" | "invalidNationality" | "invalidAge" | "invalidChoice";
 
 export type MedicalCardAnswerResult =
   | { ok: true; value: string }
@@ -93,6 +94,11 @@ export function parseMedicalCardChatAnswer(step: MedicalCardChatStep, answer: st
   }
   if (isMedicalCardSkipAnswer(value)) return step.required ? { ok: false, error: "required" } : { ok: true, value: "" };
   if (!value) return step.required ? { ok: false, error: "required" } : { ok: true, value: "" };
+
+  if (step.kind === "nationality") {
+    const country = findCountry(value.normalize("NFKC"));
+    return country ? { ok: true, value: country.code } : { ok: false, error: "invalidNationality" };
+  }
 
   if (step.kind === "age") {
     if (!/^\d{1,3}$/.test(value)) return { ok: false, error: "invalidAge" };
@@ -166,6 +172,7 @@ export interface MedicalCardConversationCopy {
   cancelled: string;
   answerPlaceholder: string;
   requiredError: string;
+  nationalityError: string;
   ageError: string;
   choiceError: string;
   reviewTitle: string;
@@ -193,6 +200,7 @@ const copies: Record<string, MedicalCardConversationCopy> = {
     cancelled: "Medical card setup was cancelled. Nothing was saved.",
     answerPlaceholder: "Type your answer",
     requiredError: "This item is required. Please enter a value.",
+    nationalityError: "Enter a valid country name or two-letter country code, such as China, Vietnam, or US.",
     ageError: "Enter an age from 0 to 120.",
     choiceError: "Choose one of the available options.",
     reviewTitle: "Review your medical card",
@@ -218,6 +226,7 @@ const copies: Record<string, MedicalCardConversationCopy> = {
     cancelled: "진료카드 작성을 취소했습니다. 입력 내용은 저장되지 않았습니다.",
     answerPlaceholder: "답변을 입력하세요",
     requiredError: "필수 항목입니다. 내용을 입력해 주세요.",
+    nationalityError: "올바른 국가명 또는 2자리 국가 코드를 입력해 주세요. 예: 대한민국, 중국, Vietnam, US",
     ageError: "나이는 0세부터 120세 사이의 숫자로 입력해 주세요.",
     choiceError: "표시된 선택지 중 하나를 선택해 주세요.",
     reviewTitle: "진료카드 내용 확인",
@@ -243,6 +252,7 @@ const copies: Record<string, MedicalCardConversationCopy> = {
     cancelled: "已取消填写就诊卡，输入内容没有保存。",
     answerPlaceholder: "请输入回答",
     requiredError: "这是必填项，请输入内容。",
+    nationalityError: "请输入正确的国家名称或两位国家代码，例如：中国、Vietnam、US。",
     ageError: "请输入 0 至 120 之间的年龄。",
     choiceError: "请选择一个显示的选项。",
     reviewTitle: "确认就诊卡内容",

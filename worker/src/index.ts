@@ -16,7 +16,7 @@ import {
   matchesHospitalCategory,
   type HospitalCategory,
 } from "../../src/hospitalMatching";
-import { buildMedicalTranslationPrompt, isMedicalTranslationLocale } from "./medicalTranslation";
+import { buildMedicalTranslationPrompt, fallbackMedicalTranslation, isMedicalTranslationLocale } from "./medicalTranslation";
 import { buildNaruPersonaPrompt } from "./naruPersona";
 import {
   agentToolNames,
@@ -1323,35 +1323,62 @@ async function translate(request: Request, env: Env) {
   const text = assertString(body.text, "text", 1, 4_000); const source = assertString(body.source, "source", 2, 20); const target = assertString(body.target, "target", 2, 20);
   if (!isMedicalTranslationLocale(source) || !isMedicalTranslationLocale(target)) throw new ApiException(400, "invalid_language", "Invalid translation language code");
   if (source === target) return json({ translated: text, cached: false });
-  const cacheKey = await sha256(`${source}\u0000${target}\u0000${text}`);
+  const cacheKey = await sha256(`medical-v2\u0000${source}\u0000${target}\u0000${text}`);
   const cached = await env.DB.prepare("SELECT translated_text FROM translation_cache WHERE cache_key=?").bind(cacheKey).first<{ translated_text: string }>();
   if (cached) return json({ translated: cached.translated_text, cached: true });
   const sourceLanguage = source.toLowerCase().split("-")[0];
   const targetLanguage = target.toLowerCase().split("-")[0];
+  const isChineseKoreanPair = (sourceLanguage === "zh" && targetLanguage === "ko")
+    || (sourceLanguage === "ko" && targetLanguage === "zh");
   let translated = "";
-  try {
-    const output = await env.AI.run("@cf/meta/m2m100-1.2b", {
-      text,
-      source_lang: sourceLanguage,
-      target_lang: targetLanguage,
-    }, { signal: AbortSignal.timeout(15_000), tags: ["narucare-translation"] });
-    translated = "translated_text" in output && typeof output.translated_text === "string" ? output.translated_text.trim() : "";
-  } catch (error) {
-    console.warn(JSON.stringify({
-      level: "warn",
-      event: "translation_primary_unavailable",
-      message: error instanceof Error ? error.message : "unknown",
-    }));
+  if (isChineseKoreanPair) {
+    try {
+      translated = await runTextModel(env, [
+        { role: "system", content: buildMedicalTranslationPrompt(source, target) },
+        { role: "user", content: text },
+      ], 600, 0, false, "@cf/meta/llama-3.3-70b-instruct-fp8-fast", 18_000, false);
+    } catch (error) {
+      console.warn(JSON.stringify({
+        level: "warn",
+        event: "translation_medical_model_unavailable",
+        message: error instanceof Error ? error.message : "unknown",
+      }));
+    }
   }
   if (!translated) {
-    translated = await runTextModel(env, [
-      {
-        role: "system",
-        content: buildMedicalTranslationPrompt(source, target),
-      },
-      { role: "user", content: text },
-    ], 1_800, 0, false, "@cf/meta/llama-3.1-8b-instruct-fast", 18_000);
+    try {
+      const output = await env.AI.run("@cf/meta/m2m100-1.2b", {
+        text,
+        source_lang: sourceLanguage,
+        target_lang: targetLanguage,
+      }, { signal: AbortSignal.timeout(15_000), tags: ["narucare-translation"] });
+      translated = "translated_text" in output && typeof output.translated_text === "string" ? output.translated_text.trim() : "";
+    } catch (error) {
+      console.warn(JSON.stringify({
+        level: "warn",
+        event: "translation_primary_unavailable",
+        message: error instanceof Error ? error.message : "unknown",
+      }));
+    }
   }
+  if (!translated) {
+    try {
+      translated = await runTextModel(env, [
+        {
+          role: "system",
+          content: buildMedicalTranslationPrompt(source, target),
+        },
+        { role: "user", content: text },
+      ], 1_800, 0, false, "@cf/meta/llama-3.1-8b-instruct-fast", 18_000, false);
+    } catch (error) {
+      console.warn(JSON.stringify({
+        level: "warn",
+        event: "translation_fallback_model_unavailable",
+        message: error instanceof Error ? error.message : "unknown",
+      }));
+    }
+  }
+  if (!translated) translated = fallbackMedicalTranslation(text, source, target);
   if (!translated) throw new ApiException(502, "translation_response_invalid", "Translation provider returned an empty response");
   await env.DB.prepare("INSERT OR REPLACE INTO translation_cache (cache_key,source_language,target_language,source_text,translated_text) VALUES (?,?,?,?,?)").bind(cacheKey, source, target, text, translated).run();
   return json({ translated, cached: false });
