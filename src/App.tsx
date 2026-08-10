@@ -108,8 +108,9 @@ function AppInner() {
       setSymptoms(saved.symptoms);
       setHospitals(saved.hospitals);
       const savedHospital = saved.hospitals.find((hospital) => hospital.id === saved.selectedHospitalId) || null;
-      setSelectedHospital(savedHospital);
-      setHospitalConfirmed(Boolean(saved.hospitalConfirmed && savedHospital));
+      const confirmedHospital = saved.hospitalConfirmed ? savedHospital : null;
+      setSelectedHospital(confirmedHospital);
+      setHospitalConfirmed(Boolean(confirmedHospital));
       setAppointmentPreference(saved.appointmentPreference);
       setAppointmentDecision(saved.appointmentDecision);
       setAppointmentBooking(saved.appointmentBooking);
