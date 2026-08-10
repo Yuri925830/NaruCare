@@ -392,7 +392,7 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(143, 106,
   body { background: linear-gradient(160deg, #fbfaf8, #eee9e3); }
   .app-layout { display: block; min-height: 100vh; padding: 0; }
   .sidebar { display: none; }
-  .app-main { --mobile-page-extra: 32px; --mobile-page-negative-gutter: -16px; padding: 0 16px 100px; }
+  .app-main { --mobile-page-gutter: 16px; --mobile-page-extra: 32px; --mobile-page-negative-gutter: -16px; padding: 0 16px 100px; }
   .page-header { height: 72px; border-bottom: 1px solid var(--line); }
   .page-header h1 { font-size: 24px; }
   .page-header .status-pill { display: none; }
@@ -449,7 +449,7 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(143, 106,
 .service-main > [role="alert"] .info-banner { width: 100%; }
 
 @media (max-width: 390px) {
-  .app-main { --mobile-page-extra: 24px; --mobile-page-negative-gutter: -12px; padding-inline: 12px; }.page-header h1 { font-size: 21px; }.language-button { padding: 0 10px; }.language-button span { max-width: 58px !important; }.hospital-actions .button { font-size: 9px; }.call-actions { grid-template-columns: 1fr; }.travel-tabs button { font-size: 11px; }.waiting-contact { grid-template-columns: 1fr; }
+  .app-main { --mobile-page-gutter: 12px; --mobile-page-extra: 24px; --mobile-page-negative-gutter: -12px; padding-inline: 12px; }.page-header h1 { font-size: 21px; }.language-button { padding: 0 10px; }.language-button span { max-width: 58px !important; }.hospital-actions .button { font-size: 9px; }.call-actions { grid-template-columns: 1fr; }.travel-tabs button { font-size: 11px; }.waiting-contact { grid-template-columns: 1fr; }
 }
 
 /* Naru IP character sheet decorations */
@@ -1041,4 +1041,60 @@ body {
   .orders-list > article > .button { grid-column: 1 / -1; width: 100%; }
   .order-manage-actions { grid-column: 1 / -1; width: 100%; grid-template-columns: 1fr 1fr; }
   .order-manage-actions .button:only-child { grid-column: 1 / -1; }
+}
+
+/* Mobile page canvas
+   Every app view uses the full phone canvas.  The page material reaches the
+   viewport edge, while cards and controls keep one consistent safe gutter.
+   Keep this block last: the designer-toy material rules above intentionally
+   restyle .panel and must not collapse the mobile content gutter again. */
+@media (max-width: 1024px), (hover: none) and (pointer: coarse) {
+  .preserved-view > .panel {
+    width: calc(100% + var(--mobile-page-extra));
+    max-width: none;
+    margin-inline: var(--mobile-page-negative-gutter);
+  }
+
+  /* These views use a layout wrapper rather than a root Panel. */
+  .preserved-view > .agent-grid,
+  .preserved-view > .filter-layout,
+  .preserved-view > .companion-chat-layout {
+    width: calc(100% + var(--mobile-page-extra));
+    max-width: none;
+    margin-inline: var(--mobile-page-negative-gutter);
+  }
+
+  .preserved-view > .panel,
+  .preserved-view > .agent-grid > .chat-panel,
+  .preserved-view > .filter-layout > .filter-panel,
+  .preserved-view > .companion-chat-layout > .companion-chat-panel {
+    min-width: 0;
+    padding-inline: var(--mobile-page-gutter) !important;
+    border-inline: 0 !important;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .preserved-view > .agent-grid > .chat-panel,
+  .preserved-view > .filter-layout > .filter-panel,
+  .preserved-view > .companion-chat-layout > .companion-chat-panel {
+    width: 100%;
+  }
+
+  .notice-actions {
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
+    align-items: stretch;
+  }
+
+  .notice-actions > .agree-check,
+  .notice-actions > .button,
+  .waiting-contact > .button:only-child {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .waiting-contact > .button:only-child {
+    grid-column: 1 / -1;
+  }
 }

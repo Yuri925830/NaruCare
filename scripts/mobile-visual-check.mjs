@@ -59,6 +59,90 @@ await page.route("**/api/**", (route) => {
 });
 
 const audited = [];
+const mobileCanvasSpecs = {
+  "auth-language": { shell: ".language-page", cards: ".language-hero, .language-list, .language-continue", gutter: 16 },
+  login: { shell: ".auth-page", cards: ".auth-form", gutter: 20 },
+  register: { shell: ".auth-page", cards: ".auth-form", gutter: 20 },
+  "agent-new-user": { shell: ".chat-panel", cards: ":scope > .agent-online, :scope > .messages, :scope > .chat-composer" },
+  "agent-card-address": { shell: ".chat-panel", cards: ":scope > .agent-online, :scope > .messages, :scope > .chat-composer" },
+  "medical-card-create": { shell: ".medical-card-panel", cards: ":scope > .info-banner, .medical-card-form > label, .medical-card-form > .button" },
+  agent: { shell: ".chat-panel", cards: ":scope > .agent-online, :scope > .messages, :scope > .chat-composer" },
+  "visit-flow": { shell: ".visit-flow-panel", cards: ":scope > .info-banner, :scope > .visit-flow-toolbar, .flow-steps > div" },
+  "visit-tips": { shell: ".visit-tips-panel", cards: ":scope > .info-banner, .prepare-grid > label, .visit-tips-flow .flow-steps > div, :scope > .flow-choice-actions" },
+  "emergency-confirm": { shell: ".emergency-confirm-panel", cards: ":scope > .emergency-illustration, :scope > .emergency-copy" },
+  "emergency-calling": { shell: ".emergency-calling-panel", cards: ":scope > .call-left, :scope > .call-script" },
+  profile: { shell: ".profile-panel", cards: ":scope > .profile-hero, .profile-grid > button, .profile-footer > .info-banner, .profile-footer > .button" },
+  "records-empty": { shell: ".records-panel", cards: ":scope > .info-banner, :scope > .empty-records, .records-list > article" },
+  "companion-orders-empty": { shell: ".orders-panel", cards: ":scope > .info-banner, :scope > .empty-records, .orders-list > article" },
+  "in-app-language": { shell: ".in-app-language", cards: ".language-list, .language-continue" },
+  hospitals: { shell: ".hospital-panel", cards: ":scope > .info-banner, :scope > .appointment-preference, .hospital-layout > .map-card, .hospital-layout > .hospital-list, :scope > .hospital-actions" },
+  navigation: { shell: ".navigation-panel", cards: ":scope > .travel-tabs, :scope > .navigation-layout" },
+  translation: { shell: ".translation-panel", cards: ":scope > .translation-language-picker, :scope > .translation-direction, :scope > .translation-conversation, :scope > .translation-composer" },
+  "companion-notice": { shell: ".companion-notice-panel", cards: ":scope > .info-banner, .notice-grid > article, .notice-actions > .agree-check, .notice-actions > .button" },
+  "companion-filter": { shell: ".filter-panel", cards: ".filter-grid > label, :scope > .button" },
+  "companion-list": { shell: ".companion-list-panel", cards: ":scope > .info-banner, .companion-list > article, :scope > .list-footer" },
+  "companion-detail": { shell: ".companion-detail-panel", cards: ":scope > .detail-profile, :scope > .detail-info" },
+  "companion-chat": { shell: ".companion-chat-panel", cards: ":scope > .chat-person, :scope > .messages, :scope > .chat-composer" },
+  "companion-waiting": { shell: ".waiting-panel", cards: ":scope > .waiting-clock, :scope > .waiting-info, .waiting-contact > .button:only-child" },
+  "companion-payment": { shell: ".payment-panel", cards: ":scope > .info-banner, .payment-grid > article, :scope > .payment-actions" },
+  "companion-arrived": { shell: ".arrived-panel", cards: ":scope > .arrived-profile, :scope > .arrived-confirm" },
+  "companion-service": { shell: ".service-panel", cards: ":scope > .service-person, :scope > .service-main" },
+  "companion-finished": { shell: ".finished-panel", cards: ":scope > .finished-success, :scope > .finished-details" },
+};
+
+async function assertMobileCanvas(name) {
+  const spec = mobileCanvasSpecs[name];
+  if (!spec) throw new Error(`${name}: missing an explicit mobile canvas regression spec`);
+  const shell = page.locator(spec.shell).filter({ visible: true }).first();
+  await shell.waitFor({ state: "visible", timeout: 12_000 });
+  const geometry = await shell.evaluate((element, { cards, gutter }) => {
+    const shellRect = element.getBoundingClientRect();
+    const expectedGutter = gutter ?? (innerWidth <= 390 ? 12 : 16);
+    const cardRects = [...element.querySelectorAll(cards)]
+      .filter((card) => {
+        const rect = card.getBoundingClientRect();
+        const style = getComputedStyle(card);
+        return rect.width > 0 && style.display !== "none" && style.visibility !== "hidden";
+      })
+      .map((card) => {
+        const rect = card.getBoundingClientRect();
+        return {
+          className: typeof card.className === "string" ? card.className : card.tagName,
+          left: rect.left - shellRect.left,
+          right: shellRect.right - rect.right,
+          viewportLeft: rect.left,
+          viewportRight: innerWidth - rect.right,
+        };
+      });
+    const style = getComputedStyle(element);
+    return {
+      viewport: innerWidth,
+      expectedGutter,
+      shell: {
+        left: shellRect.left,
+        right: innerWidth - shellRect.right,
+        width: shellRect.width,
+        paddingLeft: parseFloat(style.paddingLeft) || 0,
+        paddingRight: parseFloat(style.paddingRight) || 0,
+      },
+      cards: cardRects,
+    };
+  }, spec);
+  const tolerance = 1.5;
+  if (Math.abs(geometry.shell.left) > tolerance
+    || Math.abs(geometry.shell.right) > tolerance
+    || Math.abs(geometry.shell.width - geometry.viewport) > tolerance) {
+    throw new Error(`${name}: outer mobile canvas does not fill the phone ${JSON.stringify(geometry)}`);
+  }
+  if (!geometry.cards.length) throw new Error(`${name}: no visible cards were covered by the mobile gutter assertion`);
+  const invalid = geometry.cards.filter((card) => Math.abs(card.left - geometry.expectedGutter) > tolerance
+    || Math.abs(card.right - geometry.expectedGutter) > tolerance
+    || Math.abs(card.left - card.right) > tolerance);
+  if (invalid.length) {
+    throw new Error(`${name}: cards do not keep the ${geometry.expectedGutter}px phone gutter ${JSON.stringify({ ...geometry, invalid })}`);
+  }
+}
+
 async function auditMobile(name, selector, fullPage = true) {
   await page.setViewportSize(mobileViewport);
   const target = page.locator(selector).filter({ visible: true }).first();
@@ -95,6 +179,24 @@ async function auditMobile(name, selector, fullPage = true) {
     })
     .map((element) => ({ tag: element.tagName, className: element.className, text: element.textContent?.trim().slice(0, 40) })));
   if (clippedControls.length) throw new Error(`${name}: controls extend outside the viewport ${JSON.stringify(clippedControls)}`);
+  await assertMobileCanvas(name);
+  const headerLanguage = page.locator(".page-header .language-button").filter({ visible: true });
+  if (await headerLanguage.count()) {
+    const headerLanguageGeometry = await headerLanguage.first().evaluate((button) => {
+      const rect = button.getBoundingClientRect();
+      const icon = button.querySelector("svg")?.getBoundingClientRect();
+      const label = button.querySelector("span")?.getBoundingClientRect();
+      return {
+        text: button.textContent?.trim(),
+        width: rect.width,
+        iconWidth: icon?.width || 0,
+        labelWidth: label?.width || 0,
+      };
+    });
+    if (headerLanguageGeometry.width < 100 || headerLanguageGeometry.iconWidth < 14 || headerLanguageGeometry.labelWidth < 36) {
+      throw new Error(`${name}: header language control collapsed on mobile ${JSON.stringify(headerLanguageGeometry)}`);
+    }
+  }
   await page.screenshot({ path: shot(`${String(audited.length + 1).padStart(2, "0")}-${name}.png`), fullPage });
   audited.push(name);
 }
@@ -201,11 +303,6 @@ if (mobileNavCount !== 6) throw new Error(`mobile navigation: expected 6 indepen
 await page.locator(".bottom-nav button").nth(2).click();
 await auditMobile("visit-flow", ".visit-flow-panel");
 const flowPanel = page.locator(".visit-flow-panel").filter({ visible: true });
-const [flowWidth, stepWidth] = await Promise.all([
-  flowPanel.evaluate((element) => element.clientWidth),
-  flowPanel.locator(".flow-steps > div").first().evaluate((element) => element.getBoundingClientRect().width),
-]);
-if (stepWidth < flowWidth - 2) throw new Error("visit-flow: steps are squeezed instead of using the available width");
 if (await flowPanel.locator(".prepare-grid").count()) throw new Error("visit-flow: preparation checklist must live on its own tips card");
 const characterStyle = await flowPanel.locator(".naru-pose").first().evaluate((element) => ({
   overflow: getComputedStyle(element).overflow,
@@ -222,13 +319,6 @@ await auditMobile("visit-tips", ".visit-tips-panel");
 const tipsPanel = page.locator(".visit-tips-panel").filter({ visible: true });
 const tipsStepCount = await tipsPanel.locator(".flow-steps > div").count();
 if (tipsStepCount !== 5) throw new Error(`visit-tips: expected 5 after-arrival steps, received ${tipsStepCount}`);
-const [tipsWidth, prepWidth, tipsStepWidth] = await Promise.all([
-  tipsPanel.evaluate((element) => element.clientWidth),
-  tipsPanel.locator(".prepare-grid > label").first().evaluate((element) => element.getBoundingClientRect().width),
-  tipsPanel.locator(".flow-steps > div").first().evaluate((element) => element.getBoundingClientRect().width),
-]);
-if (prepWidth < tipsWidth - 2) throw new Error("visit-tips: cards are squeezed instead of using the available width");
-if (tipsStepWidth < tipsWidth - 2) throw new Error(`visit-tips: after-arrival flow is squeezed ${JSON.stringify({ tipsStepWidth, tipsWidth })}`);
 
 await page.locator(".bottom-nav button").nth(4).click();
 await auditMobile("emergency-confirm", ".emergency-confirm-panel", false);
@@ -283,7 +373,10 @@ const hospitalGeometry = await page.locator(".hospital-panel").filter({ visible:
   return { viewport: window.innerWidth, panelWidth: panelRect.width, innerRects };
 });
 if (hospitalGeometry.panelWidth < hospitalGeometry.viewport - 1) throw new Error(`hospitals: panel is still visibly narrower than the phone ${JSON.stringify(hospitalGeometry)}`);
-if (hospitalGeometry.innerRects.some(({ left, right }) => left < 15 || right < 15)) throw new Error(`hospitals: inner cards touch the panel frame ${JSON.stringify(hospitalGeometry)}`);
+const hospitalGutter = hospitalGeometry.viewport <= 390 ? 12 : 16;
+if (hospitalGeometry.innerRects.some(({ left, right }) => left < hospitalGutter - 1 || right < hospitalGutter - 1 || Math.abs(left - right) > 1.5)) {
+  throw new Error(`hospitals: inner cards touch the panel frame ${JSON.stringify({ ...hospitalGeometry, hospitalGutter })}`);
+}
 const routeButton = page.locator(".hospital-actions .button-mint");
 if (await routeButton.isDisabled()) throw new Error("hospitals: route button is disabled after selecting a hospital");
 await routeButton.click();
