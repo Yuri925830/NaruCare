@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { AlertTriangle, ArrowRight, BadgeCheck, CalendarCheck2, CalendarOff, CarFront, Check, Clock3, Copy, Languages, LocateFixed, Map, MapPin, Mic, Navigation, Pencil, Send, ShieldCheck, Square, Star, Stethoscope, Trash2, UserRound, Volume2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, BadgeCheck, CalendarCheck2, CalendarOff, CarFront, Check, Clock3, Copy, Languages, LocateFixed, Map, MapPin, Mic, Navigation, Pencil, Send, ShieldCheck, Square, Star, Stethoscope, Trash2, UserRound, Volume2 } from "lucide-react";
 import { api } from "../api";
 import { verifyAgentToolCall, type AgentJourneyObservation } from "../agentWorkflow";
 import { findAppointmentSlotFromText, parseAppointmentPreference } from "../appointmentConversation";
@@ -19,6 +19,7 @@ import { Button, InfoBanner, InteractiveMap, LocationPickerMap, NaruPose, NaverN
 import { hospitalDemoInsightFor, hospitalDemoLabels, hospitalDemoText } from "../hospitalDemoInsights";
 import { evaluateOpeningHours, formatOpeningSchedule, formatRestDays } from "../hospitalHours";
 import { localeOptions, useI18n } from "../i18n";
+import { formatAccuracy } from "../location";
 import {
   MEDICAL_CARD_CHAT_STEPS,
   applyMedicalCardChatAnswer,
@@ -50,6 +51,12 @@ interface MedicalCardChatState {
   returnToReview: boolean;
 }
 
+function medicalCardStepInput(draft: MedicalCard, stepIndex: number) {
+  const step = MEDICAL_CARD_CHAT_STEPS[stepIndex];
+  if (!step || step.key === "documentNumber" || !["text", "age"].includes(step.kind)) return "";
+  return String(draft[step.key] || "");
+}
+
 function InlineMessageText({ text }: { text: string }) {
   return <>{text.split(/(\*\*[^*]+\*\*)/g).map((part, index) => part.startsWith("**") && part.endsWith("**")
     ? <strong key={`${index}-${part}`}>{part.slice(2, -2)}</strong>
@@ -70,12 +77,13 @@ function WelcomeMessage({ text }: { text: string }) {
 }
 
 export function AgentPage({
-  card, symptoms, hospitalResultCount, hospitalConfirmed, journeyStep, companionDecision, selectedHospital, appointmentPreference, appointmentDecision,
-  onCard, onSaveCard, onEmergency, onHospitals, onSymptoms, onSymptomsResolved, onCompanion,
+  card, location, symptoms, hospitalResultCount, hospitalConfirmed, journeyStep, companionDecision, selectedHospital, appointmentPreference, appointmentDecision,
+  onCard, onRefreshLocation, onSaveCard, onEmergency, onHospitals, onSymptoms, onSymptomsResolved, onCompanion,
   onCompanionDecision, onAppointmentPreference, onBookAppointment, onSkipAppointment,
   onOpenAppointments, onFlow, onTranslation, onArrived, onCompleteVisit, onJourneyStep, onRestartJourney, onRecords, gateSignal,
 }: {
   card: MedicalCard | null;
+  location: LocationState;
   symptoms: string;
   hospitalResultCount: number;
   hospitalConfirmed: boolean;
@@ -85,6 +93,7 @@ export function AgentPage({
   appointmentPreference: AppointmentPreference;
   appointmentDecision: AppointmentDecision;
   onCard: () => void;
+  onRefreshLocation: () => Promise<LocationState>;
   onSaveCard: (card: MedicalCard) => Promise<MedicalCard>;
   onEmergency: (symptoms: string) => void;
   onHospitals: (symptoms: string) => void | Promise<void>;
@@ -118,9 +127,13 @@ export function AgentPage({
   const [clearingHistory, setClearingHistory] = useState(false);
   const [pendingHospitalSymptoms, setPendingHospitalSymptoms] = useState<string | null>(null);
   const [medicalCardChat, setMedicalCardChat] = useState<MedicalCardChatState | null>(null);
+  const [medicalCardLocating, setMedicalCardLocating] = useState(false);
+  const [medicalCardLocationError, setMedicalCardLocationError] = useState("");
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const previousJourneyStep = useRef(journeyStep);
+  const medicalCardMapRevision = useRef(0);
+  const medicalCardMapTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const medicalCardFieldLabels = useMemo<Record<MedicalCardChatField, string>>(() => ({
     name: t("name"),
     nationality: t("nationality"),
@@ -281,6 +294,31 @@ export function AgentPage({
     container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
   }, [messages, busy]);
 
+  useEffect(() => () => {
+    if (medicalCardMapTimer.current) window.clearTimeout(medicalCardMapTimer.current);
+  }, []);
+
+  useEffect(() => {
+    if (currentMedicalCardStep?.key !== "address" || !medicalCardChat || medicalCardChat.phase !== "collect") return;
+    if (!location.verified || !location.address.trim() || medicalCardChat.draft.address?.trim() || input.trim()) return;
+    const address = location.address.trim();
+    setMedicalCardChat((current) => {
+      if (!current || current.phase !== "collect" || MEDICAL_CARD_CHAT_STEPS[current.stepIndex]?.key !== "address") return current;
+      if (current.draft.address?.trim()) return current;
+      return {
+        ...current,
+        draft: {
+          ...current.draft,
+          address,
+          latitude: location.lat,
+          longitude: location.lng,
+          locationAccuracy: location.accuracy,
+        },
+      };
+    });
+    setInput(address);
+  }, [currentMedicalCardStep?.key, input, location.accuracy, location.address, location.lat, location.lng, location.verified, medicalCardChat]);
+
   const completeCompanionDecision = (decision: Exclude<CompanionDecision, "pending">, showChoice: boolean) => {
     const choice = decision === "use" ? companionFlow.useCompanion : companionFlow.skipCompanion;
     const reply = decision === "use" ? companionFlow.useConfirmed : companionFlow.skipConfirmed;
@@ -353,11 +391,88 @@ export function AgentPage({
     return medicalCardFlow.requiredError;
   };
 
+  const clearPendingMedicalCardMapGeocode = () => {
+    medicalCardMapRevision.current += 1;
+    if (medicalCardMapTimer.current) {
+      window.clearTimeout(medicalCardMapTimer.current);
+      medicalCardMapTimer.current = null;
+    }
+  };
+
+  const applyMedicalCardAddress = (address: string, lat: number, lng: number, accuracy?: number) => {
+    const cleanAddress = address.trim();
+    setMedicalCardChat((current) => {
+      if (!current || current.phase !== "collect" || MEDICAL_CARD_CHAT_STEPS[current.stepIndex]?.key !== "address") return current;
+      return {
+        ...current,
+        draft: {
+          ...current.draft,
+          address: cleanAddress,
+          latitude: lat,
+          longitude: lng,
+          locationAccuracy: accuracy,
+        },
+      };
+    });
+    setInput(cleanAddress);
+  };
+
+  const useMedicalCardCurrentLocation = async () => {
+    if (medicalCardLocating) return;
+    clearPendingMedicalCardMapGeocode();
+    const revision = medicalCardMapRevision.current;
+    setMedicalCardLocationError("");
+    setMedicalCardLocating(true);
+    try {
+      const next = await onRefreshLocation();
+      if (revision !== medicalCardMapRevision.current) return;
+      if (!next.verified) {
+        setMedicalCardLocationError(t("locationDenied"));
+        return;
+      }
+      const address = next.address.trim() || await api.reverseGeocode(next.lat, next.lng);
+      if (revision !== medicalCardMapRevision.current) return;
+      applyMedicalCardAddress(address, next.lat, next.lng, next.accuracy);
+    } catch {
+      if (revision === medicalCardMapRevision.current) setMedicalCardLocationError(t("locationDenied"));
+    } finally {
+      if (revision === medicalCardMapRevision.current) setMedicalCardLocating(false);
+    }
+  };
+
+  const pickMedicalCardMapLocation = (lat: number, lng: number) => {
+    clearPendingMedicalCardMapGeocode();
+    const revision = medicalCardMapRevision.current;
+    setMedicalCardLocationError("");
+    setMedicalCardLocating(true);
+    setMedicalCardChat((current) => {
+      if (!current || current.phase !== "collect" || MEDICAL_CARD_CHAT_STEPS[current.stepIndex]?.key !== "address") return current;
+      return { ...current, draft: { ...current.draft, latitude: lat, longitude: lng, locationAccuracy: undefined } };
+    });
+    medicalCardMapTimer.current = window.setTimeout(() => {
+      setMedicalCardLocating(true);
+      void api.reverseGeocode(lat, lng)
+        .then((address) => {
+          if (revision !== medicalCardMapRevision.current) return;
+          applyMedicalCardAddress(address, lat, lng);
+        })
+        .catch(() => {
+          if (revision === medicalCardMapRevision.current) setMedicalCardLocationError(t("locationDenied"));
+        })
+        .finally(() => {
+          if (revision === medicalCardMapRevision.current) setMedicalCardLocating(false);
+        });
+    }, 320);
+  };
+
   const startMedicalCardCreation = (sourceText = medicalCardFlow.startAction, showChoice = true) => {
     if (card) {
       onCard();
       return;
     }
+    clearPendingMedicalCardMapGeocode();
+    setMedicalCardLocationError("");
+    setMedicalCardLocating(false);
     setGate(false);
     setInput("");
     setMedicalCardChat({
@@ -376,6 +491,9 @@ export function AgentPage({
   };
 
   const cancelMedicalCardCreation = (userText?: string) => {
+    clearPendingMedicalCardMapGeocode();
+    setMedicalCardLocationError("");
+    setMedicalCardLocating(false);
     setMedicalCardChat(null);
     setInput("");
     setMessages((current) => [
@@ -395,6 +513,10 @@ export function AgentPage({
     }
     const step = MEDICAL_CARD_CHAT_STEPS[current.stepIndex];
     if (!step) return;
+    if (step.key === "address") {
+      clearPendingMedicalCardMapGeocode();
+      setMedicalCardLocating(false);
+    }
     const visibleAnswer = step.key === "documentNumber"
       ? maskMedicalCardChatValue(step.key, displayAnswer)
       : displayAnswer;
@@ -405,17 +527,46 @@ export function AgentPage({
       window.setTimeout(() => inputRef.current?.focus(), 0);
       return;
     }
-    const draft = applyMedicalCardChatAnswer(current.draft, step.key, parsed.value);
+    let draft = applyMedicalCardChatAnswer(current.draft, step.key, parsed.value);
+    if (step.key === "address" && parsed.value.trim() !== String(current.draft.address || "").trim()) {
+      draft = { ...draft, latitude: undefined, longitude: undefined, locationAccuracy: undefined };
+    }
     if (current.returnToReview || current.stepIndex >= MEDICAL_CARD_CHAT_STEPS.length - 1) {
       setMedicalCardChat({ draft, stepIndex: current.stepIndex, phase: "review", returnToReview: false });
+      setInput("");
       return;
     }
-    setMedicalCardChat({ ...current, draft, stepIndex: current.stepIndex + 1 });
+    const nextStepIndex = current.stepIndex + 1;
+    setMedicalCardChat({ ...current, draft, stepIndex: nextStepIndex });
+    setInput(medicalCardStepInput(draft, nextStepIndex));
+    window.setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const previousMedicalCardQuestion = () => {
+    const current = medicalCardChat;
+    if (!current || current.phase !== "collect") return;
+    clearPendingMedicalCardMapGeocode();
+    setMedicalCardLocating(false);
+    setMedicalCardLocationError("");
+    if (current.returnToReview) {
+      setMedicalCardChat({ ...current, phase: "review", returnToReview: false });
+      setInput("");
+      return;
+    }
+    if (current.stepIndex <= 0) return;
+    const previousStepIndex = current.stepIndex - 1;
+    setMedicalCardChat({ ...current, stepIndex: previousStepIndex });
+    setInput(medicalCardStepInput(current.draft, previousStepIndex));
     window.setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   const editMedicalCardField = (stepIndex: number) => {
+    clearPendingMedicalCardMapGeocode();
+    setMedicalCardLocating(false);
+    setMedicalCardLocationError("");
+    const draft = medicalCardChat?.draft;
     setMedicalCardChat((current) => current ? { ...current, stepIndex, phase: "collect", returnToReview: true } : current);
+    setInput(draft ? medicalCardStepInput(draft, stepIndex) : "");
     window.setTimeout(() => inputRef.current?.focus(), 0);
   };
 
@@ -504,11 +655,11 @@ export function AgentPage({
   const send = async (text = input) => {
     const clean = text.trim();
     if (!clean || busy || historyLoading || clearingHistory) return;
-    setInput("");
     if (medicalCardChat?.phase === "collect") {
       answerMedicalCardQuestion(clean);
       return;
     }
+    setInput("");
     setMessages((current) => [...current, { id: crypto.randomUUID(), role: "user", text: clean }]);
     const cardIntent = /(就诊卡|診療カード|medical card|진료카드|create.*card|建卡)/i.test(clean);
     if (!card && cardIntent) { startMedicalCardCreation(clean, false); return; }
@@ -794,10 +945,45 @@ export function AgentPage({
           {medicalCardChat.phase === "collect" && currentMedicalCardStep && <>
             <p className="medical-card-chat-question">{medicalCardFlow.ask.replace("{field}", medicalCardFieldLabels[currentMedicalCardStep.key])}</p>
             <span className={`medical-card-chat-requirement ${currentMedicalCardStep.required ? "required" : "optional"}`}>{currentMedicalCardStep.required ? medicalCardFlow.required : medicalCardFlow.optional}</span>
+            {currentMedicalCardStep.key === "address" && <div className="medical-card-chat-location">
+              <div className="medical-card-chat-location-intro">
+                <span><LocateFixed size={19} /></span>
+                <strong>{t("useCurrentLocation")}<small>{t("addressHelp")}</small></strong>
+              </div>
+              <Button type="button" variant="secondary" className="medical-card-chat-locate" onClick={() => void useMedicalCardCurrentLocation()} disabled={medicalCardLocating}>
+                <LocateFixed size={16} />{medicalCardLocating ? t("locating") : t("useCurrentLocation")}
+              </Button>
+              <div className="medical-card-chat-location-status">
+                <MapPin size={17} />
+                <span>
+                  <small>{t("currentLocation")}</small>
+                  <strong dir="auto">{input.trim() || medicalCardChat.draft.address || location.address || t("locationDenied")}</strong>
+                  {(medicalCardChat.draft.locationAccuracy ?? location.accuracy) ? <em>{t("locationAccuracy", { accuracy: formatAccuracy(medicalCardChat.draft.locationAccuracy ?? location.accuracy!) })}</em> : null}
+                </span>
+              </div>
+              <div className="medical-card-chat-location-actions">
+                <Button type="button" variant="secondary" className="medical-card-chat-back" onClick={previousMedicalCardQuestion}><ArrowLeft size={15} />{t("back")}</Button>
+                <Button type="button" className="medical-card-chat-confirm-address" onClick={() => answerMedicalCardQuestion(input.trim() || String(medicalCardChat.draft.address || ""))} disabled={medicalCardLocating || !(input.trim() || medicalCardChat.draft.address?.trim())}>
+                  <MapPin size={16} />{t("confirm")}
+                </Button>
+              </div>
+              <LocationPickerMap
+                center={[medicalCardChat.draft.latitude ?? location.lat, medicalCardChat.draft.longitude ?? location.lng]}
+                accuracy={medicalCardChat.draft.locationAccuracy ?? location.accuracy}
+                onPick={pickMedicalCardMapLocation}
+                className="medical-card-chat-map"
+              />
+              <small className="medical-card-chat-map-help">{t("mapPickerHelp")}</small>
+              {medicalCardLocationError && <small className="medical-card-chat-location-error" role="alert">{medicalCardLocationError}</small>}
+            </div>}
             {medicalCardChoiceOptions.length > 0 && <div className="medical-card-chat-options" role="group" aria-label={medicalCardFieldLabels[currentMedicalCardStep.key]}>
-              {medicalCardChoiceOptions.map((option) => <button type="button" key={option.value} onClick={() => answerMedicalCardQuestion(option.value, option.label)}>{option.label}</button>)}
+              {medicalCardChoiceOptions.map((option) => {
+                const selected = String(medicalCardChat.draft[currentMedicalCardStep.key] || "") === option.value;
+                return <button type="button" key={option.value} className={selected ? "selected" : ""} aria-pressed={selected} onClick={() => answerMedicalCardQuestion(option.value, option.label)}>{option.label}</button>;
+              })}
             </div>}
             <div className="medical-card-chat-actions">
+              {currentMedicalCardStep.key !== "address" && (medicalCardChat.returnToReview || medicalCardChat.stepIndex > 0) && <Button variant="secondary" className="medical-card-chat-back" onClick={previousMedicalCardQuestion}><ArrowLeft size={15} />{t("back")}</Button>}
               {!currentMedicalCardStep.required && <Button variant="secondary" onClick={() => answerMedicalCardQuestion("skip", medicalCardFlow.skip)}>{medicalCardFlow.skip}</Button>}
               <Button variant="ghost" onClick={() => cancelMedicalCardCreation()}>{medicalCardFlow.cancel}</Button>
             </div>
@@ -852,7 +1038,7 @@ export function AgentPage({
         {busy && <div className="typing"><i /><i /><i /></div>}
       </div>
       {!card && !medicalCardChat && <div className="prompt-suggestions"><span>{t("quickServices")}</span><button onClick={() => send(t("promptUnwell"))}>{t("promptUnwell")}</button><button onClick={() => startMedicalCardCreation()}>{t("promptCard")}</button><button onClick={() => send(t("promptCompanion"))}>{t("promptCompanion")}</button></div>}
-      <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); void send(); }}><input ref={inputRef} dir="auto" value={input} onChange={(event) => setInput(event.target.value)} placeholder={medicalCardChat?.phase === "collect" ? medicalCardFlow.answerPlaceholder : t("inputPlaceholder")} disabled={historyLoading || clearingHistory || busy || Boolean(medicalCardChat && medicalCardChat.phase !== "collect")} /><button aria-label={t("sendMessage")} disabled={historyLoading || clearingHistory || busy || Boolean(medicalCardChat && medicalCardChat.phase !== "collect")}><ArrowRight /></button></form>
+      <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); void send(); }}><input ref={inputRef} dir="auto" value={input} onChange={(event) => setInput(event.target.value)} placeholder={medicalCardChat?.phase === "collect" ? medicalCardFlow.answerPlaceholder : t("inputPlaceholder")} disabled={historyLoading || clearingHistory || busy || medicalCardLocating || Boolean(medicalCardChat && medicalCardChat.phase !== "collect")} /><button aria-label={t("sendMessage")} disabled={historyLoading || clearingHistory || busy || medicalCardLocating || Boolean(medicalCardChat && medicalCardChat.phase !== "collect")}><ArrowRight /></button></form>
     </Panel>
     <Panel className="agent-status">
       <h3>{t("currentStatus")}</h3>
@@ -1038,12 +1224,18 @@ export function VisitFlowPage({ onTips }: { onTips: () => void }) {
 export function VisitTipsPage({ onStart, onReturn }: { onStart: () => void; onReturn: () => void }) {
   const { t } = useI18n();
   const prep = [[t("idPassport"), t("idPassportDesc")], [t("insuranceInfo"), t("insuranceInfoDesc")], [t("medicationItem"), t("medicationDesc")], [t("previousResults"), t("previousResultsDesc")]];
+  const steps = [[t("stepRegister"), t("stepRegisterDesc")], [t("stepForm"), t("stepFormDesc")], [t("stepWait"), t("stepWaitDesc")], [t("stepRoom"), t("stepRoomDesc")], [t("stepPay"), t("stepPayDesc")]];
   const [checked, setChecked] = useState(() => prep.map(() => false));
   const prepared = checked.every(Boolean);
   return <Panel className="flow-panel visit-tips-panel">
     <InfoBanner title={t("visitPrepare")} action={<div className="banner-character"><span className="soft-chip">{t("confirmBefore")}</span><NaruPose pose={10} className="flow-banner-naru" /></div>}>{t("prepareSubtitle")}</InfoBanner>
     <div className="prepare-grid">{prep.map(([title, desc], index) => <label className={checked[index] ? "checked" : ""} key={title}><input type="checkbox" checked={checked[index]} onChange={(event) => setChecked((current) => current.map((value, itemIndex) => itemIndex === index ? event.target.checked : value))} /><span><Check size={16} /></span><strong>{title}<small>{desc}</small></strong></label>)}</div>
     <p className="flow-preparation-hint">{t("confirmPreparationItems")}</p>
+    <section className="visit-tips-flow" aria-labelledby="visit-tips-flow-title">
+      <h2 id="visit-tips-flow-title">{t("afterArrival")}</h2>
+      <div className="flow-steps">{steps.map(([title, desc], index) => <div key={title}><span>{String(index + 1).padStart(2, "0")}</span><strong>{title}<small>{desc}</small></strong>{index < steps.length - 1 && <ArrowRight />}</div>)}</div>
+      <InfoBanner title={t("flowReminder")} tone="mint" />
+    </section>
     <div className="flow-choice-actions"><Button variant="secondary" onClick={onReturn}>{t("back")}</Button><Button onClick={onStart} disabled={!prepared}><Navigation size={18} />{t("startNavigation")}</Button></div>
   </Panel>;
 }

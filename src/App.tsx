@@ -636,6 +636,7 @@ function AppInner() {
       case "agent": return <AgentPage
         key={`visit-${visitSessionVersion}`}
         card={user.card}
+        location={location}
         symptoms={symptoms}
         hospitalResultCount={hospitals.length}
         hospitalConfirmed={hospitalConfirmed}
@@ -645,6 +646,7 @@ function AppInner() {
         appointmentPreference={appointmentPreference}
         appointmentDecision={appointmentDecision}
         onCard={() => goTo("card")}
+        onRefreshLocation={refreshLocation}
         onSaveCard={async (card) => {
           const saved = await api.saveCard(card);
           setUser((current) => current ? { ...current, card: saved } : current);

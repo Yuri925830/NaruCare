@@ -45,6 +45,12 @@ await context.addInitScript(() => {
 const page = await context.newPage();
 await page.route("**/api/**", (route) => {
   const path = new URL(route.request().url()).pathname;
+  if (path.endsWith("/api/location/reverse")) {
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ address: "서울특별시 중구 세종대로 110" }) });
+  }
+  if (path.endsWith("/api/maps/config")) {
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ naverMapsClientId: "", dynamicMap: false }) });
+  }
   if (path.endsWith("/api/translate")) {
     const payload = JSON.parse(route.request().postData() || "{}");
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ translated: payload.text || "" }) });
@@ -107,6 +113,76 @@ await page.locator('input[autocomplete="new-password"]').nth(1).fill("12345678")
 await page.locator('button[type="submit"]').click();
 await auditMobile("agent-new-user", ".agent-grid", false);
 
+// The Agent medical-card wizard must let users revisit prior answers and
+// make automatic location + map confirmation unmistakable at the address step.
+await page.locator(".prompt-suggestions button").nth(1).click();
+const wizard = page.locator(".medical-card-chat").filter({ visible: true });
+const wizardProgress = wizard.locator(".medical-card-chat-progress");
+const composerInput = page.locator(".chat-composer input");
+const composerSubmit = page.locator(".chat-composer button");
+const waitWizardStep = (step) => page.waitForFunction((expected) => document.querySelector(".medical-card-chat-progress")?.getAttribute("aria-valuenow") === String(expected), step);
+await wizard.waitFor();
+if (await wizard.locator(".medical-card-chat-back").count()) throw new Error("medical-card wizard: first step must not show a previous-step action");
+await composerInput.fill("Mobile Agent QA");
+await composerSubmit.click();
+await waitWizardStep(2);
+await composerInput.fill("CN");
+await composerSubmit.click();
+await waitWizardStep(3);
+await wizard.locator(".medical-card-chat-back").click();
+await waitWizardStep(2);
+if (await wizardProgress.getAttribute("aria-valuenow") !== "2" || await composerInput.inputValue() !== "CN") {
+  throw new Error("medical-card wizard: back did not restore the previous text answer");
+}
+await composerSubmit.click();
+await waitWizardStep(3);
+await composerInput.fill("30");
+await composerSubmit.click();
+await waitWizardStep(4);
+await wizard.locator(".medical-card-chat-options button").first().click();
+await waitWizardStep(5);
+const selectedLanguage = wizard.locator(".medical-card-chat-options button.selected");
+if (await selectedLanguage.count() !== 1) throw new Error("medical-card wizard: the previously selected language is not highlighted");
+await selectedLanguage.click();
+await waitWizardStep(6);
+await wizard.locator(".medical-card-chat-options button").first().click();
+await waitWizardStep(7);
+await composerInput.fill("901010-1234567");
+await composerSubmit.click();
+await waitWizardStep(8);
+await wizard.locator(".medical-card-chat-options button").first().click();
+await waitWizardStep(9);
+const addressLocation = wizard.locator(".medical-card-chat-location");
+await addressLocation.waitFor();
+await addressLocation.locator(".medical-card-chat-locate").click();
+await page.waitForFunction(() => {
+  const button = document.querySelector(".medical-card-chat-locate");
+  const input = document.querySelector(".chat-composer input");
+  return button && !button.hasAttribute("disabled") && input instanceof HTMLInputElement && input.value.trim().length > 0;
+});
+await addressLocation.locator(".medical-card-chat-map .interactive-map").waitFor();
+const addressGeometry = await addressLocation.evaluate((element) => {
+  const card = element.getBoundingClientRect();
+  const map = element.querySelector(".medical-card-chat-map")?.getBoundingClientRect();
+  const locate = element.querySelector(".medical-card-chat-locate")?.getBoundingClientRect();
+  return { card: { left: card.left, right: card.right, width: card.width }, map: map && { left: map.left, right: map.right, width: map.width }, locate: locate && { left: locate.left, right: locate.right, width: locate.width } };
+});
+if (!addressGeometry.map || !addressGeometry.locate
+  || addressGeometry.map.left < addressGeometry.card.left - 1 || addressGeometry.map.right > addressGeometry.card.right + 1
+  || addressGeometry.locate.left < addressGeometry.card.left - 1 || addressGeometry.locate.right > addressGeometry.card.right + 1) {
+  throw new Error(`medical-card wizard: location UI overflows on mobile ${JSON.stringify(addressGeometry)}`);
+}
+await auditMobile("agent-card-address", ".medical-card-chat", false);
+await wizard.locator(".medical-card-chat-back").click();
+await waitWizardStep(8);
+if (await wizardProgress.getAttribute("aria-valuenow") !== "8" || await wizard.locator(".medical-card-chat-options button.selected").count() !== 1) {
+  throw new Error("medical-card wizard: the previous structured answer was not retained");
+}
+await wizard.locator(".medical-card-chat-options button.selected").click();
+await waitWizardStep(9);
+if (!(await composerInput.inputValue()).trim()) throw new Error("medical-card wizard: the located address was not retained after returning");
+await wizard.locator(".medical-card-chat-actions .button").last().click();
+
 await page.locator(".bottom-nav button").nth(0).click();
 await page.locator(".medical-card-form").waitFor();
 await page.locator('[data-field="name"] input').fill("Mobile QA");
@@ -144,11 +220,15 @@ if (tipsActionWidth < toolbarWidth - 2) throw new Error(`visit-flow: tips action
 await page.locator(".bottom-nav button").nth(3).click();
 await auditMobile("visit-tips", ".visit-tips-panel");
 const tipsPanel = page.locator(".visit-tips-panel").filter({ visible: true });
-const [tipsWidth, prepWidth] = await Promise.all([
+const tipsStepCount = await tipsPanel.locator(".flow-steps > div").count();
+if (tipsStepCount !== 5) throw new Error(`visit-tips: expected 5 after-arrival steps, received ${tipsStepCount}`);
+const [tipsWidth, prepWidth, tipsStepWidth] = await Promise.all([
   tipsPanel.evaluate((element) => element.clientWidth),
   tipsPanel.locator(".prepare-grid > label").first().evaluate((element) => element.getBoundingClientRect().width),
+  tipsPanel.locator(".flow-steps > div").first().evaluate((element) => element.getBoundingClientRect().width),
 ]);
 if (prepWidth < tipsWidth - 2) throw new Error("visit-tips: cards are squeezed instead of using the available width");
+if (tipsStepWidth < tipsWidth - 2) throw new Error(`visit-tips: after-arrival flow is squeezed ${JSON.stringify({ tipsStepWidth, tipsWidth })}`);
 
 await page.locator(".bottom-nav button").nth(4).click();
 await auditMobile("emergency-confirm", ".emergency-confirm-panel", false);
@@ -158,6 +238,25 @@ await page.locator(".bottom-nav button").nth(1).click();
 
 await page.locator(".bottom-nav button").nth(5).click();
 await auditMobile("profile", ".profile-panel");
+const profileFooterGeometry = await page.locator(".profile-panel").filter({ visible: true }).evaluate((panel) => {
+  const reference = panel.querySelector(".profile-grid > button")?.getBoundingClientRect();
+  const privacy = panel.querySelector(".profile-footer > .info-banner")?.getBoundingClientRect();
+  const logout = panel.querySelector(".profile-footer > .button")?.getBoundingClientRect();
+  return {
+    reference: reference ? { left: reference.left, right: reference.right, width: reference.width } : null,
+    privacy: privacy ? { left: privacy.left, right: privacy.right, width: privacy.width } : null,
+    logout: logout ? { left: logout.left, right: logout.right, width: logout.width } : null,
+  };
+});
+const { reference, privacy, logout } = profileFooterGeometry;
+if (!reference || !privacy || !logout
+  || Math.abs(privacy.width - logout.width) > 1
+  || Math.abs(privacy.left - reference.left) > 1
+  || Math.abs(privacy.right - reference.right) > 1
+  || Math.abs(logout.left - reference.left) > 1
+  || Math.abs(logout.right - reference.right) > 1) {
+  throw new Error(`profile: privacy promise and logout are shorter than the service cards ${JSON.stringify(profileFooterGeometry)}`);
+}
 await page.locator(".profile-grid button").nth(1).click();
 await auditMobile("records-empty", ".records-panel");
 await page.locator(".page-back").click();

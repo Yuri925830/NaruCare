@@ -35,6 +35,12 @@ describe("medical card chat conversation", () => {
     expect(parseMedicalCardChatAnswer(insurance, "없음")).toEqual({ ok: true, value: "no" });
   });
 
+  it("accepts canonical language codes regardless of case", () => {
+    const language = MEDICAL_CARD_CHAT_STEPS.find((step) => step.key === "language")!;
+    expect(parseMedicalCardChatAnswer(language, "zh-CN")).toEqual({ ok: true, value: "zh-CN" });
+    expect(parseMedicalCardChatAnswer(language, "ZH-cn")).toEqual({ ok: true, value: "zh-CN" });
+  });
+
   it("allows optional fields to be skipped and masks document numbers", () => {
     const notes = MEDICAL_CARD_CHAT_STEPS.find((step) => step.key === "notes")!;
     const draft = createMedicalCardChatDraft("en");

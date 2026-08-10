@@ -78,7 +78,8 @@ export function isMedicalCardCancelAnswer(value: string) {
 
 function canonicalChoice(value: string, choices: Record<string, readonly string[]>) {
   const normalized = normalizedAnswer(value);
-  return Object.entries(choices).find(([canonical, aliases]) => canonical === normalized || aliases.includes(normalized))?.[0] || null;
+  return Object.entries(choices).find(([canonical, aliases]) => [canonical, ...aliases]
+    .some((candidate) => normalizedAnswer(candidate) === normalized))?.[0] || null;
 }
 
 export function parseMedicalCardChatAnswer(step: MedicalCardChatStep, answer: string): MedicalCardAnswerResult {
