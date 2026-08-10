@@ -5,6 +5,7 @@ import { verifyAgentToolCall, type AgentJourneyObservation } from "../agentWorkf
 import { findAppointmentSlotFromText, parseAppointmentPreference } from "../appointmentConversation";
 import { companionFlowCopy } from "../companionFlow";
 import { conversationCopy } from "../conversationCopy";
+import { findCountry } from "../countries";
 import { hospitalAppointmentCopy } from "../hospitalAppointmentCopy";
 import {
   appointmentAvailabilityFor,
@@ -386,6 +387,7 @@ export function AgentPage({
   };
 
   const medicalCardErrorText = (error: MedicalCardAnswerError) => {
+    if (error === "invalidNationality") return medicalCardFlow.nationalityError;
     if (error === "invalidAge") return medicalCardFlow.ageError;
     if (error === "invalidChoice") return medicalCardFlow.choiceError;
     return medicalCardFlow.requiredError;
@@ -590,6 +592,10 @@ export function AgentPage({
 
   const displayMedicalCardValue = (field: MedicalCardChatField, value: string) => {
     if (!value) return medicalCardFlow.emptyValue;
+    if (field === "nationality") {
+      const country = findCountry(value);
+      if (country) return locale === "ko" ? country.koreanName : locale === "en" ? country.englishName : country.nativeName;
+    }
     if (field === "gender") return value === "female" ? t("female") : value === "male" ? t("male") : t("other");
     if (field === "documentType") return value === "alien" ? t("alienRegistration") : t("passport");
     if (field === "insurance") return value === "yes" ? t("yes") : t("no");
@@ -1422,6 +1428,7 @@ export function TranslationPage({ userLanguage, active = true, onRecorded, onCom
   async function translate(event?: FormEvent) {
     event?.preventDefault();
     if (!input.trim()) return;
+    setVoiceError("");
     setBusy(true);
     try {
       const sourceText = input.trim();

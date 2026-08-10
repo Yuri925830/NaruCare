@@ -25,6 +25,15 @@ describe("medical card chat conversation", () => {
     expect(parseMedicalCardChatAnswer(name, "건너뛰기")).toEqual({ ok: false, error: "required" });
   });
 
+  it("validates and normalizes nationality input against the country catalogue", () => {
+    const nationality = MEDICAL_CARD_CHAT_STEPS.find((step) => step.key === "nationality")!;
+    expect(parseMedicalCardChatAnswer(nationality, "7")).toEqual({ ok: false, error: "invalidNationality" });
+    expect(parseMedicalCardChatAnswer(nationality, "not-a-country")).toEqual({ ok: false, error: "invalidNationality" });
+    expect(parseMedicalCardChatAnswer(nationality, "중국")).toEqual({ ok: true, value: "CN" });
+    expect(parseMedicalCardChatAnswer(nationality, "China")).toEqual({ ok: true, value: "CN" });
+    expect(parseMedicalCardChatAnswer(nationality, "中国")).toEqual({ ok: true, value: "CN" });
+  });
+
   it("normalizes Korean structured answers", () => {
     const gender = MEDICAL_CARD_CHAT_STEPS.find((step) => step.key === "gender")!;
     const document = MEDICAL_CARD_CHAT_STEPS.find((step) => step.key === "documentType")!;
