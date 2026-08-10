@@ -902,6 +902,9 @@ body {
   .hospital-scroll { padding-right: 3px; padding-bottom: 92px; }
   .hospital-scroll .hospital-item:nth-of-type(n+4) { display: flex; }
   .hospital-layout .interactive-map { min-height: 0; height: 280px; }
+  .hospital-location-picker-actions { align-items: stretch; flex-direction: column; gap: 6px; padding: 8px; }
+  .hospital-location-picker-actions p { padding: 0 4px; }
+  .hospital-location-picker-actions .button { width: 100%; min-height: 42px; }
 
   .in-app-language { height: calc(100dvh - 173px); min-height: 0 !important; padding: 8px !important; overflow: hidden; }
   .in-app-language .language-selector.compact { height: 100%; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto auto; gap: 8px; overflow: hidden; }
