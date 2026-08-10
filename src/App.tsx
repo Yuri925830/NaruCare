@@ -16,7 +16,7 @@ import { I18nProvider, useI18n } from "./i18n";
 import { requestFastAccurateLocation, type PreciseLocationFix } from "./location";
 import { extractReportableSymptoms, isHospitalCommandWithoutSymptoms } from "./triage";
 import { AuthPage } from "./pages/AuthPage";
-import { AgentPage, HospitalsPage, NavigationPage, TranslationPage, VisitFlowPage } from "./pages/CarePages";
+import { AgentPage, HospitalsPage, NavigationPage, TranslationPage, VisitFlowPage, VisitTipsPage } from "./pages/CarePages";
 import {
   CompanionArrivedPage, CompanionChatPage, CompanionDetailPage, CompanionFilterPage, CompanionFinishedPage,
   CompanionListPage, CompanionNoticePage, CompanionPaymentPage, CompanionServicePage, CompanionWaitingPage,
@@ -362,7 +362,7 @@ function AppInner() {
       return;
     }
     if (step === "prepare" && selectedHospital && hospitalConfirmed && companionDecision !== "pending") {
-      goTo("visit-flow");
+      goTo("visit-tips");
       return;
     }
     if (step === "navigation" && selectedHospital) {
@@ -408,7 +408,7 @@ function AppInner() {
       return;
     }
     advanceJourney("prepare");
-    goTo("visit-flow");
+    goTo("visit-tips");
   }
 
   function changeAppointmentPreference(preference: AppointmentPreference) {
@@ -610,7 +610,7 @@ function AppInner() {
   }
 
   const titles: Record<View, string> = {
-    agent: "Naru", card: t("createCard"), hospitals: t("nearbyHospitals"), "visit-flow": t("navFlow"), navigation: t("navigationRoute"), translation: t("translationConversation"),
+    agent: "Naru", card: t("createCard"), hospitals: t("nearbyHospitals"), "visit-flow": t("navFlow"), "visit-tips": t("visitTipsCard"), navigation: t("navigationRoute"), translation: t("translationConversation"),
     "companions-notice": t("companionsNotice"), "companions-filter": t("companionConditions"), companions: t("companionsTitle"), "companion-detail": t("companionDetail"), "companion-chat": t("companionChat"),
     "companion-waiting": t("waitingConfirmation"), "companion-payment": t("payDeposit"), "companion-arrived": t("companionArrived"), "companion-service": t("serviceInProgress"), "companion-finished": t("serviceFinished"), "companion-orders": t("companionOrders"),
     "emergency-confirm": t("emergencyCall"), "emergency-calling": t("calling119"), profile: t("profileTitle"), records: t("recordsTitle"), language: t("chooseLanguage"),
@@ -654,7 +654,7 @@ function AppInner() {
         onHospitals={openHospitals}
         onSymptoms={captureSymptoms}
         onSymptomsResolved={clearCurrentSymptoms}
-        onFlow={() => goTo("visit-flow")}
+        onFlow={() => goTo("visit-tips")}
         onTranslation={() => openJourneyStep("translation")}
         onArrived={confirmHospitalArrival}
         onCompleteVisit={finishVisitAssistance}
@@ -678,8 +678,6 @@ function AppInner() {
         appointmentPreference={appointmentPreference}
         appointmentDecision={appointmentDecision}
         appointmentBooking={appointmentBooking}
-        appointmentComplete={Boolean(selectedHospital && appointmentDecisionComplete(selectedHospital, appointmentDecision, appointmentBooking))}
-        needsCompanionDecision={Boolean(selectedHospital && appointmentDecisionComplete(selectedHospital, appointmentDecision, appointmentBooking) && companionDecision === "pending")}
         onSelect={(hospital) => {
           const changed = selectedHospital?.id !== hospital.id || !hospitalConfirmed;
           setSelectedHospital(hospital);
@@ -698,12 +696,7 @@ function AppInner() {
         onCancelAppointment={cancelAppointment}
         onFlow={() => {
           if (!selectedHospital || !hospitalConfirmed) return;
-          if (!appointmentDecisionComplete(selectedHospital, appointmentDecision, appointmentBooking)) return;
-          if (companionDecision === "pending") {
-            goTo("agent");
-            return;
-          }
-          if (visitJourneyStepIndex(journeyStep) >= visitJourneyStepIndex("prepare")) goTo("visit-flow");
+          goTo("visit-tips");
         }}
         onCompanion={() => goTo("companions-notice")}
         onRoute={() => {
@@ -743,17 +736,10 @@ function AppInner() {
           } finally { setHospitalsLoading(false); }
         }}
       />;
-      case "visit-flow": return <VisitFlowPage onStart={() => {
+      case "visit-flow": return <VisitFlowPage onTips={() => goTo("visit-tips")} />;
+      case "visit-tips": return <VisitTipsPage onStart={() => {
         if (!selectedHospital || !hospitalConfirmed) {
           void openHospitals(symptoms);
-          return;
-        }
-        if (!appointmentDecisionComplete(selectedHospital, appointmentDecision, appointmentBooking)) {
-          goTo("hospitals");
-          return;
-        }
-        if (companionDecision === "pending" || visitJourneyStepIndex(journeyStep) < visitJourneyStepIndex("prepare")) {
-          goTo("agent");
           return;
         }
         advanceJourney("navigation");
@@ -764,7 +750,7 @@ function AppInner() {
       case "translation": return <TranslationPage userLanguage={user.card?.language || locale} active={view === "translation"} onRecorded={(entry) => { if (currentRecordId) void api.appendRecordTranslation(currentRecordId, entry).then(() => setRecordsVersion((value) => value + 1)); }} onComplete={visitJourneyStepIndex(journeyStep) >= visitJourneyStepIndex("translation") ? () => void finishVisitAssistance() : undefined} />;
       case "companions-notice": return <CompanionNoticePage onContinue={() => goTo("companions-filter")} />;
       case "companions-filter": return <CompanionFilterPage filters={filters} onChange={setFilters} onMatch={() => void match()} />;
-      case "companions": return <CompanionListPage people={people} onFilters={() => goTo("companions-filter")} onDetail={selectCompanion} onChoose={selectCompanion} onContinue={() => goTo("visit-flow")} />;
+      case "companions": return <CompanionListPage people={people} onFilters={() => goTo("companions-filter")} onDetail={selectCompanion} onChoose={selectCompanion} onContinue={() => goTo("visit-tips")} />;
       case "companion-detail": return <CompanionDetailPage person={selectedCompanion} durationMinutes={companionDurationMinutes} onDurationChange={setCompanionDurationMinutes} onChat={() => goTo("companion-chat")} onApply={() => applyForCompanion()} />;
       case "companion-chat": return <CompanionChatPage person={selectedCompanion} hospitalName={selectedHospital?.name || t("hospital")} durationMinutes={companionDurationMinutes} onApply={() => applyForCompanion()} />;
       case "companion-waiting": return order ? <CompanionWaitingPage person={order.companion} onAccepted={() => void acceptOrder()} onMessage={() => goTo("companion-chat")} onCancel={() => { void api.updateOrder(order.id, "cancelled"); setOrder(null); goTo("companions"); }} /> : <Panel />;

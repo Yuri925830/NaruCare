@@ -115,14 +115,27 @@ await auditMobile("agent", ".agent-grid", false);
 
 // The visit-flow information card must be independently accessible.
 await page.locator(".bottom-nav button").nth(2).click();
-await auditMobile("visit-flow", ".flow-panel");
-const flowPanel = page.locator(".flow-panel").filter({ visible: true });
-const [flowWidth, prepWidth, stepWidth] = await Promise.all([
+await auditMobile("visit-flow", ".visit-flow-panel");
+const flowPanel = page.locator(".visit-flow-panel").filter({ visible: true });
+const [flowWidth, stepWidth] = await Promise.all([
   flowPanel.evaluate((element) => element.clientWidth),
-  flowPanel.locator(".prepare-grid > label").first().evaluate((element) => element.getBoundingClientRect().width),
   flowPanel.locator(".flow-steps > div").first().evaluate((element) => element.getBoundingClientRect().width),
 ]);
-if (prepWidth < flowWidth - 2 || stepWidth < flowWidth - 2) throw new Error("visit-flow: cards are squeezed instead of using the available width");
+if (stepWidth < flowWidth - 2) throw new Error("visit-flow: steps are squeezed instead of using the available width");
+if (await flowPanel.locator(".prepare-grid").count()) throw new Error("visit-flow: preparation checklist must live on its own tips card");
+const characterStyle = await flowPanel.locator(".naru-pose").first().evaluate((element) => ({
+  overflow: getComputedStyle(element).overflow,
+  filter: getComputedStyle(element.querySelector("img")).filter,
+}));
+if (characterStyle.overflow !== "visible" || characterStyle.filter !== "none") throw new Error(`visit-flow: character artwork is clipped into a rectangular shadow ${JSON.stringify(characterStyle)}`);
+await flowPanel.locator(".visit-tips-action").click();
+await auditMobile("visit-tips", ".visit-tips-panel");
+const tipsPanel = page.locator(".visit-tips-panel").filter({ visible: true });
+const [tipsWidth, prepWidth] = await Promise.all([
+  tipsPanel.evaluate((element) => element.clientWidth),
+  tipsPanel.locator(".prepare-grid > label").first().evaluate((element) => element.getBoundingClientRect().width),
+]);
+if (prepWidth < tipsWidth - 2) throw new Error("visit-tips: cards are squeezed instead of using the available width");
 
 await page.locator(".bottom-nav button").nth(3).click();
 await auditMobile("emergency-confirm", ".emergency-confirm-panel", false);
@@ -148,6 +161,18 @@ await page.locator(".side-nav button").nth(2).click();
 await page.locator(".hospital-item").first().waitFor({ timeout: 15_000 });
 await page.locator(".hospital-item").first().click();
 await auditMobile("hospitals", ".hospital-panel");
+const hospitalGeometry = await page.locator(".hospital-panel").filter({ visible: true }).evaluate((panel) => {
+  const panelRect = panel.getBoundingClientRect();
+  const innerRects = [panel.querySelector(".appointment-preference"), panel.querySelector(".map-card"), panel.querySelector(".hospital-list"), panel.querySelector(".hospital-actions")]
+    .filter(Boolean)
+    .map((element) => {
+      const rect = element.getBoundingClientRect();
+      return { left: rect.left - panelRect.left, right: panelRect.right - rect.right };
+    });
+  return { viewport: window.innerWidth, panelWidth: panelRect.width, innerRects };
+});
+if (hospitalGeometry.panelWidth < hospitalGeometry.viewport - 20) throw new Error(`hospitals: panel is still visibly narrower than the phone ${JSON.stringify(hospitalGeometry)}`);
+if (hospitalGeometry.innerRects.some(({ left, right }) => left < 9 || right < 9)) throw new Error(`hospitals: inner cards touch the panel frame ${JSON.stringify(hospitalGeometry)}`);
 const routeButton = page.locator(".hospital-actions .button-mint");
 if (await routeButton.isDisabled()) throw new Error("hospitals: route button is disabled after selecting a hospital");
 await routeButton.click();
@@ -156,7 +181,7 @@ await page.locator(".route-info > .button-secondary").click();
 await auditMobile("translation", ".translation-panel");
 
 await page.setViewportSize(desktopViewport);
-await page.locator(".side-nav button").nth(4).click();
+await page.locator(".side-nav button").nth(5).click();
 await auditMobile("companion-notice", ".companion-notice-panel");
 await page.locator(".agree-check input").check();
 await page.locator(".notice-actions > .button").click();

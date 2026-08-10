@@ -754,7 +754,7 @@ export function AgentPage({
   const journeyActionLabel = journeyStep === "hospital"
     ? t("findHospital")
     : journeyStep === "prepare"
-      ? t("viewVisitFlow")
+      ? t("visitTipsCard")
       : journeyStep === "navigation"
         ? t("route")
         : journeyStep === "translation"
@@ -870,7 +870,7 @@ export function AgentPage({
 
 export function HospitalsPage({
   location, hospitals, loading, selected, confirmed, appointmentPreference, appointmentDecision, appointmentBooking,
-  appointmentComplete, needsCompanionDecision, onSelect, onAppointmentPreference, onBookAppointment,
+  onSelect, onAppointmentPreference, onBookAppointment,
   onSkipAppointment, onCancelAppointment, onFlow, onCompanion, onRoute, onLocationPick, onRefresh,
 }: {
   location: LocationState;
@@ -881,8 +881,6 @@ export function HospitalsPage({
   appointmentPreference: AppointmentPreference;
   appointmentDecision: AppointmentDecision;
   appointmentBooking: HospitalAppointmentBooking | null;
-  appointmentComplete: boolean;
-  needsCompanionDecision: boolean;
   onSelect: (hospital: Hospital) => void;
   onAppointmentPreference: (preference: AppointmentPreference) => void;
   onBookAppointment: (slot: HospitalAppointmentSlot) => void;
@@ -895,7 +893,6 @@ export function HospitalsPage({
   onRefresh: () => void;
 }) {
   const { locale, t } = useI18n();
-  const companionFlow = companionFlowCopy(locale);
   const appointmentCopy = hospitalAppointmentCopy(locale);
   const demoLabels = hospitalDemoLabels(locale);
   const [now, setNow] = useState(() => new Date());
@@ -1022,24 +1019,32 @@ export function HospitalsPage({
           </div>}
       {appointmentDecision === "skip" && <p className="appointment-skipped"><Check size={14} />{selectedAvailability.policy === "walk_in" ? appointmentCopy.continueWalkIn : appointmentCopy.continueWithoutBooking}</p>}
     </section>}
-    <div className="hospital-actions"><Button onClick={onFlow} disabled={!selected || !confirmed || !appointmentComplete}>{!confirmed ? t("selectHospitalFirst") : !appointmentComplete ? appointmentCopy.completeFirst : needsCompanionDecision ? companionFlow.decideCompanion : t("prepareSelectedHospital")}</Button><Button variant="secondary" onClick={onCompanion}>{t("companion")}</Button><Button variant="mint" onClick={onRoute} disabled={!selected || !confirmed}><Navigation size={18} />{t("route")}</Button>{selected?.sourceUrl && <a className="button button-ghost" href={selected.sourceUrl} target="_blank" rel="noreferrer">{t("hospitalDataSource", { source: selected.dataSource || "OpenStreetMap" })}</a>}</div>
+    <div className="hospital-actions"><Button onClick={onFlow} disabled={!selected || !confirmed}>{!confirmed ? t("selectHospitalFirst") : t("prepareSelectedHospital")}</Button><Button variant="secondary" onClick={onCompanion}>{t("companion")}</Button><Button variant="mint" onClick={onRoute} disabled={!selected || !confirmed}><Navigation size={18} />{t("route")}</Button>{selected?.sourceUrl && <a className="button button-ghost" href={selected.sourceUrl} target="_blank" rel="noreferrer">{t("hospitalDataSource", { source: selected.dataSource || "OpenStreetMap" })}</a>}</div>
   </Panel>;
 }
 
-export function VisitFlowPage({ onStart, onReturn }: { onStart: () => void; onReturn: () => void }) {
+export function VisitFlowPage({ onTips }: { onTips: () => void }) {
   const { t } = useI18n();
-  const prep = [[t("idPassport"), t("idPassportDesc")], [t("insuranceInfo"), t("insuranceInfoDesc")], [t("medicationItem"), t("medicationDesc")], [t("previousResults"), t("previousResultsDesc")]];
   const steps = [[t("stepRegister"), t("stepRegisterDesc")], [t("stepForm"), t("stepFormDesc")], [t("stepWait"), t("stepWaitDesc")], [t("stepRoom"), t("stepRoomDesc")], [t("stepPay"), t("stepPayDesc")]];
-  const [checked, setChecked] = useState(() => prep.map(() => false));
-  const prepared = checked.every(Boolean);
-  return <Panel className="flow-panel">
-    <InfoBanner title={t("visitPrepare")} action={<div className="banner-character"><span className="soft-chip">{t("confirmBefore")}</span><NaruPose pose={10} className="flow-banner-naru" /></div>}>{t("prepareSubtitle")}</InfoBanner>
-    <div className="prepare-grid">{prep.map(([title, desc], index) => <label className={checked[index] ? "checked" : ""} key={title}><input type="checkbox" checked={checked[index]} onChange={(event) => setChecked((current) => current.map((value, itemIndex) => itemIndex === index ? event.target.checked : value))} /><span><Check size={16} /></span><strong>{title}<small>{desc}</small></strong></label>)}</div>
-    <p className="flow-preparation-hint">{t("confirmPreparationItems")}</p>
+  return <Panel className="flow-panel visit-flow-panel">
+    <InfoBanner title={t("navFlow")} action={<NaruPose pose={10} className="flow-banner-naru" />}>{t("afterArrival")}</InfoBanner>
+    <div className="visit-flow-toolbar"><Button className="visit-tips-action" variant="secondary" onClick={onTips}><Check size={18} />{t("visitTipsCard")}</Button></div>
     <h2>{t("afterArrival")}</h2>
     <div className="flow-steps">{steps.map(([title, desc], index) => <div key={title}><span>{String(index + 1).padStart(2, "0")}</span><strong>{title}<small>{desc}</small></strong>{index < steps.length - 1 && <ArrowRight />}</div>)}</div>
     <InfoBanner title={t("flowReminder")} tone="mint" />
-    <div className="flow-choice-actions"><Button variant="secondary" onClick={onReturn}>{t("returnHospitals")}</Button><Button onClick={onStart} disabled={!prepared}><Navigation size={18} />{t("startNavigation")}</Button></div>
+  </Panel>;
+}
+
+export function VisitTipsPage({ onStart, onReturn }: { onStart: () => void; onReturn: () => void }) {
+  const { t } = useI18n();
+  const prep = [[t("idPassport"), t("idPassportDesc")], [t("insuranceInfo"), t("insuranceInfoDesc")], [t("medicationItem"), t("medicationDesc")], [t("previousResults"), t("previousResultsDesc")]];
+  const [checked, setChecked] = useState(() => prep.map(() => false));
+  const prepared = checked.every(Boolean);
+  return <Panel className="flow-panel visit-tips-panel">
+    <InfoBanner title={t("visitPrepare")} action={<div className="banner-character"><span className="soft-chip">{t("confirmBefore")}</span><NaruPose pose={10} className="flow-banner-naru" /></div>}>{t("prepareSubtitle")}</InfoBanner>
+    <div className="prepare-grid">{prep.map(([title, desc], index) => <label className={checked[index] ? "checked" : ""} key={title}><input type="checkbox" checked={checked[index]} onChange={(event) => setChecked((current) => current.map((value, itemIndex) => itemIndex === index ? event.target.checked : value))} /><span><Check size={16} /></span><strong>{title}<small>{desc}</small></strong></label>)}</div>
+    <p className="flow-preparation-hint">{t("confirmPreparationItems")}</p>
+    <div className="flow-choice-actions"><Button variant="secondary" onClick={onReturn}>{t("back")}</Button><Button onClick={onStart} disabled={!prepared}><Navigation size={18} />{t("startNavigation")}</Button></div>
   </Panel>;
 }
 

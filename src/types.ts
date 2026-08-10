@@ -6,6 +6,7 @@ export type View =
   | "card"
   | "hospitals"
   | "visit-flow"
+  | "visit-tips"
   | "navigation"
   | "translation"
   | "companions-notice"
