@@ -333,7 +333,7 @@ function AppInner() {
       const current = location.verified ? location : savedCardLocation || await refreshLocation();
       const results = current.verified ? await api.hospitals(current.lat, current.lng, effectiveSymptoms, locale) : [];
       setHospitals(results);
-      setSelectedHospital(results[0] || null);
+      setSelectedHospital(null);
       await recordPromise;
     } finally { setHospitalsLoading(false); }
   }, [advanceJourney, beginVisitRecord, captureSymptoms, goTo, locale, location, refreshLocation, user?.card]);
@@ -720,7 +720,7 @@ function AppInner() {
             setLocation(next);
             const results = await api.hospitals(lat, lng, symptoms, locale);
             setHospitals(results);
-            setSelectedHospital(results[0] || null);
+            setSelectedHospital(null);
           } finally { setHospitalsLoading(false); }
         }}
         onRefresh={async () => {
@@ -734,7 +734,7 @@ function AppInner() {
             const next = await refreshLocation();
             const results = next.verified ? await api.hospitals(next.lat, next.lng, symptoms, locale) : [];
             setHospitals(results);
-            setSelectedHospital(results[0] || null);
+            setSelectedHospital(null);
           } finally { setHospitalsLoading(false); }
         }}
       />;
