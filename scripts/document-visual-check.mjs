@@ -68,8 +68,7 @@ async function scenario(mobile) {
   });
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   if (mobile) {
-    await page.locator(".bottom-nav button").last().click();
-    await page.locator(".profile-grid").getByRole("button", { name: /Medical documents/ }).click();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Photo translation", exact: true }).click();
   } else await page.locator(".side-nav").getByRole("button", { name: "Photo translation", exact: true }).click();
   await page.getByRole("button", { name: /Upload a photo/ }).waitFor();
   assert.equal(await page.locator('input[type="file"][capture="environment"]').count(), 1);
@@ -147,8 +146,7 @@ async function localizedLayout(locale, width) {
   });
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   if (width < 760) {
-    await page.locator(".bottom-nav button").last().click();
-    await page.locator(".profile-grid button").nth(1).click();
+    await page.locator(".bottom-nav").getByRole("button", { name: locale === "ko" ? "사진 번역" : "拍照翻译", exact: true }).click();
   } else await page.locator(".side-nav").getByRole("button", { name: locale === "ko" ? "사진 번역" : "拍照翻译", exact: true }).click();
   await page.locator(".medical-document-upload-options").waitFor();
   await page.waitForFunction(() => [...document.querySelectorAll(".medical-documents .naru-pose img")].every((img) => img.complete && img.naturalWidth > 0));
@@ -159,11 +157,107 @@ async function localizedLayout(locale, width) {
   console.log(`${locale} ${width}px: localized entry, introduction, Naru artwork and responsive layout passed.`);
 }
 
+async function recoverDemoAccount(register) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await context.addInitScript(() => {
+    localStorage.setItem("narucare-session", "demo:6");
+    localStorage.setItem("narucare-locale", "en");
+    localStorage.setItem("narucare-demo-users", JSON.stringify({ "6": { password: "offline-secret", card: { name: "Offline Test", nationality: "US", age: "30", gender: "female", documentType: "passport", documentNumber: "TEST", insurance: "none", conditions: "", medications: "", surgeries: "", symptoms: "", notes: "", language: "en" } } }));
+    localStorage.setItem("narucare-demo-records:6", '[{"id":"offline-only-record"}]');
+  });
+  const page = await context.newPage();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  let rejectAuth = true;
+  let uploads = 0;
+  let cardWrites = 0;
+  let onlineMemoryWrites = 0;
+  let releaseChat;
+  const pendingChat = new Promise((resolve) => { releaseChat = resolve; });
+  const authModes = [];
+  await page.route("**/api/**", (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    const json = (value, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(value) });
+    if (path.startsWith("/api/auth/")) {
+      const mode = path.split("/").at(-1);
+      authModes.push(mode);
+      if (rejectAuth) return json({ error: mode === "register" ? "id_taken" : "invalid_credentials" }, mode === "register" ? 409 : 401);
+      return json({ token: "recovered-online-token", user: { id: request.postDataJSON().id, card: null } });
+    }
+    if (path === "/api/card") cardWrites++;
+    if (path === "/api/chat/memory" && request.headers().authorization === "Bearer recovered-online-token") onlineMemoryWrites++;
+    if (path === "/api/chat") return pendingChat.then(() => json({ intent: "hospital", symptoms: "headache", reply: "Synthetic delayed result", action: "none", confidence: "high" }));
+    if (path === "/api/documents" && request.method() === "POST") {
+      uploads++;
+      assert.equal(request.headers().authorization, "Bearer recovered-online-token");
+      assert.match(request.postData(), /filename="preserved-photo.png"/);
+      return json({ id: "recovered-doc", name: "preserved-photo.png", mimeType: "image/png", size: png.length, sourceLanguage: "auto", targetLanguage: "en", sourceText, translatedText: "", status: "uploaded", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, 201);
+    }
+    return json({ history: [], records: [], orders: [], documents: [] });
+  });
+  await page.goto(baseUrl, { waitUntil: "networkidle" });
+  if (!register) {
+    await page.locator(".chat-composer input").fill("Please explain a balanced breakfast");
+    const chatStarted = page.waitForRequest((request) => new URL(request.url()).pathname === "/api/chat");
+    await page.locator(".chat-composer button").click();
+    await chatStarted;
+  }
+  await page.locator(".bottom-nav").getByRole("button", { name: "Photo translation", exact: true }).click();
+  await page.getByLabel("Upload a photo", { exact: true }).setInputFiles({ name: "preserved-photo.png", mimeType: "image/png", buffer: png });
+  const upload = page.getByRole("button", { name: "Upload and extract text", exact: true });
+  assert.equal(await upload.isEnabled(), true, "Demo account must have an actionable upload button");
+  await upload.click();
+  const dialog = page.getByRole("dialog", { name: "Connect online account", exact: true });
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByText("preserved-photo.png", { exact: true }).waitFor();
+  await upload.click();
+  assert.equal(await dialog.locator('input[autocomplete="username"]').inputValue(), "6");
+  await dialog.locator('input[autocomplete="username"]').fill("online-account");
+  await dialog.locator('input[type="password"]').fill("online-secret");
+  await dialog.getByRole("button", { name: "Sign in online", exact: true }).click();
+  await dialog.getByRole("alert").waitFor();
+  assert.equal(uploads, 0, "Failed authentication must never upload the photo");
+  assert.equal(await page.evaluate(() => localStorage.getItem("narucare-session")), "demo:6");
+  if (register) {
+    await dialog.getByRole("button", { name: "Create online account", exact: true }).click();
+    await dialog.locator('input[type="password"]').nth(1).fill("online-secret");
+    await dialog.getByRole("button", { name: "Create online account", exact: true }).click();
+    await dialog.getByRole("alert").waitFor();
+    assert.equal(uploads, 0);
+  }
+  rejectAuth = false;
+  await dialog.getByRole("button", { name: register ? "Create online account" : "Sign in online", exact: true }).click();
+  await page.locator("#medical-document-source-text").waitFor();
+  assert.equal(await page.locator("#medical-document-source-text").inputValue(), sourceText);
+  assert.equal(uploads, 1, "Reconnect must resume the selected upload exactly once");
+  assert.equal(cardWrites, 0, "Connecting must not upload unrelated local medical data");
+  assert.equal(await page.locator(".medical-document-notice").count(), 0);
+  assert.equal(await page.locator(".preserved-view").count(), 1, "Old account views must be unmounted");
+  if (!register) {
+    const lateResponse = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/chat");
+    releaseChat();
+    await (await lateResponse).finished();
+    await page.waitForTimeout(150);
+    assert.equal(cardWrites, 0, "A stale chat response must not copy the previous account's medical card");
+    assert.equal(onlineMemoryWrites, 0, "A stale chat response must not write into the new account's chat history");
+    assert.equal(await page.locator(".medical-documents").isVisible(), true);
+  }
+  assert.equal(await page.evaluate(() => localStorage.getItem("narucare-demo-records:6")), '[{"id":"offline-only-record"}]');
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("narucare-demo-users"))["6"].password), "offline-secret");
+  assert.ok(authModes.every((mode) => mode === "login" || (register && mode === "register")));
+  assert.deepEqual(errors, []);
+  await context.close();
+  console.log(`Demo recovery (${register ? "registration" : "login"}): mobile entry, actionable upload, cancellation, auth failures, preserved photo and automatic upload passed.`);
+}
+
 try {
   await scenario(false);
   await scenario(true);
   await localizedLayout("zh-CN", 1440);
   await localizedLayout("zh-CN", 390);
   await localizedLayout("ko", 360);
+  await recoverDemoAccount(false);
+  await recoverDemoAccount(true);
 }
 finally { await browser.close(); }

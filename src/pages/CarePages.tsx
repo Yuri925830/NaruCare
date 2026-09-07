@@ -55,7 +55,7 @@ interface MedicalCardChatState {
 
 function medicalCardStepInput(draft: MedicalCard, stepIndex: number) {
   const step = MEDICAL_CARD_CHAT_STEPS[stepIndex];
-  if (!step || step.key === "documentNumber" || !["text", "age"].includes(step.kind)) return "";
+  if (!step || step.key === "documentNumber" || !["text", "nationality", "age"].includes(step.kind)) return "";
   return String(draft[step.key] || "");
 }
 
@@ -133,6 +133,7 @@ export function AgentPage({
   const [medicalCardLocationError, setMedicalCardLocationError] = useState("");
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const mounted = useRef(true);
   const previousJourneyStep = useRef(journeyStep);
   const medicalCardMapRevision = useRef(0);
   const medicalCardMapTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
@@ -296,8 +297,15 @@ export function AgentPage({
     container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
   }, [messages, busy]);
 
-  useEffect(() => () => {
-    if (medicalCardMapTimer.current) window.clearTimeout(medicalCardMapTimer.current);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      // Account changes unmount this page. Discard its pending responses before
+      // they can invoke callbacks or save chat data under the next account.
+      mounted.current = false;
+      medicalCardMapRevision.current += 1;
+      if (medicalCardMapTimer.current) window.clearTimeout(medicalCardMapTimer.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -372,6 +380,7 @@ export function AgentPage({
     setClearingHistory(true);
     try {
       const cleared = await api.clearChatHistory();
+      if (!mounted.current) return;
       if (!cleared) {
         setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: conversation.clearFailed }]);
         return;
@@ -575,19 +584,21 @@ export function AgentPage({
 
   const saveMedicalCardFromChat = async () => {
     const current = medicalCardChat;
-    if (!current || current.phase !== "review" || busy) return;
+    if (!mounted.current || !current || current.phase !== "review" || busy) return;
     setMedicalCardChat({ ...current, phase: "saving" });
     setBusy(true);
     try {
       await onSaveCard(current.draft);
+      if (!mounted.current) return;
       setMedicalCardChat(null);
       setMessages((messages) => [...messages, { id: crypto.randomUUID(), role: "naru", text: medicalCardFlow.saved }]);
       void api.rememberChat(medicalCardFlow.startAction, medicalCardFlow.saved, "card");
     } catch {
+      if (!mounted.current) return;
       setMedicalCardChat({ ...current, phase: "review" });
       setMessages((messages) => [...messages, { id: crypto.randomUUID(), role: "naru", text: medicalCardFlow.saveError }]);
     } finally {
-      setBusy(false);
+      if (mounted.current) setBusy(false);
     }
   };
 
@@ -611,6 +622,7 @@ export function AgentPage({
     deterministicFallback = false,
     actionSymptoms = "",
   ) => {
+    if (!mounted.current) return false;
     const verification = verifyAgentToolCall(agentObservation, action, deterministicFallback ? "high" : confidence);
     if (verification.status === "blocked" || verification.acceptedAction !== action) return false;
 
@@ -661,7 +673,7 @@ export function AgentPage({
 
   const send = async (text = input) => {
     const clean = text.trim();
-    if (!clean || busy || historyLoading || clearingHistory) return;
+    if (!mounted.current || !clean || busy || historyLoading || clearingHistory) return;
     if (medicalCardChat?.phase === "collect") {
       answerMedicalCardQuestion(clean);
       return;
@@ -754,6 +766,7 @@ export function AgentPage({
     if (isSymptomsResolvedStatement(clean)) {
       setPendingHospitalSymptoms(null);
       await onSymptomsResolved?.();
+      if (!mounted.current) return;
       const reply = `🌿 ${t("symptomsResolvedReply")} 💙`;
       setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
       void api.rememberChat(clean, reply, "recovery");
@@ -784,8 +797,10 @@ export function AgentPage({
     const reportedSymptoms = extractReportableSymptoms(localTriage.symptoms || "");
     const effectiveEmergencySymptoms = reportedSymptoms || extractReportableSymptoms(card.symptoms || "") || extractReportableSymptoms(clean);
     if (localTriage.reason === "symptoms" && reportedSymptoms) await onSymptoms?.(reportedSymptoms);
+    if (!mounted.current) return;
     if (localTriage.intent === "emergency") {
       if (localTriage.symptoms) await onSymptoms?.(localTriage.symptoms);
+      if (!mounted.current) return;
       setPendingHospitalSymptoms(null);
       void api.rememberChat(clean, "", "emergency");
       onEmergency(effectiveEmergencySymptoms);
@@ -818,6 +833,7 @@ export function AgentPage({
         return;
       }
       if (localTriage.symptoms) await onSymptoms?.(localTriage.symptoms);
+      if (!mounted.current) return;
       setPendingHospitalSymptoms(null);
       setMessages((current) => [...current, { id: crypto.randomUUID(), role: "status", text: t("nearbyHospitals"), detail: reportedSymptoms || t("nearbyAccepting") }]);
       void api.rememberChat(clean, `${t("nearbyHospitals")}: ${reportedSymptoms || t("nearbyAccepting")}`, "hospital");
@@ -831,11 +847,14 @@ export function AgentPage({
       const response = await api.chat(clean, locale, true, history, {
         ...agentObservation,
       });
+      if (!mounted.current) return;
       const responseSymptoms = extractReportableSymptoms(response.symptoms || reportedSymptoms);
       if ((response.intent === "hospital" || response.intent === "emergency") && responseSymptoms) await onSymptoms?.(responseSymptoms);
+      if (!mounted.current) return;
       if (response.intent === "recovery" || response.symptomStatus === "resolved") {
         setPendingHospitalSymptoms(null);
         await onSymptomsResolved?.();
+        if (!mounted.current) return;
         const reply = response.reply || `🌿 ${t("symptomsResolvedReply")} 💙`;
         setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply }]);
         return;
@@ -855,6 +874,7 @@ export function AgentPage({
           Boolean(!modelAction && fallbackAction),
           responseSymptoms,
         );
+        if (!mounted.current) return;
         if (handled) return;
         const stepPrompt = currentJourneyPrompt();
         const reply = response.reply && response.reply !== stepPrompt ? `${response.reply}\n\n${stepPrompt}` : stepPrompt;
@@ -893,7 +913,7 @@ export function AgentPage({
       const reply = response.reply || fallback;
       setMessages((current) => [...current, { id: crypto.randomUUID(), role: "naru", text: reply, sources: response.sources }]);
     } finally {
-      setBusy(false);
+      if (mounted.current) setBusy(false);
     }
   };
 

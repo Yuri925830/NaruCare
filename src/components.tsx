@@ -85,7 +85,7 @@ const bottomNav = [
   { id: "card" as View, key: "navCard" as const, Icon: CreditCard },
   { id: "agent" as View, key: "navNaru" as const, Icon: MessageCircleMore },
   { id: "visit-flow" as View, key: "navFlow" as const, Icon: ListTree },
-  { id: "visit-tips" as View, key: "visitTipsCard" as const, Icon: Sparkles },
+  { id: "documents" as View, key: null, Icon: Camera },
   { id: "emergency-confirm" as View, key: "navEmergency" as const, Icon: AlertCircle, emergency: true },
   { id: "profile" as View, key: "navProfile" as const, Icon: CircleUserRound },
 ];
@@ -95,7 +95,7 @@ const sideNav = [
   bottomNav[1],
   { id: "hospitals" as View, key: "findHospital" as const, Icon: HospitalIcon, emergency: false },
   bottomNav[2],
-  bottomNav[3],
+  { id: "visit-tips" as View, key: "visitTipsCard" as const, Icon: Sparkles },
   { id: "companions-notice" as View, key: "companion" as const, Icon: UserRound, emergency: false },
   { id: "translation" as View, key: "translation" as const, Icon: Languages, emergency: false },
   { id: "documents" as View, key: null, Icon: Camera, emergency: false },
@@ -124,7 +124,7 @@ export function AppShell({ view, title, user, onNavigate, onLanguage, onBack, ca
     || (id === "emergency-confirm" && view === "emergency-calling")
     || (id === "profile" && ["records", "companion-orders"].includes(view));
   const isBottomActive = (id: View) => id === view
-    || (id === "profile" && view === "documents")
+    || (id === "visit-flow" && view === "visit-tips")
     || (id === "agent" && ["hospitals", "navigation", "translation", "companions", "companions-notice", "companions-filter", "companion-detail", "companion-chat", "companion-waiting", "companion-payment", "companion-arrived", "companion-service", "companion-finished"].includes(view))
     || (id === "emergency-confirm" && view === "emergency-calling")
     || (id === "profile" && ["records", "companion-orders"].includes(view));
@@ -148,7 +148,7 @@ export function AppShell({ view, title, user, onNavigate, onLanguage, onBack, ca
     </main>
     <nav className="bottom-nav">
       {bottomNav.map(({ id, key, Icon, emergency }) => <button key={id} className={`${isBottomActive(id) ? "active" : ""} ${emergency ? "emergency-nav" : ""}`} onClick={() => onNavigate(id)}>
-        <span><Icon size={21} /></span><small>{t(key)}</small>
+        <span><Icon size={21} /></span><small>{key ? t(key) : medicalDocumentCopy(locale).navTitle}</small>
       </button>)}
     </nav>
   </div>;

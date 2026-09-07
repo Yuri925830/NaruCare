@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { AlertCircle, ArrowRight, Camera, Check, Download, FileText, ImagePlus, Languages, LoaderCircle, RefreshCw, Trash2, Upload, X } from "lucide-react";
 import { api, ApiError } from "../api";
 import { Button, NaruPose, Panel } from "../components";
@@ -6,6 +6,7 @@ import { localeOptions, useI18n } from "../i18n";
 import { medicalDocumentCopy, type MedicalDocumentCopy } from "../medicalDocumentCopy";
 import { MAX_MEDICAL_DOCUMENT_TEXT, MEDICAL_DOCUMENT_ACCEPT, MEDICAL_PHOTO_ACCEPT, medicalDocumentFileError, type MedicalDocument, type MedicalDocumentSummary } from "../medicalDocuments";
 import "../medicalDocuments.css";
+import type { SessionUser } from "../types";
 
 type BusyStep = "uploading" | "translating" | "loading" | "deleting" | "downloading";
 type Failure = { error: unknown; retry?: () => void };
@@ -50,8 +51,8 @@ function saveBlob(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-export function MedicalDocumentsPage({ active = true, userLanguage }: { active?: boolean; userLanguage?: string }) {
-  const { locale } = useI18n();
+export function MedicalDocumentsPage({ active = true, userLanguage, accountId, onAuthenticated }: { active?: boolean; userLanguage?: string; accountId: string; onAuthenticated: (user: SessionUser) => void }) {
+  const { locale, t } = useI18n();
   const copy = medicalDocumentCopy(locale);
   const demo = api.isDemo();
   const [sourceLanguage, setSourceLanguage] = useState("auto");
@@ -70,6 +71,16 @@ export function MedicalDocumentsPage({ active = true, userLanguage }: { active?:
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraFailure, setCameraFailure] = useState<string | null>(null);
+  const [connectionOpen, setConnectionOpen] = useState(false);
+  const [connectionMode, setConnectionMode] = useState<"login" | "register">("login");
+  const [connectionId, setConnectionId] = useState(accountId);
+  const [connectionPassword, setConnectionPassword] = useState("");
+  const [connectionConfirm, setConnectionConfirm] = useState("");
+  const [connectionError, setConnectionError] = useState("");
+  const [connecting, setConnecting] = useState(false);
+  const connectionDialog = useRef<HTMLDialogElement>(null);
+  const connectionLock = useRef(false);
+  const resumeUpload = useRef(false);
   const photoInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const captureInput = useRef<HTMLInputElement>(null);
@@ -87,6 +98,13 @@ export function MedicalDocumentsPage({ active = true, userLanguage }: { active?:
     mounted.current = true;
     return () => { mounted.current = false; };
   }, []);
+
+  useEffect(() => {
+    if (!connectionOpen) return;
+    const dialog = connectionDialog.current;
+    if (dialog && !dialog.open) dialog.showModal();
+    return () => { if (dialog?.open) dialog.close(); };
+  }, [connectionOpen]);
 
   useEffect(() => {
     if (!selectedFile || !(/image\/(jpeg|png)/.test(selectedFile.type) || /\.(jpe?g|png)$/i.test(selectedFile.name))) {
@@ -242,7 +260,8 @@ export function MedicalDocumentsPage({ active = true, userLanguage }: { active?:
   }
 
   function upload() {
-    if (!selectedFile || demo) return;
+    if (!selectedFile) return;
+    if (api.isDemo()) { openConnection(true); return; }
     const file = selectedFile;
     void perform("uploading", async () => {
       const result = await api.uploadDocument(file, sourceLanguage, targetLanguage);
@@ -254,6 +273,60 @@ export function MedicalDocumentsPage({ active = true, userLanguage }: { active?:
       updateHistory(result);
       window.requestAnimationFrame(() => reviewHeading.current?.focus());
     }, upload);
+  }
+
+  function openConnection(continueUpload = false) {
+    resumeUpload.current = continueUpload;
+    setConnectionId(accountId);
+    setConnectionMode("login");
+    setConnectionPassword("");
+    setConnectionConfirm("");
+    setConnectionError("");
+    setConnectionOpen(true);
+  }
+
+  function closeConnection() {
+    if (connectionLock.current) return;
+    resumeUpload.current = false;
+    setConnectionPassword("");
+    setConnectionConfirm("");
+    setConnectionOpen(false);
+  }
+
+  async function connectAccount(event: FormEvent) {
+    event.preventDefault();
+    if (connectionLock.current) return;
+    setConnectionError("");
+    if (connectionPassword.length < 6) { setConnectionError(t("passwordShort")); return; }
+    if (connectionMode === "register" && connectionPassword !== connectionConfirm) { setConnectionError(t("passwordMismatch")); return; }
+    connectionLock.current = true;
+    setConnecting(true);
+    try {
+      const connected = connectionMode === "login"
+        ? await api.loginOnline(connectionId.trim(), connectionPassword)
+        : await api.registerOnline(connectionId.trim(), connectionPassword);
+      if (!mounted.current) return;
+      setCurrent(null);
+      setSourceText("");
+      setHistory([]);
+      setHistoryError(null);
+      setFailure(null);
+      setDeleteId(null);
+      setConnectionPassword("");
+      setConnectionConfirm("");
+      setConnectionOpen(false);
+      onAuthenticated(connected);
+      const continueUpload = resumeUpload.current;
+      resumeUpload.current = false;
+      if (continueUpload) upload();
+    } catch (error) {
+      if (!mounted.current) return;
+      const code = error instanceof ApiError ? error.code : "";
+      setConnectionError(code === "id_taken" ? t("idTaken") : code === "invalid_id" ? copy.invalidAccount : code === "invalid_credentials" ? copy.onlineLoginFailed : code === "session_changed" ? copy.sessionChanged : copy.onlineConnectionFailed);
+    } finally {
+      connectionLock.current = false;
+      if (mounted.current) setConnecting(false);
+    }
   }
 
   function translate() {
@@ -321,7 +394,7 @@ export function MedicalDocumentsPage({ active = true, userLanguage }: { active?:
       <ol className="medical-document-steps" aria-label={copy.title}>
         {[copy.stepUpload, copy.stepReview, copy.stepTranslate].map((label, index) => <li key={label} className={(translationCurrent ? 2 : current ? 1 : 0) === index ? "active" : ""} aria-current={(translationCurrent ? 2 : current ? 1 : 0) === index ? "step" : undefined}><span>{index + 1}</span>{label}</li>)}
       </ol>
-      {demo && <div className="medical-document-notice" role="status"><AlertCircle size={20} /><div><strong>{copy.demoTitle}</strong><p>{copy.demoHelp}</p></div></div>}
+      {demo && <div className="medical-document-notice" role="status"><AlertCircle size={20} /><div><strong>{copy.demoTitle}</strong><p>{copy.demoHelp}</p><Button variant="secondary" onClick={() => openConnection()}>{copy.connectAccount}</Button></div></div>}
       <div className="medical-document-upload-options">
         <button type="button" disabled={Boolean(busy)} onClick={startCamera}><span className="medical-document-option-icon"><Camera size={25} /></span><strong>{copy.takePhoto}</strong><small>{copy.takePhotoHelp}</small></button>
         <button type="button" disabled={Boolean(busy)} onClick={() => photoInput.current?.click()}><span className="medical-document-option-icon"><ImagePlus size={25} /></span><strong>{copy.uploadPhoto}</strong><small>{copy.uploadPhotoHelp}</small></button>
@@ -342,7 +415,7 @@ export function MedicalDocumentsPage({ active = true, userLanguage }: { active?:
         {!current && <button type="button" className="medical-document-icon-button" aria-label={copy.removeFile} disabled={Boolean(busy)} onClick={() => { setSelectedFile(null); setFailure(null); }}><X size={19} /></button>}
       </div>}
       {!current && selectedFile && (selectedFile.type === "application/pdf" || /\.pdf$/i.test(selectedFile.name)) && <p className="medical-document-review-help">{copy.pdfHelp}</p>}
-      {selectedFile && !current && <Button className="medical-document-upload-submit" disabled={Boolean(busy) || demo} onClick={upload}>{busy === "uploading" ? <LoaderCircle className="medical-document-spinner" size={19} /> : <Upload size={19} />}{busy === "uploading" ? copy.uploading : copy.upload}</Button>}
+      {selectedFile && !current && <Button className="medical-document-upload-submit" disabled={Boolean(busy)} onClick={upload}>{busy === "uploading" ? <LoaderCircle className="medical-document-spinner" size={19} /> : <Upload size={19} />}{busy === "uploading" ? copy.uploading : copy.upload}</Button>}
       <p className="medical-document-privacy">{copy.uploadPrivacy}</p>
     </Panel>
 
@@ -378,6 +451,18 @@ export function MedicalDocumentsPage({ active = true, userLanguage }: { active?:
       <div className="medical-document-viewfinder"><video ref={video} autoPlay muted playsInline onLoadedData={() => setCameraReady(true)} aria-label={copy.preview} />{!cameraReady && !cameraFailure && <div role="status"><LoaderCircle className="medical-document-spinner" size={24} /><span>{copy.cameraStarting}</span></div>}</div>
       {cameraFailure && <p className="medical-document-camera-error" role="alert">{errorMessage(cameraFailure, copy)}</p>}
       <div className="medical-document-camera-actions"><Button disabled={!cameraReady || Boolean(cameraFailure)} onClick={capturePhoto}><Camera size={19} />{copy.capture}</Button><Button variant="ghost" onClick={() => { setCameraOpen(false); captureInput.current?.click(); }}>{copy.cameraFallback}</Button></div>
+    </dialog>}
+    {connectionOpen && <dialog ref={connectionDialog} className="medical-document-connection" aria-labelledby="document-connection-title" onCancel={(event) => { event.preventDefault(); closeConnection(); }}>
+      <div className="medical-document-section-heading"><h2 id="document-connection-title">{copy.connectAccount}</h2><button type="button" className="medical-document-icon-button" aria-label={copy.cancel} disabled={connecting} onClick={closeConnection}><X size={20} /></button></div>
+      <p>{copy.demoHelp}</p>
+      <form onSubmit={connectAccount}>
+        <label>{t("accountId")}<input value={connectionId} onChange={(event) => setConnectionId(event.target.value)} autoComplete="username" required minLength={2} maxLength={48} disabled={connecting} autoFocus /></label>
+        <label>{t("password")}<input type="password" value={connectionPassword} onChange={(event) => setConnectionPassword(event.target.value)} autoComplete={connectionMode === "register" ? "new-password" : "current-password"} minLength={6} required disabled={connecting} /></label>
+        {connectionMode === "register" && <label>{t("confirmPassword")}<input type="password" value={connectionConfirm} onChange={(event) => setConnectionConfirm(event.target.value)} autoComplete="new-password" minLength={6} required disabled={connecting} /></label>}
+        {connectionError && <p className="form-error" role="alert">{connectionError}</p>}
+        <Button type="submit" disabled={connecting}>{connecting ? t("loading") : connectionMode === "register" ? copy.onlineRegister : copy.onlineLogin}</Button>
+        <Button type="button" variant="ghost" disabled={connecting} onClick={() => { setConnectionMode(connectionMode === "login" ? "register" : "login"); setConnectionError(""); setConnectionConfirm(""); }}>{connectionMode === "login" ? copy.onlineRegister : copy.onlineLogin}</Button>
+      </form>
     </dialog>}
   </div>;
 }

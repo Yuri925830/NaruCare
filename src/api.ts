@@ -69,8 +69,33 @@ function requireDocumentSession() {
   if (demoCurrentId()) throw new ApiError("Document processing requires an online account", 503, "documents_require_online");
 }
 
+async function onlineSession(mode: "login" | "register", id: string, password: string): Promise<SessionUser> {
+  const accountId = id.trim();
+  if (accountId.length < 2 || accountId.length > 48 || (mode === "register" && !/^[\p{L}\p{N}_.-]+$/u.test(accountId))) {
+    throw new ApiError("Invalid ID", 400, "invalid_id");
+  }
+  if (password.length < 6 || password.length > 128) throw new ApiError("Invalid password", 400, "invalid_password");
+
+  // Explicit online authentication must never fall back to a local demo account.
+  const previousToken = token();
+  const payload = await request<unknown>(`/api/auth/${mode}`, { method: "POST", body: JSON.stringify({ id: accountId, password }) });
+  const result = payload && typeof payload === "object" && !Array.isArray(payload) ? payload as Record<string, unknown> : null;
+  const user = result?.user && typeof result.user === "object" && !Array.isArray(result.user) ? result.user as Record<string, unknown> : null;
+  if (typeof result?.token !== "string" || !result.token.trim() || result.token.trim().startsWith("demo:")
+    || typeof user?.id !== "string" || user.id.toLowerCase() !== accountId.toLowerCase()
+    || !(user.card === null || (typeof user.card === "object" && !Array.isArray(user.card)))) {
+    throw new ApiError("Invalid online session response", 502, "online_session_invalid");
+  }
+  const authenticatedUser = { id: user.id, card: user.card as MedicalCard | null };
+  if (token() !== previousToken) throw new ApiError("Session changed during authentication", 409, "session_changed");
+  localStorage.setItem(TOKEN_KEY, result.token.trim());
+  return authenticatedUser;
+}
+
 export const api = {
   isDemo: () => Boolean(demoCurrentId()),
+  loginOnline: (id: string, password: string): Promise<SessionUser> => onlineSession("login", id, password),
+  registerOnline: (id: string, password: string): Promise<SessionUser> => onlineSession("register", id, password),
   async documents(): Promise<MedicalDocumentSummary[]> {
     requireDocumentSession();
     return (await request<{ documents: MedicalDocumentSummary[] }>("/api/documents")).documents;

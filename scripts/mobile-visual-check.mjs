@@ -314,7 +314,7 @@ const [toolbarWidth, tipsActionWidth] = await Promise.all([
   flowPanel.locator(".visit-tips-action").evaluate((element) => element.getBoundingClientRect().width),
 ]);
 if (tipsActionWidth < toolbarWidth - 2) throw new Error(`visit-flow: tips action is not full width ${JSON.stringify({ toolbarWidth, tipsActionWidth })}`);
-await page.locator(".bottom-nav button").nth(3).click();
+await flowPanel.locator(".visit-tips-action").click();
 await auditMobile("visit-tips", ".visit-tips-panel");
 const tipsPanel = page.locator(".visit-tips-panel").filter({ visible: true });
 const tipsStepCount = await tipsPanel.locator(".flow-steps > div").count();
@@ -347,11 +347,11 @@ if (!reference || !privacy || !logout
   || Math.abs(logout.right - reference.right) > 1) {
   throw new Error(`profile: privacy promise and logout are shorter than the service cards ${JSON.stringify(profileFooterGeometry)}`);
 }
-await page.locator(".profile-grid button").nth(1).click();
+await page.locator(".profile-grid").getByRole("button", { name: /就诊记录/ }).click();
 await auditMobile("records-empty", ".records-panel");
 await page.locator(".page-back").click();
 await page.locator(".profile-panel").filter({ visible: true }).waitFor();
-await page.locator(".profile-grid button").nth(2).click();
+await page.locator(".profile-grid").getByRole("button", { name: /真人陪诊订单/ }).click();
 await auditMobile("companion-orders-empty", ".orders-panel");
 await page.locator(".page-header .language-button").click();
 await auditMobile("in-app-language", ".in-app-language", false);

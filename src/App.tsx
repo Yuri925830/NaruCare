@@ -64,6 +64,7 @@ function AppInner() {
   const { locale, t } = useI18n();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [checking, setChecking] = useState(true);
+  const [sessionVersion, setSessionVersion] = useState(0);
   const [view, setView] = useState<View>("agent");
   const [viewHistory, setViewHistory] = useState<View[]>([]);
   const [visitedViews, setVisitedViews] = useState<View[]>(["agent"]);
@@ -132,7 +133,7 @@ function AppInner() {
       setCurrentRecordId(null);
     }
     setVisitSessionOwnerId(user.id);
-  }, [user?.id]);
+  }, [user?.id, sessionVersion]);
   useEffect(() => {
     if (!user || visitSessionOwnerId !== user.id) return;
     saveVisitSession(user.id, {
@@ -150,9 +151,11 @@ function AppInner() {
   }, [appointmentBooking, appointmentDecision, appointmentPreference, companionDecision, currentRecordId, hospitalConfirmed, hospitals, journeyStep, selectedHospital?.id, symptoms, user?.id, visitSessionOwnerId]);
   useEffect(() => {
     if (!user) return;
+    let active = true;
     void refreshLocation();
-    void Promise.all([api.records(), api.orders()]).then(([records, orders]) => { setRecordsCount(records.length); setOrdersCount(orders.length); });
-  }, [user?.id]);
+    void Promise.all([api.records(), api.orders()]).then(([records, orders]) => { if (active) { setRecordsCount(records.length); setOrdersCount(orders.length); } });
+    return () => { active = false; };
+  }, [user?.id, sessionVersion]);
   useEffect(() => {
     const card = user?.card;
     if (!card || !isHospitalCommandWithoutSymptoms(card.symptoms || "")) return;
@@ -604,6 +607,41 @@ function AppInner() {
     goTo("agent", { replace: true });
   }
 
+  function documentAccountConnected(next: SessionUser) {
+    // Keep the document picker mounted, but discard the previous account's
+    // transient care state and cached views. Offline cards/history stay local.
+    ++symptomSaveVersion.current;
+    if (user) clearVisitSession(user.id);
+    recordingStream?.getTracks().forEach((track) => track.stop());
+    setRecordingStream(null);
+    setVisitSessionOwnerId(null);
+    setSymptoms("");
+    setHospitals([]);
+    setHospitalsLoading(false);
+    setSelectedHospital(null);
+    setHospitalConfirmed(false);
+    setAppointmentPreference(defaultAppointmentPreference());
+    setAppointmentDecision("pending");
+    setAppointmentBooking(null);
+    setCompanionDecision("pending");
+    setJourneyStep("symptoms");
+    setFilters(getDefaultFilters(locale));
+    setPeople(api.allCompanions);
+    setSelectedCompanion(api.allCompanions[0]);
+    setCompanionDurationMinutes(120);
+    setOrder(null);
+    setCurrentRecordId(null);
+    setRecordsCount(0);
+    setOrdersCount(0);
+    setRecordsVersion((value) => value + 1);
+    setOrdersVersion((value) => value + 1);
+    setVisitedViews(["documents"]);
+    setViewHistory([]);
+    setView("documents");
+    setUser(next);
+    setSessionVersion((value) => value + 1);
+  }
+
   function confirmHospitalArrival() {
     if (!selectedHospital || visitJourneyStepIndex(journeyStep) < visitJourneyStepIndex("navigation")) return;
     void updateCurrentRecord({ status: "arrived" });
@@ -635,7 +673,7 @@ function AppInner() {
 
   const renderView = (target: View): ReactNode => {
     switch (target) {
-      case "documents": return <MedicalDocumentsPage key={user.id} userLanguage={user.card?.language || locale} active={view === "documents"} />;
+      case "documents": return <MedicalDocumentsPage accountId={user.id} onAuthenticated={documentAccountConnected} userLanguage={user.card?.language || locale} active={view === "documents"} />;
       case "card": return <MedicalCardPage card={user.card} location={location} onSaved={(card) => { const wasNew = !user.card; setUser({ ...user, card }); if (wasNew) goBack(); }} />;
       case "agent": return <AgentPage
         key={`visit-${visitSessionVersion}`}

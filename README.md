@@ -851,13 +851,14 @@ NaruCare/
 
 ## Medical document upload and translation
 
-Open **Photo translation** in the sidebar (or **Medical documents** in the profile or conversation translation page). The page introduces the feature and offers camera capture, photo-library upload, and file upload. Mobile devices use their camera picker; desktop browsers can capture a photo with a webcam over HTTPS or localhost.
+Open **Photo translation** in the desktop sidebar or mobile bottom navigation (also available as **Medical documents** in the profile or conversation translation page). The page introduces the feature and offers camera capture, photo-library upload, and file upload. Mobile devices use their camera picker; desktop browsers can capture a photo with a webcam over HTTPS or localhost.
 
 - Supported inputs: JPEG, PNG, PDF, and UTF-8 TXT, up to 10 MiB and 20,000 extracted characters per document.
 - Photos use multilingual text recognition. PDFs use their text layer; for scanned PDFs without selectable text, upload photos of the pages.
 - Review and edit the recognized text, choose source/target languages, then translate. The result appears beside the original and can be downloaded as TXT; the original file can also be downloaded.
 - Original files are private R2 objects under `medical-documents/`, using the existing `RECORDINGS` binding. D1 stores account-owned document metadata and text. History supports reopening, retranslating, and deletion of the original and translation.
-- Document processing uses Workers AI. The offline demo supports local file/photo previews; it does not fabricate recognition or translation results.
+- Document processing uses Workers AI. Existing offline demo users can sign in or register online directly on this page. Starting an upload opens that form and continues recognition after authentication, keeping the selected file. Cancelling or failing authentication also keeps the selection. Offline cards and history remain local.
+- The production Pages build disables automatic demo fallback (`VITE_DEMO_MODE=false`). Local demo previews do not fabricate recognition or translation results.
 
 Before deploying the new Worker, apply migration `0008_medical_documents.sql`:
 
