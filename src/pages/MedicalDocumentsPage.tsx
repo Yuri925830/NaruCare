@@ -9,6 +9,7 @@ import "../medicalDocuments.css";
 import type { SessionUser } from "../types";
 import type { DocumentConversationContext } from "../documentConversation";
 import { documentConversationCopy } from "../documentConversationCopy";
+import { resolveDocumentLocale } from "../documentLocales";
 
 type BusyStep = "uploading" | "translating" | "loading" | "deleting" | "downloading";
 type Failure = { error: unknown; retry?: () => void };
@@ -53,17 +54,20 @@ function saveBlob(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-export function MedicalDocumentsPage({ active = true, userLanguage, accountId, onAuthenticated, onAskNaru, onDocumentDeleted, requestedDocumentId, onDocumentOpened }: {
-  active?: boolean; userLanguage?: string; accountId: string; onAuthenticated: (user: SessionUser) => void;
+export function MedicalDocumentsPage({ active = true, accountId, onAuthenticated, onAskNaru, onDocumentDeleted, requestedDocumentId, onDocumentOpened }: {
+  active?: boolean; accountId: string; onAuthenticated: (user: SessionUser) => void;
   onAskNaru: (context: DocumentConversationContext) => void; onDocumentDeleted: (id: string) => void;
   requestedDocumentId: string | null; onDocumentOpened: () => void;
 }) {
-  const { locale, t } = useI18n();
+  const { locale, option, t } = useI18n();
   const copy = medicalDocumentCopy(locale);
   const conversationCopy = documentConversationCopy(locale);
   const demo = api.isDemo();
   const [sourceLanguage, setSourceLanguage] = useState("auto");
-  const [targetLanguage, setTargetLanguage] = useState(() => localeOptions.find((item) => item.code === (userLanguage || locale))?.code || "en");
+  const [targetLanguage, setTargetLanguage] = useState(() => resolveDocumentLocale(locale));
+  const interfaceLocale = useRef(locale);
+  interfaceLocale.current = locale;
+  useEffect(() => { setTargetLanguage(resolveDocumentLocale(locale)); }, [locale]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [current, setCurrent] = useState<MedicalDocument | null>(null);
@@ -282,7 +286,7 @@ export function MedicalDocumentsPage({ active = true, userLanguage, accountId, o
       setCurrent(result);
       setSourceText(result.sourceText);
       setSourceLanguage(result.sourceLanguage);
-      setTargetLanguage(result.targetLanguage);
+      if (locale === interfaceLocale.current) setTargetLanguage(result.targetLanguage);
       updateHistory(result);
       window.requestAnimationFrame(() => reviewHeading.current?.focus());
     }, upload);
@@ -352,7 +356,7 @@ export function MedicalDocumentsPage({ active = true, userLanguage, accountId, o
       setCurrent(result);
       setSourceText(result.sourceText);
       setSourceLanguage(result.sourceLanguage);
-      setTargetLanguage(result.targetLanguage);
+      if (locale === interfaceLocale.current) setTargetLanguage(result.targetLanguage);
       updateHistory(result);
     }, translate);
   }
@@ -365,7 +369,7 @@ export function MedicalDocumentsPage({ active = true, userLanguage, accountId, o
       setSelectedFile(null);
       setSourceText(result.sourceText);
       setSourceLanguage(result.sourceLanguage);
-      setTargetLanguage(result.targetLanguage);
+      if (locale === interfaceLocale.current) setTargetLanguage(result.targetLanguage);
       setDeleteId(null);
       window.requestAnimationFrame(() => reviewHeading.current?.focus());
     }, () => openDocument(id));
@@ -399,7 +403,7 @@ export function MedicalDocumentsPage({ active = true, userLanguage, accountId, o
     saveBlob(new Blob(["\uFEFF", text], { type: "text/plain;charset=utf-8" }), `${current.name.replace(/\.[^.]+$/, "")}-${current.targetLanguage}.txt`);
   }
 
-  return <div className="medical-documents">
+  return <div className="medical-documents" dir={option.direction || "ltr"}>
     <Panel className="medical-document-upload">
       <div className="medical-document-intro">
         <div className="medical-document-intro-copy"><span className="medical-document-eyebrow"><FileText size={16} />NaruCare</span><h2>{copy.introduction}</h2><p>{copy.subtitle}</p></div>

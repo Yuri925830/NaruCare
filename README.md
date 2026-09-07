@@ -853,6 +853,8 @@ NaruCare/
 
 Open **Photo translation** in the desktop sidebar or mobile bottom navigation (also available as **Medical documents** in the profile or conversation translation page). The page introduces the feature and offers camera capture, photo-library upload, and file upload. Mobile devices use their camera picker; desktop browsers can capture a photo with a webcam over HTTPS or localhost.
 
+All 28 languages in the app's language selector have complete document and Naru-question interface copy, including upload/camera controls, online-account recovery, errors, and suggested questions. Arabic, Urdu, and Persian use right-to-left document panels and chat. Switching the interface language updates the default translation target and the language of subsequent Naru replies; document text and existing conversation messages remain intact. Additional feature locale packs live in `src/documentLocales/`; coverage tests fail if a configured language or required message is missing.
+
 - Supported inputs: JPEG, PNG, PDF, and UTF-8 TXT, up to 10 MiB and 20,000 extracted characters per document.
 - Photos use multilingual text recognition. PDFs use their text layer; for scanned PDFs without selectable text, upload photos of the pages.
 - Review and edit the recognized text, choose source/target languages, then translate. The result appears beside the original and can be downloaded as TXT; the original file can also be downloaded.
@@ -874,7 +876,7 @@ npx wrangler deploy --config worker/wrangler.jsonc
 
 The GitHub Pages workflow deploys the frontend when `main` is updated. The database migration and Worker deployment are separate steps and must also be completed for the live document feature to work.
 
-Document regression checks: `npm test`, `npm run visual:documents`, and `npm run visual:document-naru` (start the Vite server first). Browser checks use synthetic documents and mocked API responses, not real patient records.
+Document regression checks: `npm test`, `npm run visual:documents`, `npm run visual:document-naru`, and `npm run visual:document-locales` (start the Vite server first). The locale check walks every configured language at mobile width, including error recovery and switching languages during a document conversation. Browser checks use synthetic documents and mocked API responses, not real patient records.
 
 ```text
 POST   /api/auth/register

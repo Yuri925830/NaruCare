@@ -11,6 +11,8 @@ const databases: DatabaseSync[] = [];
 afterEach(() => { for (const database of databases.splice(0)) database.close(); });
 
 const question = { message: "Does this confirm that I have pneumonia?", locale: "en" };
+// Read the app's locale registry without importing browser JSX into Worker types.
+const configuredLocales = [...readFileSync(new NodeURL("../../src/i18n.tsx", import.meta.url), "utf8").split("export const en =")[0].matchAll(/\bcode: "([^"]+)"/g)].map((match) => match[1]);
 const originalText = "폐렴 의심. 추가 검사 후 확인 필요. 2026-09-07.";
 const translatedText = "Suspected pneumonia. Confirmation requires additional testing. 2026-09-07.";
 
@@ -53,6 +55,17 @@ function harness() {
 }
 
 describe("private document conversations", () => {
+  it.each(configuredLocales)("uses the selected %s reply language even with English history and a Korean document", async (locale) => {
+    const h = harness();
+    const response = await h.ask({ ...question, locale, history: [{ role: "user", content: "Explain this report." }, { role: "assistant", content: "Earlier English answer." }] });
+    expect(response.status).toBe(200);
+    const prompt = h.generate.mock.calls[0][0][0].content;
+    expect(prompt).toContain(`The selected reply language is locale ${locale}.`);
+    expect(prompt).toContain("previous conversation turns use another language");
+    expect(prompt).toContain("only when the latest user message explicitly asks");
+    expect(h.context().originalText).toBe(originalText);
+  });
+
   it("requires authentication on the actual worker route", async () => {
     const h = harness();
     const response = await h.route();

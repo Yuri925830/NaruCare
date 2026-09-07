@@ -17,6 +17,7 @@
     "visual:mobile": "node scripts/mobile-visual-check.mjs",
     "visual:documents": "node scripts/document-visual-check.mjs",
     "visual:document-naru": "node scripts/document-naru-visual-check.mjs",
+    "visual:document-locales": "node scripts/document-locales-check.mjs",
     "naru:extract": "python scripts/extract-naru-poses.py",
     "countries:generate": "node scripts/generate-countries.mjs",
     "locales:generate": "node scripts/generate-locales.mjs",

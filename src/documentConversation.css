@@ -1,4 +1,9 @@
 .document-naru-chat { display: flex; flex-direction: column; gap: 14px; height: min(900px, calc(100dvh - 140px)); min-height: 620px; padding: 22px; overflow: hidden; }
+.document-naru-chat[dir="rtl"] { text-align: start; }
+.document-naru-chat[dir="rtl"] .document-naru-attachment .lucide-arrow-left { transform: scaleX(-1); }
+.document-naru-chat[dir="rtl"] .document-naru-message-assistant { border-radius: 17px 17px 5px 17px; }
+.document-naru-chat[dir="rtl"] .document-naru-message-user { border-radius: 17px 17px 17px 5px; }
+.document-naru-chat button { overflow-wrap: anywhere; }
 .document-naru-header { display: flex; align-items: center; gap: 12px; min-height: 52px; flex-shrink: 0; }
 .document-naru-avatar { width: 39px; flex-shrink: 0; }
 .document-naru-header > div { display: grid; gap: 3px; min-width: 0; }

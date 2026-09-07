@@ -24,8 +24,8 @@ export function NaruStandard({ className = "" }: { className?: string }) {
   return <span className={`naru-standard ${className}`} aria-hidden="true"><img src="./naru-standard.png" alt="" /></span>;
 }
 
-export function Panel({ className = "", children }: { className?: string; children?: ReactNode }) {
-  return <section className={`panel ${className}`}>{children}</section>;
+export function Panel({ className = "", children, dir }: { className?: string; children?: ReactNode; dir?: "ltr" | "rtl" | "auto" }) {
+  return <section className={`panel ${className}`} dir={dir}>{children}</section>;
 }
 
 export function Button({ className = "", variant = "primary", children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "danger" | "mint" | "navy" | "ghost" }) {
@@ -147,7 +147,7 @@ export function AppShell({ view, title, user, onNavigate, onLanguage, onBack, ca
       <div className="page-content">{children}</div>
     </main>
     <nav className="bottom-nav">
-      {bottomNav.map(({ id, key, Icon, emergency }) => <button key={id} className={`${isBottomActive(id) ? "active" : ""} ${emergency ? "emergency-nav" : ""}`} onClick={() => onNavigate(id)}>
+      {bottomNav.map(({ id, key, Icon, emergency }) => <button key={id} className={`${isBottomActive(id) ? "active" : ""} ${emergency ? "emergency-nav" : ""} ${id === "documents" ? "document-nav" : ""}`} onClick={() => onNavigate(id)}>
         <span><Icon size={21} /></span><small>{key ? t(key) : medicalDocumentCopy(locale).navTitle}</small>
       </button>)}
     </nav>

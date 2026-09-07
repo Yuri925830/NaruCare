@@ -12,6 +12,7 @@ interface Props {
   onBackToDocument: () => void;
   onDetach: () => void;
 }
+type ChatError = "expired" | "unavailable" | "tooMany" | "error" | "offline";
 
 function ReplyText({ text }: { text: string }) {
   return <>{text.split(/(\*\*[^*]+\*\*)/g).map((part, index) => part.startsWith("**") && part.endsWith("**")
@@ -25,14 +26,14 @@ export function DocumentNaruChat(props: Props) {
 }
 
 function DocumentNaruChatSession({ context, onBackToDocument, onDetach }: Props) {
-  const { locale } = useI18n();
+  const { locale, option } = useI18n();
   const copy = documentConversationCopy(locale);
   const [messages, setMessages] = useState<DocumentConversationMessage[]>([]);
   const [input, setInput] = useState("");
   const [pendingQuestion, setPendingQuestion] = useState("");
   const [busy, setBusy] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<ChatError | null>(null);
   const requestRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -60,7 +61,7 @@ function DocumentNaruChatSession({ context, onBackToDocument, onDetach }: Props)
     const controller = new AbortController();
     requestRef.current = controller;
     setBusy(true);
-    setError("");
+    setError(null);
     setPendingQuestion(question);
     setInput("");
     try {
@@ -78,8 +79,8 @@ function DocumentNaruChatSession({ context, onBackToDocument, onDetach }: Props)
     } catch (cause) {
       if (requestRef.current !== controller || controller.signal.aborted) return;
       setError(cause instanceof ApiError
-        ? cause.status === 401 ? copy.expired : cause.status === 404 ? copy.unavailable : cause.status === 429 ? copy.tooMany : copy.error
-        : cause instanceof TypeError ? copy.offline : copy.error);
+        ? cause.status === 401 ? "expired" : cause.status === 404 ? "unavailable" : cause.status === 429 ? "tooMany" : "error"
+        : cause instanceof TypeError ? "offline" : "error");
     } finally {
       if (requestRef.current === controller) {
         requestRef.current = null;
@@ -89,7 +90,7 @@ function DocumentNaruChatSession({ context, onBackToDocument, onDetach }: Props)
   }
 
   const visibleMessages: DocumentConversationMessage[] = pendingQuestion ? [...messages, { role: "user", content: pendingQuestion }] : messages;
-  return <Panel className="document-naru-chat">
+  return <Panel className="document-naru-chat" dir={option.direction || "ltr"}>
     <header className="document-naru-header">
       <NaruPose pose={2} className="document-naru-avatar" />
       <div><strong>Naru</strong><span>{copy.subtitle}</span></div>
@@ -110,7 +111,7 @@ function DocumentNaruChatSession({ context, onBackToDocument, onDetach }: Props)
         <p dir="auto">{message.role === "assistant" ? <ReplyText text={message.content} /> : message.content}</p>
       </article>)}
       {busy && <div className="document-naru-thinking" role="status"><LoaderCircle size={17} /><span>{elapsed >= 20 ? copy.stillThinking : copy.thinking}</span><small aria-hidden="true">{copy.elapsed.replace("{seconds}", String(elapsed))}</small></div>}
-      {error && <div className="document-naru-error" role="alert"><p>{error}</p><Button type="button" variant="ghost" onClick={() => void ask(pendingQuestion)}><RefreshCw size={15} />{copy.retry}</Button></div>}
+      {error && <div className="document-naru-error" role="alert"><p>{copy[error]}</p><Button type="button" variant="ghost" onClick={() => void ask(pendingQuestion)}><RefreshCw size={15} />{copy.retry}</Button></div>}
     </div>
     <div className="document-naru-suggestions" aria-label={copy.subtitle}>
       {copy.questionLabels.map((label, index) => <button key={index} type="button" disabled={busy} onClick={() => void ask(copy.questions[index])}>{label}</button>)}

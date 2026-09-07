@@ -1,4 +1,10 @@
 .medical-documents { display: grid; gap: 22px; padding-bottom: 24px; }
+.medical-documents button { overflow-wrap: anywhere; }
+.medical-documents[dir="rtl"] { text-align: start; }
+.medical-documents[dir="rtl"] .medical-document-languages > svg,
+.medical-documents[dir="rtl"] .medical-document-ask .lucide-arrow-right { transform: scaleX(-1); }
+.medical-documents[dir="rtl"] .medical-document-languages select { padding-inline: 14px 35px; }
+.bottom-nav .document-nav small { white-space: normal; overflow-wrap: anywhere; line-height: 1.15; max-height: 2.3em; }
 .medical-document-ask { display: flex; align-items: center; gap: 16px; padding: 16px 20px; margin: 18px 0; border: 1px solid #d9e3d8; border-radius: 20px; background: linear-gradient(110deg, #f4f5ec, #eaf1eb); }
 .medical-document-ask .medical-document-ask-naru { width: 70px; height: 78px; flex: 0 0 70px; }
 .medical-document-ask > div { flex: 1; min-width: 0; }
@@ -167,6 +173,7 @@
   .medical-document-languages { gap: 10px; }
   .medical-document-languages label { font-size: 12px; }
   .medical-document-languages select { padding: 0 5px 0 10px; font-size: 13px; }
+  .medical-documents[dir="rtl"] .medical-document-languages select { padding-inline: 10px 5px; }
   .medical-document-selected { padding: 11px; gap: 11px; }
   .medical-document-selected > a { width: 70px; height: 82px; }
   .medical-document-upload-submit { width: 100%; font-size: 13px; padding: 10px; }

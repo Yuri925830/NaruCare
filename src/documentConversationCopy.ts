@@ -1,3 +1,5 @@
+import { documentLocaleBundles, resolveDocumentLocale } from "./documentLocales";
+
 const en = {
   askNaru: "Ask Naru about this document",
   askNaruHelp: "Unfamiliar terms or worrying results? Ask questions with this document attached. No need to wait for a translation.",
@@ -26,7 +28,8 @@ const en = {
   memory: "This chat stays with this document while this page is open.",
 };
 
-type Copy = typeof en;
+export type DocumentConversationCopy = typeof en;
+type Copy = DocumentConversationCopy;
 const zh: Copy = {
   askNaru: "拿这份文档问 Naru",
   askNaruHelp: "术语看不懂、担心检查结果？带上这份文档直接提问，不必等翻译完成。",
@@ -112,8 +115,9 @@ const ja: Copy = {
 };
 
 export function documentConversationCopy(locale: string): Copy {
-  if (locale.startsWith("zh")) return zh;
-  if (locale.startsWith("ko")) return ko;
-  if (locale.startsWith("ja")) return ja;
-  return en;
+  const code = resolveDocumentLocale(locale);
+  if (code === "zh-CN") return zh;
+  if (code === "ko") return ko;
+  if (code === "ja") return ja;
+  return documentLocaleBundles[code as keyof typeof documentLocaleBundles]?.conversation || en;
 }

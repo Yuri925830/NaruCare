@@ -1,3 +1,5 @@
+import { documentLocaleBundles, resolveDocumentLocale } from "./documentLocales";
+
 const en = {
   title: "Medical documents",
   navTitle: "Photo translation",
@@ -346,5 +348,6 @@ const copies: Record<string, MedicalDocumentCopy> = {
 };
 
 export function medicalDocumentCopy(locale: string): MedicalDocumentCopy {
-  return copies[locale] || copies.en;
+  const code = resolveDocumentLocale(locale);
+  return documentLocaleBundles[code as keyof typeof documentLocaleBundles]?.medical || copies[code] || copies.en;
 }
