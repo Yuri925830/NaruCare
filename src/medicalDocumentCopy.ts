@@ -1,7 +1,7 @@
 const en = {
   title: "Medical documents",
   navTitle: "Photo translation",
-  subtitle: "Photograph prescriptions or test reports, or upload a photo or file. Review and edit the recognized text, then translate it into your chosen language.",
+  subtitle: "Photograph prescriptions or test reports, or upload a photo or file. Review the recognized text, translate it, and ask Naru what it means and what to do next.",
   introduction: "Understand your medical documents",
   stepUpload: "Add a document",
   stepReview: "Review the text",
@@ -91,7 +91,7 @@ const copies: Record<string, MedicalDocumentCopy> = {
   "zh-CN": {
     title: "医疗文档",
     navTitle: "拍照翻译",
-    subtitle: "拍摄处方、检查报告等医疗文档，或上传照片和文件。核对并修改识别出的文字，再翻译为您选择的语言。",
+    subtitle: "拍摄诊断书、处方或检查报告，也可以上传照片和文件。核对识别文字后翻译，或直接问 Naru：这是什么意思、严重吗、接下来怎么办。",
     introduction: "看懂您的医疗文档",
     stepUpload: "添加文档",
     stepReview: "核对文字",
@@ -176,7 +176,7 @@ const copies: Record<string, MedicalDocumentCopy> = {
   ko: {
     title: "의료 문서",
     navTitle: "사진 번역",
-    subtitle: "처방전이나 검사 결과를 촬영하거나 사진과 파일을 업로드하세요. 인식된 내용을 확인하고 수정한 뒤 원하는 언어로 번역할 수 있습니다.",
+    subtitle: "진단서, 처방전, 검사 결과를 촬영하거나 사진과 파일을 업로드하세요. 인식된 내용을 확인한 뒤 번역하거나 Naru에게 의미와 다음에 할 일을 물어보세요.",
     introduction: "내 의료 문서를 이해하세요",
     stepUpload: "문서 추가",
     stepReview: "내용 확인",
@@ -261,7 +261,7 @@ const copies: Record<string, MedicalDocumentCopy> = {
   ja: {
     title: "医療文書",
     navTitle: "写真翻訳",
-    subtitle: "処方箋や検査結果を撮影するか、写真やファイルをアップロードしてください。認識された文字を確認・修正して、ご希望の言語に翻訳できます。",
+    subtitle: "診断書や処方箋、検査結果を撮影するか、写真やファイルをアップロードしてください。認識された文字を確認して翻訳し、意味や次にすることをNaruに質問できます。",
     introduction: "医療文書の内容を理解しましょう",
     stepUpload: "文書を追加",
     stepReview: "内容を確認",

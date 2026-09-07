@@ -3,6 +3,7 @@ import type { AgentJourneyObservation } from "./agentWorkflow";
 import { hospitalCategory, hospitalCategoryAffinity } from "./hospitalMatching";
 import { assessMedicalIntent } from "./triage";
 import { medicalDocumentFileError, type MedicalDocument, type MedicalDocumentSummary, type MedicalDocumentTranslationInput } from "./medicalDocuments";
+import type { DocumentQuestionInput, DocumentQuestionResponse } from "./documentConversation";
 import type { ChatHistoryEntry, ChatResponse, Companion, CompanionFilters, CompanionOrder, Hospital, MedicalCard, SessionUser, TranslationRecordEntry, VisitRecord } from "./types";
 
 const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
@@ -103,6 +104,12 @@ export const api = {
   async document(id: string): Promise<MedicalDocument> {
     requireDocumentSession();
     return request<MedicalDocument>(`/api/documents/${encodeURIComponent(id)}`);
+  },
+  async askDocument(id: string, input: DocumentQuestionInput, signal?: AbortSignal): Promise<DocumentQuestionResponse> {
+    requireDocumentSession();
+    return request<DocumentQuestionResponse>(`/api/documents/${encodeURIComponent(id)}/chat`, {
+      method: "POST", body: JSON.stringify(input), signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(55_000)]) : undefined,
+    }, 55_000);
   },
   async uploadDocument(file: File, sourceLanguage: string, targetLanguage: string): Promise<MedicalDocument> {
     requireDocumentSession();

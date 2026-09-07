@@ -11,6 +11,7 @@ import {
   translateMedicalDocumentText,
   validateMedicalDocumentFile,
   type DocumentTextModel,
+  type DocumentImageModel,
 } from "./medicalDocuments";
 import worker from "./index";
 import { MAX_MEDICAL_DOCUMENT_BYTES, MAX_MEDICAL_DOCUMENT_TEXT } from "../../src/medicalDocuments";
@@ -88,6 +89,57 @@ describe("medical document validation", () => {
 });
 
 describe("document extraction and translation", () => {
+  it("prefers the configured image provider without a second OCR call", async () => {
+    const h = harness();
+    const imageModel = vi.fn<DocumentImageModel>(async (prompt) => `검사 12.5 mg\n${prompt.match(/\[END_OCR_[\w-]+\]/)![0]}`);
+    await expect(extractMedicalDocumentText(h.env, "camera.jpg", "image/jpeg", Uint8Array.of(0xff), imageModel)).resolves.toBe("검사 12.5 mg");
+    expect(imageModel).toHaveBeenCalledWith(expect.stringContaining("never guess"), "data:image/jpeg;base64,/w==", 35_000);
+    expect(h.aiRun).not.toHaveBeenCalled();
+  });
+
+  it.each(["provider_failure", "incomplete_result"])("falls back once on %s and validates the fallback OCR", async (failure) => {
+    const h = harness();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const imageModel = vi.fn<DocumentImageModel>(async () => {
+      if (failure === "provider_failure") throw new Error("provider failure");
+      return "partial transcription";
+    });
+    h.aiRun.mockImplementation(async (_model, input) => ({ choices: [{ finish_reason: "stop", message: { content: `Dose 12.5 mg\n${input.messages[0].content.match(/\[END_OCR_[\w-]+\]/)[0]}` } }] }));
+    try {
+      await expect(extractMedicalDocumentText(h.env, "camera.jpg", "image/jpeg", Uint8Array.of(0xff), imageModel)).resolves.toBe("Dose 12.5 mg");
+      expect(imageModel).toHaveBeenCalledOnce();
+      expect(h.aiRun).toHaveBeenCalledOnce();
+      h.aiRun.mockResolvedValue({ choices: [{ finish_reason: "length", message: { content: "partial" } }] });
+      await expect(extractMedicalDocumentText(h.env, "camera.jpg", "image/jpeg", Uint8Array.of(0xff), imageModel)).rejects.toMatchObject({ code: "document_extraction_incomplete" });
+    } finally { vi.restoreAllMocks(); }
+  });
+
+  it("does not rerun OCR for complete empty or overlong transcriptions", async () => {
+    const h = harness();
+    const imageModel: DocumentImageModel = async (prompt) => prompt.match(/\[END_OCR_[\w-]+\]/)![0];
+    await expect(extractMedicalDocumentText(h.env, "camera.jpg", "image/jpeg", Uint8Array.of(0xff), imageModel)).rejects.toMatchObject({ code: "document_text_empty" });
+    await expect(extractMedicalDocumentText(h.env, "camera.jpg", "image/jpeg", Uint8Array.of(0xff), async (prompt) => `${"x".repeat(MAX_MEDICAL_DOCUMENT_TEXT + 1)}\n${prompt.match(/\[END_OCR_[\w-]+\]/)![0]}`)).rejects.toMatchObject({ code: "document_text_too_long" });
+    expect(h.aiRun).not.toHaveBeenCalled();
+  });
+
+  it("keeps primary and fallback OCR within one 60-second deadline", async () => {
+    const h = harness();
+    vi.useFakeTimers();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const imageModel = vi.fn<DocumentImageModel>(() => new Promise(() => {}));
+    h.aiRun.mockImplementation(() => new Promise(() => {}));
+    try {
+      const result = extractMedicalDocumentText(h.env, "camera.jpg", "image/jpeg", Uint8Array.of(0xff), imageModel);
+      const rejection = expect(result).rejects.toMatchObject({ status: 504, code: "document_extraction_failed" });
+      await vi.advanceTimersByTimeAsync(35_000);
+      expect(imageModel).toHaveBeenCalledOnce();
+      expect(h.aiRun).toHaveBeenCalledOnce();
+      await vi.advanceTimersByTimeAsync(25_000);
+      await rejection;
+      expect(h.aiRun).toHaveBeenCalledOnce();
+    } finally { vi.useRealTimers(); vi.restoreAllMocks(); }
+  });
+
   it("uses verbatim OCR for photos and rejects interrupted OCR", async () => {
     const h = harness();
     h.aiRun.mockImplementation(async (_model, input) => {
@@ -160,6 +212,27 @@ describe("document extraction and translation", () => {
 });
 
 describe("private document lifecycle", () => {
+  it("reuses only the owner's unchanged completed translation and regenerates edits", async () => {
+    const h = harness();
+    const uploaded = await h.upload();
+    const input = { sourceText: "Dose 15 mg", sourceLanguage: "en", targetLanguage: "ko" };
+    const translate = (body: typeof input, userId = "alice") => h.request(`/${uploaded.id}/translate`, userId, { method: "POST", body: JSON.stringify(body) });
+    const first = await (await translate(input)).json();
+    h.generate.mockClear();
+    expect(await (await translate(input)).json()).toEqual(first);
+    expect(h.generate).not.toHaveBeenCalled();
+    await expect(translate(input, "bob")).rejects.toMatchObject({ status: 404 });
+    expect(h.generate).not.toHaveBeenCalled();
+    await translate({ ...input, sourceText: "Dose 20 mg" });
+    expect(h.generate).toHaveBeenCalledOnce();
+    h.generate.mockClear();
+    await translate({ ...input, sourceText: "Dose 20 mg", targetLanguage: "ja" });
+    expect(h.generate).toHaveBeenCalledOnce();
+    h.generate.mockClear();
+    await translate({ ...input, sourceText: "Dose 20 mg", sourceLanguage: "auto", targetLanguage: "ja" });
+    expect(h.generate).toHaveBeenCalledOnce();
+  });
+
   it("requires sign-in at the API boundary", async () => {
     const h = harness();
     const tasks: Promise<unknown>[] = [];

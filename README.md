@@ -856,8 +856,11 @@ Open **Photo translation** in the desktop sidebar or mobile bottom navigation (a
 - Supported inputs: JPEG, PNG, PDF, and UTF-8 TXT, up to 10 MiB and 20,000 extracted characters per document.
 - Photos use multilingual text recognition. PDFs use their text layer; for scanned PDFs without selectable text, upload photos of the pages.
 - Review and edit the recognized text, choose source/target languages, then translate. The result appears beside the original and can be downloaded as TXT; the original file can also be downloaded.
+- **Ask Naru about this document** opens a conversation with the recognized text attached, even before translation. Users can ask about meaning, diagnostic uncertainty, severity, medicines, or next steps and continue with free-text follow-ups. No medical card is required. The server checks ownership on every question and includes the saved translation only when it matches the attached source text and language. Corrected text starts a fresh conversation.
+- Document questions stay separate from general Naru history and do not change the medical card or visit workflow. The current conversation stays in memory while navigating and is cleared when the attachment changes, is deleted, or the user signs out. Closing/reloading the page or leaving document chat clears it.
 - Original files are private R2 objects under `medical-documents/`, using the existing `RECORDINGS` binding. D1 stores account-owned document metadata and text. History supports reopening, retranslating, and deletion of the original and translation.
-- Document processing uses Workers AI. Existing offline demo users can sign in or register online directly on this page. Starting an upload opens that form and continues recognition after authentication, keeping the selected file. Cancelling or failing authentication also keeps the selection. Offline cards and history remain local.
+- OCR uses the existing OpenAI configuration when available, with a bounded Workers AI fallback. PDF text extraction uses Workers AI. Translation and document questions reuse the app's configured text provider. Original text, numbers, and completion checks remain intact. Repeating an unchanged translation reuses that account's saved result without another model call.
+- Existing offline demo users can sign in or register online directly on this page. Starting an upload opens that form and continues recognition after authentication, keeping the selected file. Cancelling or failing authentication also keeps the selection. Offline cards and history remain local.
 - The production Pages build disables automatic demo fallback (`VITE_DEMO_MODE=false`). Local demo previews do not fabricate recognition or translation results.
 
 Before deploying the new Worker, apply migration `0008_medical_documents.sql`:
@@ -871,7 +874,7 @@ npx wrangler deploy --config worker/wrangler.jsonc
 
 The GitHub Pages workflow deploys the frontend when `main` is updated. The database migration and Worker deployment are separate steps and must also be completed for the live document feature to work.
 
-Document regression checks: `npm test` and `npm run visual:documents` (start the Vite server first). Browser checks use synthetic documents and mocked API responses, not real patient records.
+Document regression checks: `npm test`, `npm run visual:documents`, and `npm run visual:document-naru` (start the Vite server first). Browser checks use synthetic documents and mocked API responses, not real patient records.
 
 ```text
 POST   /api/auth/register
@@ -899,6 +902,7 @@ GET    /api/documents
 GET    /api/documents/:id
 GET    /api/documents/:id/file
 POST   /api/documents/:id/translate
+POST   /api/documents/:id/chat
 DELETE /api/documents/:id
 
 POST   /api/companions

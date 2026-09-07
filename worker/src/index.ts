@@ -19,6 +19,8 @@ import {
 import { buildMedicalTranslationPrompt, fallbackMedicalTranslation, isMedicalTranslationLocale } from "./medicalTranslation";
 import { buildNaruPersonaPrompt } from "./naruPersona";
 import { DocumentError, handleMedicalDocumentRequest } from "./medicalDocuments";
+import { handleDocumentChat, type DocumentChatModel } from "./documentChat";
+import { createDocumentImageModel } from "./documentAi";
 import {
   agentToolNames,
   finalizeAgentToolDecision,
@@ -1187,6 +1189,9 @@ async function runOpenAiTextModel(
     },
   }, timeoutMs);
   const text = openAiResponseText(output);
+  if (output && typeof output === "object" && "status" in output && output.status !== "completed") {
+    throw new ApiException(502, "ai_response_incomplete", "OpenAI returned an incomplete response");
+  }
   if (!text) throw new ApiException(502, "ai_response_invalid", "OpenAI returned an empty response");
   return text;
 }
@@ -2121,7 +2126,13 @@ async function routeRequest(request: Request, env: Env, ctx: ExecutionContext) {
   if (request.method === "POST" && path === "/api/transcribe") return transcribe(request, env, url);
   if (path === "/api/documents" || path.startsWith("/api/documents/")) {
     const userId = await requireUser(request, env);
-    return handleMedicalDocumentRequest(request, env, userId, (messages, maxTokens, timeoutMs) => runTextModel(env, messages, maxTokens, 0, false, env.AI_MODEL, timeoutMs, false));
+    const apiKey = envSecret(env, "OPENAI_API_KEY");
+    const generate: DocumentChatModel = (messages, maxTokens, timeoutMs) => apiKey
+      ? runOpenAiTextModel(env, apiKey, messages, maxTokens, false, "low", timeoutMs)
+      : runTextModel(env, messages, maxTokens, 0, false, env.AI_MODEL, timeoutMs, false);
+    const documentChat = path.match(/^\/api\/documents\/([^/]+)\/chat$/);
+    if (request.method === "POST" && documentChat) return handleDocumentChat(request, env, userId, decodeURIComponent(documentChat[1]), generate);
+    return handleMedicalDocumentRequest(request, env, userId, generate, createDocumentImageModel(apiKey, openAiModel(env)));
   }
   if (request.method === "POST" && path === "/api/chat") return chat(request, env);
   if (request.method === "GET" && path === "/api/chat/history") return chatHistory(request, env);

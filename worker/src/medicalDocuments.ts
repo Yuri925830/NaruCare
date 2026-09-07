@@ -10,6 +10,7 @@ import { buildMedicalTranslationPrompt, isMedicalTranslationLocale } from "./med
 
 type DocumentEnv = Pick<Env, "DB" | "RECORDINGS" | "AI">;
 export type DocumentTextModel = (messages: { role: "system" | "user"; content: string }[], maxTokens: number, timeoutMs: number) => Promise<string>;
+export type DocumentImageModel = (prompt: string, imageDataUrl: string, timeoutMs: number) => Promise<string>;
 const MAX_MULTIPART_BYTES = MAX_MEDICAL_DOCUMENT_BYTES + 64 * 1024;
 const MAX_TRANSLATION_JSON_BYTES = MAX_MEDICAL_DOCUMENT_TEXT * 6 + 4096;
 const DOCUMENT_CHUNK_CHARS = 2000;
@@ -124,7 +125,7 @@ async function withDocumentTimeout<T>(operation: Promise<T>, timeoutMs: number, 
   } finally { if (timeout !== undefined) clearTimeout(timeout); }
 }
 
-export async function extractMedicalDocumentText(env: Pick<DocumentEnv, "AI">, name: string, mimeType: string, bytes: Uint8Array<ArrayBuffer>) {
+export async function extractMedicalDocumentText(env: Pick<DocumentEnv, "AI">, name: string, mimeType: string, bytes: Uint8Array<ArrayBuffer>, imageModel?: DocumentImageModel) {
   if (mimeType === "text/plain") return sourceText(utf8Text(bytes));
   try {
     if (mimeType === "application/pdf") {
@@ -134,16 +135,32 @@ export async function extractMedicalDocumentText(env: Pick<DocumentEnv, "AI">, n
       return sourceText(result.data);
     }
     const marker = `[END_OCR_${crypto.randomUUID()}]`;
-    const result = await env.AI.run("@cf/google/gemma-4-26b-a4b-it", {
+    const prompt = buildDocumentOcrPrompt(marker);
+    const imageDataUrl = `data:${mimeType};base64,${Buffer.from(bytes).toString("base64")}`;
+    const deadline = Date.now() + 60_000;
+    if (imageModel) {
+      let transcription: string | undefined;
+      try {
+        const result = await withDocumentTimeout(imageModel(prompt, imageDataUrl, 35_000), 35_000, "document_extraction_failed");
+        transcription = completeOutput(result, marker, "document_extraction_incomplete");
+      } catch {
+        // Only provider/completeness failures fall back. Never log medical text or image data.
+        console.warn(JSON.stringify({ event: "document_ocr_provider_fallback", provider: "cloudflare" }));
+      }
+      if (transcription !== undefined) return sourceText(transcription);
+    }
+    const timeoutMs = deadline - Date.now();
+    if (timeoutMs <= 0) throw new DocumentError(504, "document_extraction_failed", "Text recognition timed out. Please retry");
+    const result = await withDocumentTimeout(env.AI.run("@cf/google/gemma-4-26b-a4b-it", {
       messages: [
-        { role: "system", content: buildDocumentOcrPrompt(marker) },
-        { role: "user", content: [{ type: "image_url", image_url: { url: `data:${mimeType};base64,${Buffer.from(bytes).toString("base64")}`, detail: "high" } }] },
+        { role: "system", content: prompt },
+        { role: "user", content: [{ type: "image_url", image_url: { url: imageDataUrl, detail: "high" } }] },
       ],
       max_completion_tokens: 24_000,
       temperature: 0,
       stream: false,
       store: false,
-    }, { signal: AbortSignal.timeout(60_000), tags: ["narucare-document-ocr"] });
+    }, { signal: AbortSignal.timeout(timeoutMs), tags: ["narucare-document-ocr"] }), timeoutMs, "document_extraction_failed");
     if (!("choices" in result) || result.choices[0]?.finish_reason !== "stop") throw new DocumentError(502, "document_extraction_incomplete", "Image text recognition was incomplete. Upload a clearer or smaller page photo");
     return sourceText(completeOutput(result.choices[0]?.message.content, marker, "document_extraction_incomplete"));
   } catch (error) {
@@ -213,7 +230,7 @@ async function findOwnedDocument(env: DocumentEnv, userId: string, id: string) {
   return row;
 }
 
-async function uploadMedicalDocument(request: Request, env: DocumentEnv, userId: string) {
+async function uploadMedicalDocument(request: Request, env: DocumentEnv, userId: string, imageModel?: DocumentImageModel) {
   const contentType = request.headers.get("content-type") || "";
   if (!contentType.toLowerCase().startsWith("multipart/form-data;")) throw new DocumentError(400, "invalid_document", "Upload a multipart file");
   const body = await readBoundedDocumentBody(request, MAX_MULTIPART_BYTES);
@@ -227,7 +244,7 @@ async function uploadMedicalDocument(request: Request, env: DocumentEnv, userId:
   const target = language(form.get("targetLanguage"), false);
   const bytes = new Uint8Array(await file.arrayBuffer());
   const mimeType = validateMedicalDocumentFile(file, bytes);
-  const text = await extractMedicalDocumentText(env, file.name, mimeType, bytes);
+  const text = await extractMedicalDocumentText(env, file.name, mimeType, bytes, imageModel);
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   const name = file.name.split(/[\\/]/).pop()!.replace(/[\r\n]/g, " ").slice(0, 240) || "document";
@@ -243,10 +260,10 @@ async function uploadMedicalDocument(request: Request, env: DocumentEnv, userId:
 }
 
 /** Called only after the main router's requireUser check. All document lookups remain user-scoped. */
-export async function handleMedicalDocumentRequest(request: Request, env: DocumentEnv, userId: string, generate: DocumentTextModel) {
+export async function handleMedicalDocumentRequest(request: Request, env: DocumentEnv, userId: string, generate: DocumentTextModel, imageModel?: DocumentImageModel) {
   const path = new URL(request.url).pathname;
   if (path === "/api/documents") {
-    if (request.method === "POST") return uploadMedicalDocument(request, env, userId);
+    if (request.method === "POST") return uploadMedicalDocument(request, env, userId, imageModel);
     if (request.method === "GET") {
       const rows = await env.DB.prepare(`SELECT ${SUMMARY_COLUMNS} FROM medical_documents WHERE user_id=? ORDER BY created_at DESC`).bind(userId).all<DocumentRow>();
       return documentJson({ documents: rows.results.map(summary) });
@@ -279,6 +296,11 @@ export async function handleMedicalDocumentRequest(request: Request, env: Docume
     const text = sourceText(input.sourceText);
     const source = language(input.sourceLanguage, true);
     const target = language(input.targetLanguage, false);
+    // Reuse only this owner's saved, complete translation for exactly the same source and languages.
+    // Never put medical text in the shared phrase cache.
+    if (row.status === "translated" && row.translated_text.trim() && text === row.source_text && source === row.source_language && target === row.target_language) {
+      return documentJson(document(row));
+    }
     const translatedText = await translateMedicalDocumentText(text, source, target, generate);
     const updatedAt = new Date().toISOString();
     const result = await env.DB.prepare("UPDATE medical_documents SET source_text=?,translated_text=?,source_language=?,target_language=?,status='translated',updated_at=? WHERE id=? AND user_id=? AND updated_at=?").bind(text, translatedText, source, target, updatedAt, row.id, userId, row.updated_at).run();

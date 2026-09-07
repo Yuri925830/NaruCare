@@ -24,6 +24,8 @@ import {
 import { CompanionOrdersPage, EmergencyCallingPage, EmergencyConfirmPage, ProfilePage, RecordsPage } from "./pages/EmergencyProfilePages";
 import { MedicalCardPage } from "./pages/MedicalCardPage";
 import { MedicalDocumentsPage } from "./pages/MedicalDocumentsPage";
+import { DocumentNaruChat } from "./pages/DocumentNaruChat";
+import type { DocumentConversationContext } from "./documentConversation";
 import { medicalDocumentCopy } from "./medicalDocumentCopy";
 import type { Companion, CompanionFilters, CompanionOrder, Hospital, LocationState, MedicalCard, SessionUser, View, VisitRecord, VisitRecordDetails } from "./types";
 import { furthestVisitJourneyStep, visitJourneyStepIndex, type CompanionDecision, type VisitJourneyStep } from "./visitJourney";
@@ -65,6 +67,8 @@ function AppInner() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [checking, setChecking] = useState(true);
   const [sessionVersion, setSessionVersion] = useState(0);
+  const [documentConversation, setDocumentConversation] = useState<DocumentConversationContext | null>(null);
+  const [documentToOpen, setDocumentToOpen] = useState<string | null>(null);
   const [view, setView] = useState<View>("agent");
   const [viewHistory, setViewHistory] = useState<View[]>([]);
   const [visitedViews, setVisitedViews] = useState<View[]>(["agent"]);
@@ -103,6 +107,8 @@ function AppInner() {
   useEffect(() => { void api.me().then((current) => { if (current) setUser(current); }).finally(() => setChecking(false)); }, []);
   useEffect(() => {
     if (!user) {
+      setDocumentConversation(null);
+      setDocumentToOpen(null);
       setVisitSessionOwnerId(null);
       return;
     }
@@ -611,6 +617,7 @@ function AppInner() {
     // Keep the document picker mounted, but discard the previous account's
     // transient care state and cached views. Offline cards/history stay local.
     ++symptomSaveVersion.current;
+    setDocumentConversation(null);
     if (user) clearVisitSession(user.id);
     recordingStream?.getTracks().forEach((track) => track.stop());
     setRecordingStream(null);
@@ -673,9 +680,9 @@ function AppInner() {
 
   const renderView = (target: View): ReactNode => {
     switch (target) {
-      case "documents": return <MedicalDocumentsPage accountId={user.id} onAuthenticated={documentAccountConnected} userLanguage={user.card?.language || locale} active={view === "documents"} />;
+      case "documents": return <MedicalDocumentsPage accountId={user.id} onAuthenticated={documentAccountConnected} userLanguage={user.card?.language || locale} active={view === "documents"} onAskNaru={(context) => { setDocumentConversation(context); goTo("agent"); }} onDocumentDeleted={(id) => { setDocumentConversation((current) => current?.id === id ? null : current); }} requestedDocumentId={documentToOpen} onDocumentOpened={() => setDocumentToOpen(null)} />;
       case "card": return <MedicalCardPage card={user.card} location={location} onSaved={(card) => { const wasNew = !user.card; setUser({ ...user, card }); if (wasNew) goBack(); }} />;
-      case "agent": return <AgentPage
+      case "agent": return documentConversation ? <DocumentNaruChat context={documentConversation} onBackToDocument={() => { setDocumentToOpen(documentConversation.id); goTo("documents"); }} onDetach={() => setDocumentConversation(null)} /> : <AgentPage
         key={`visit-${visitSessionVersion}`}
         card={user.card}
         location={location}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import { AlertCircle, ArrowRight, Camera, Check, Download, FileText, ImagePlus, Languages, LoaderCircle, RefreshCw, Trash2, Upload, X } from "lucide-react";
+import { AlertCircle, ArrowRight, Camera, Check, Download, FileText, ImagePlus, Languages, LoaderCircle, MessageCircleMore, RefreshCw, Trash2, Upload, X } from "lucide-react";
 import { api, ApiError } from "../api";
 import { Button, NaruPose, Panel } from "../components";
 import { localeOptions, useI18n } from "../i18n";
@@ -7,6 +7,8 @@ import { medicalDocumentCopy, type MedicalDocumentCopy } from "../medicalDocumen
 import { MAX_MEDICAL_DOCUMENT_TEXT, MEDICAL_DOCUMENT_ACCEPT, MEDICAL_PHOTO_ACCEPT, medicalDocumentFileError, type MedicalDocument, type MedicalDocumentSummary } from "../medicalDocuments";
 import "../medicalDocuments.css";
 import type { SessionUser } from "../types";
+import type { DocumentConversationContext } from "../documentConversation";
+import { documentConversationCopy } from "../documentConversationCopy";
 
 type BusyStep = "uploading" | "translating" | "loading" | "deleting" | "downloading";
 type Failure = { error: unknown; retry?: () => void };
@@ -51,9 +53,14 @@ function saveBlob(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-export function MedicalDocumentsPage({ active = true, userLanguage, accountId, onAuthenticated }: { active?: boolean; userLanguage?: string; accountId: string; onAuthenticated: (user: SessionUser) => void }) {
+export function MedicalDocumentsPage({ active = true, userLanguage, accountId, onAuthenticated, onAskNaru, onDocumentDeleted, requestedDocumentId, onDocumentOpened }: {
+  active?: boolean; userLanguage?: string; accountId: string; onAuthenticated: (user: SessionUser) => void;
+  onAskNaru: (context: DocumentConversationContext) => void; onDocumentDeleted: (id: string) => void;
+  requestedDocumentId: string | null; onDocumentOpened: () => void;
+}) {
   const { locale, t } = useI18n();
   const copy = medicalDocumentCopy(locale);
+  const conversationCopy = documentConversationCopy(locale);
   const demo = api.isDemo();
   const [sourceLanguage, setSourceLanguage] = useState("auto");
   const [targetLanguage, setTargetLanguage] = useState(() => localeOptions.find((item) => item.code === (userLanguage || locale))?.code || "en");
@@ -134,6 +141,12 @@ export function MedicalDocumentsPage({ active = true, userLanguage, accountId, o
   useEffect(() => {
     if (!active) setCameraOpen(false);
   }, [active]);
+
+  useEffect(() => {
+    if (!active || !requestedDocumentId || busy) return;
+    if (current?.id !== requestedDocumentId) openDocument(requestedDocumentId);
+    onDocumentOpened();
+  }, [active, requestedDocumentId, busy]);
 
   useEffect(() => {
     if (!cameraOpen || !active) return;
@@ -363,6 +376,7 @@ export function MedicalDocumentsPage({ active = true, userLanguage, accountId, o
       await api.deleteDocument(id);
       if (!mounted.current) return;
       historyGeneration.current++;
+      onDocumentDeleted(id);
       setHistoryLoading(false);
       setHistory((items) => items.filter((item) => item.id !== id));
       if (current?.id === id) { setCurrent(null); setSelectedFile(null); setSourceText(""); }
@@ -424,6 +438,7 @@ export function MedicalDocumentsPage({ active = true, userLanguage, accountId, o
 
     {current && <Panel className="medical-document-review">
       <div className="medical-document-section-heading"><div><h2 ref={reviewHeading} tabIndex={-1}>{copy.reviewTitle}</h2><p>{current.name}</p></div><Button variant="ghost" disabled={Boolean(busy)} onClick={downloadOriginal}><Download size={17} />{copy.originalDownload}</Button></div>
+      <div className="medical-document-ask"><NaruPose pose={2} className="medical-document-ask-naru" /><div><strong>{conversationCopy.title}</strong><p>{conversationCopy.askNaruHelp}</p></div><Button disabled={demo || !sourceText.trim() || busy === "loading" || busy === "deleting"} onClick={() => onAskNaru({ id: current.id, name: current.name, sourceText, sourceLanguage })}><MessageCircleMore size={18} />{conversationCopy.askNaru}<ArrowRight size={17} /></Button></div>
       <p className="medical-document-review-help">{copy.reviewHelp}</p>
       {current.mimeType === "application/pdf" && <p className="medical-document-review-help">{copy.pdfHelp}</p>}
       <div className="medical-document-text-columns">
