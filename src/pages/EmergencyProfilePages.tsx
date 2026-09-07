@@ -4,6 +4,7 @@ import { api } from "../api";
 import { Button, formatWon, InfoBanner, NaruPose, Panel, StatusPill } from "../components";
 import { buildKorean119Message, fallbackEmergencySymptomsKorean, isUsableKoreanTranslation } from "../emergencyKorean";
 import { useI18n } from "../i18n";
+import { medicalDocumentCopy } from "../medicalDocumentCopy";
 import type { CompanionOrder, LocationState, SessionUser, VisitRecord } from "../types";
 
 export function EmergencyConfirmPage({ hasCard, onCall, onDecline }: { hasCard: boolean; onCall: () => void; onDecline: () => void }) {
@@ -100,11 +101,12 @@ export function EmergencyCallingPage({ user, location, symptoms, active = true, 
   return <Panel className="emergency-calling-panel"><div className="call-left"><NaruPose pose={8} className="emergency-calling-naru" /><div className="call-119">119</div><h2>{t("connecting119")}</h2><p>{location.verified || user.card?.address ? t("locationObtained") : t("locationDenied")}</p><div className="call-location"><MapPin /><span>{t("currentAddress")}<strong>{displayAddress}</strong></span></div><div className="call-actions"><Button variant="secondary" onClick={openTranslation}><Languages />{t("openEmergencyTranslation")}</Button><Button variant="danger" onClick={finish}><PhoneCall />{t("endCall")}</Button></div></div><div className="call-script"><strong>{looping ? t("koreanLoop") : t("startKoreanLoop")}</strong><article><p lang="ko">{korean}</p><Button variant="danger" onClick={toggleLoop} disabled={translatingSymptoms}><Volume2 />{translatingSymptoms ? t("loading") : looping ? t("autoLoop") : t("startKoreanLoop")}</Button></article><small>{t("chineseConfirmation")}</small><article><p>{confirmation}</p></article><p className="browser-note">{t("browserCallNote")}</p></div></Panel>;
 }
 
-export function ProfilePage({ user, recordsCount, ordersCount, onCard, onRecords, onOrders, onLanguage, onLogout }: { user: SessionUser; recordsCount: number; ordersCount: number; onCard: () => void; onRecords: () => void; onOrders: () => void; onLanguage: () => void; onLogout: () => void }) {
-  const { option, t } = useI18n();
+export function ProfilePage({ user, recordsCount, ordersCount, onCard, onRecords, onOrders, onDocuments, onLanguage, onLogout }: { user: SessionUser; recordsCount: number; ordersCount: number; onCard: () => void; onRecords: () => void; onOrders: () => void; onDocuments: () => void; onLanguage: () => void; onLogout: () => void }) {
+  const { locale, option, t } = useI18n();
   const [dialog, setDialog] = useState<{ title: string; body: string } | null>(null);
   const items = [
     { icon: <CreditCard />, title: t("myMedicalCard"), sub: user.card ? t("cardCreated", { name: user.card.name }) : t("cardMissingShort"), action: onCard },
+    { icon: <Languages />, title: medicalDocumentCopy(locale).title, sub: medicalDocumentCopy(locale).subtitle, action: onDocuments },
     { icon: <span>☷</span>, title: t("visitRecords"), sub: t("completedCount", { count: recordsCount }), action: onRecords },
     { icon: <UserRound />, title: t("companionOrders"), sub: t("orderCount", { count: ordersCount }), action: onOrders },
     { icon: <span>▣</span>, title: t("paymentMethods"), sub: t("notLinked"), action: () => setDialog({ title: t("paymentMethods"), body: t("paymentProtectionDesc") }) },

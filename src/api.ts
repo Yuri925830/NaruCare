@@ -2,6 +2,7 @@ import { companions, fallbackHospitals, matchCompanions } from "./data";
 import type { AgentJourneyObservation } from "./agentWorkflow";
 import { hospitalCategory, hospitalCategoryAffinity } from "./hospitalMatching";
 import { assessMedicalIntent } from "./triage";
+import { medicalDocumentFileError, type MedicalDocument, type MedicalDocumentSummary, type MedicalDocumentTranslationInput } from "./medicalDocuments";
 import type { ChatHistoryEntry, ChatResponse, Companion, CompanionFilters, CompanionOrder, Hospital, MedicalCard, SessionUser, TranslationRecordEntry, VisitRecord } from "./types";
 
 const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
@@ -64,8 +65,49 @@ function allowDemo(error: unknown) {
   return import.meta.env.VITE_DEMO_MODE !== "false" && (error instanceof TypeError || (error instanceof DOMException && error.name === "AbortError"));
 }
 
+function requireDocumentSession() {
+  if (demoCurrentId()) throw new ApiError("Document processing requires an online account", 503, "documents_require_online");
+}
+
 export const api = {
   isDemo: () => Boolean(demoCurrentId()),
+  async documents(): Promise<MedicalDocumentSummary[]> {
+    requireDocumentSession();
+    return (await request<{ documents: MedicalDocumentSummary[] }>("/api/documents")).documents;
+  },
+  async document(id: string): Promise<MedicalDocument> {
+    requireDocumentSession();
+    return request<MedicalDocument>(`/api/documents/${encodeURIComponent(id)}`);
+  },
+  async uploadDocument(file: File, sourceLanguage: string, targetLanguage: string): Promise<MedicalDocument> {
+    requireDocumentSession();
+    const error = medicalDocumentFileError(file);
+    if (error) throw new ApiError("Invalid medical document", 400, error);
+    const body = new FormData();
+    body.set("file", file);
+    body.set("sourceLanguage", sourceLanguage);
+    body.set("targetLanguage", targetLanguage);
+    return request<MedicalDocument>("/api/documents", { method: "POST", body }, 180_000);
+  },
+  async translateDocument(id: string, input: MedicalDocumentTranslationInput): Promise<MedicalDocument> {
+    requireDocumentSession();
+    return request<MedicalDocument>(`/api/documents/${encodeURIComponent(id)}/translate`, { method: "POST", body: JSON.stringify(input) }, 300_000);
+  },
+  async documentFile(id: string): Promise<Blob> {
+    requireDocumentSession();
+    const headers = new Headers();
+    if (token()) headers.set("authorization", `Bearer ${token()}`);
+    const response = await fetch(`${API_BASE}/api/documents/${encodeURIComponent(id)}/file`, { headers, signal: AbortSignal.timeout(30_000) });
+    if (!response.ok) {
+      const payload = response.headers.get("content-type")?.includes("json") ? await response.json() as ApiErrorPayload : null;
+      throw new ApiError(payload?.message || `HTTP ${response.status}`, response.status, payload?.error || "http_error");
+    }
+    return response.blob();
+  },
+  async deleteDocument(id: string): Promise<void> {
+    requireDocumentSession();
+    await request<{ ok: boolean }>(`/api/documents/${encodeURIComponent(id)}`, { method: "DELETE" });
+  },
   async logout() {
     if (!demoCurrentId() && token()) {
       try { await request<{ ok: boolean }>("/api/auth/logout", { method: "POST" }); }

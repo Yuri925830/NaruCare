@@ -23,6 +23,8 @@ import {
 } from "./pages/CompanionPages";
 import { CompanionOrdersPage, EmergencyCallingPage, EmergencyConfirmPage, ProfilePage, RecordsPage } from "./pages/EmergencyProfilePages";
 import { MedicalCardPage } from "./pages/MedicalCardPage";
+import { MedicalDocumentsPage } from "./pages/MedicalDocumentsPage";
+import { medicalDocumentCopy } from "./medicalDocumentCopy";
 import type { Companion, CompanionFilters, CompanionOrder, Hospital, LocationState, MedicalCard, SessionUser, View, VisitRecord, VisitRecordDetails } from "./types";
 import { furthestVisitJourneyStep, visitJourneyStepIndex, type CompanionDecision, type VisitJourneyStep } from "./visitJourney";
 import { clearVisitSession, loadVisitSession, saveVisitSession } from "./visitSession";
@@ -378,7 +380,7 @@ function AppInner() {
 
   function navigate(next: View) {
     if (!user) return;
-    const allowedWithoutCard: View[] = ["agent", "card", "emergency-confirm", "emergency-calling", "language", "profile", "records"];
+    const allowedWithoutCard: View[] = ["agent", "card", "emergency-confirm", "emergency-calling", "language", "profile", "records", "documents"];
     if (!user.card && !allowedWithoutCard.includes(next)) {
       goTo("agent");
       setGateSignal((value) => value + 1);
@@ -610,6 +612,7 @@ function AppInner() {
   }
 
   const titles: Record<View, string> = {
+    documents: medicalDocumentCopy(locale).title,
     agent: "Naru", card: t("createCard"), hospitals: t("nearbyHospitals"), "visit-flow": t("navFlow"), "visit-tips": t("visitTipsCard"), navigation: t("navigationRoute"), translation: t("translationConversation"),
     "companions-notice": t("companionsNotice"), "companions-filter": t("companionConditions"), companions: t("companionsTitle"), "companion-detail": t("companionDetail"), "companion-chat": t("companionChat"),
     "companion-waiting": t("waitingConfirmation"), "companion-payment": t("payDeposit"), "companion-arrived": t("companionArrived"), "companion-service": t("serviceInProgress"), "companion-finished": t("serviceFinished"), "companion-orders": t("companionOrders"),
@@ -632,6 +635,7 @@ function AppInner() {
 
   const renderView = (target: View): ReactNode => {
     switch (target) {
+      case "documents": return <MedicalDocumentsPage key={user.id} userLanguage={user.card?.language || locale} active={view === "documents"} />;
       case "card": return <MedicalCardPage card={user.card} location={location} onSaved={(card) => { const wasNew = !user.card; setUser({ ...user, card }); if (wasNew) goBack(); }} />;
       case "agent": return <AgentPage
         key={`visit-${visitSessionVersion}`}
@@ -749,7 +753,7 @@ function AppInner() {
         goTo("navigation");
       }} onReturn={() => goBack()} />;
       case "navigation": return selectedHospital ? <NavigationPage location={location} hospital={selectedHospital} onArrived={confirmHospitalArrival} onTranslation={() => goTo("translation")} /> : <Panel><p>{t("noHospitalsFound")}</p></Panel>;
-      case "translation": return <TranslationPage userLanguage={user.card?.language || locale} active={view === "translation"} onRecorded={(entry) => { if (currentRecordId) void api.appendRecordTranslation(currentRecordId, entry).then(() => setRecordsVersion((value) => value + 1)); }} onComplete={visitJourneyStepIndex(journeyStep) >= visitJourneyStepIndex("translation") ? () => void finishVisitAssistance() : undefined} />;
+      case "translation": return <TranslationPage onDocuments={() => goTo("documents")} userLanguage={user.card?.language || locale} active={view === "translation"} onRecorded={(entry) => { if (currentRecordId) void api.appendRecordTranslation(currentRecordId, entry).then(() => setRecordsVersion((value) => value + 1)); }} onComplete={visitJourneyStepIndex(journeyStep) >= visitJourneyStepIndex("translation") ? () => void finishVisitAssistance() : undefined} />;
       case "companions-notice": return <CompanionNoticePage onContinue={() => goTo("companions-filter")} />;
       case "companions-filter": return <CompanionFilterPage filters={filters} onChange={setFilters} onMatch={() => void match()} />;
       case "companions": return <CompanionListPage people={people} onFilters={() => goTo("companions-filter")} onDetail={selectCompanion} onChoose={selectCompanion} onContinue={() => goTo("visit-tips")} />;
@@ -763,7 +767,7 @@ function AppInner() {
       case "companion-orders": return <CompanionOrdersPage version={ordersVersion} onResume={resumeOrder} onDeleted={companionOrderDeleted} onCountChange={setOrdersCount} />;
       case "emergency-confirm": return <EmergencyConfirmPage hasCard={Boolean(user.card)} onCall={() => { void refreshLocation(); goTo("emergency-calling"); }} onDecline={() => user.card ? void openHospitals(extractReportableSymptoms(symptoms || user.card.symptoms || "")) : goTo("card")} />;
       case "emergency-calling": return <EmergencyCallingPage user={user} location={location} symptoms={extractReportableSymptoms(symptoms || user.card?.symptoms || "")} active={view === "emergency-calling"} onTranslation={() => goTo("translation")} onEnd={() => { void (async () => { await updateCurrentRecord({ status: "completed" }); await resetVisitSession(user.card ? "agent" : "card"); })(); }} />;
-      case "profile": return <ProfilePage user={user} recordsCount={recordsCount} ordersCount={ordersCount} onCard={() => goTo("card")} onRecords={() => goTo("records")} onOrders={() => goTo("companion-orders")} onLanguage={openLanguage} onLogout={() => { clearVisitSession(user.id); void api.logout(); setUser(null); setAppointmentPreference(defaultAppointmentPreference()); setAppointmentDecision("pending"); setAppointmentBooking(null); setJourneyStep("symptoms"); setCompanionDecision("pending"); setHospitalConfirmed(false); setViewHistory([]); setVisitedViews(["agent"]); }} />;
+      case "profile": return <ProfilePage user={user} recordsCount={recordsCount} ordersCount={ordersCount} onCard={() => goTo("card")} onRecords={() => goTo("records")} onOrders={() => goTo("companion-orders")} onDocuments={() => goTo("documents")} onLanguage={openLanguage} onLogout={() => { clearVisitSession(user.id); void api.logout(); setUser(null); setAppointmentPreference(defaultAppointmentPreference()); setAppointmentDecision("pending"); setAppointmentBooking(null); setJourneyStep("symptoms"); setCompanionDecision("pending"); setHospitalConfirmed(false); setViewHistory([]); setVisitedViews(["agent"]); }} />;
       case "records": return <RecordsPage version={recordsVersion} onCountChange={setRecordsCount} />;
       case "language": return <Panel className="in-app-language"><h2>{t("chooseLanguage")}</h2><p>{t("languageSubtitle")}</p><LanguageSelector compact onDone={goBack} /></Panel>;
       default: return null;

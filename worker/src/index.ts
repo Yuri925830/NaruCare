@@ -18,6 +18,7 @@ import {
 } from "../../src/hospitalMatching";
 import { buildMedicalTranslationPrompt, fallbackMedicalTranslation, isMedicalTranslationLocale } from "./medicalTranslation";
 import { buildNaruPersonaPrompt } from "./naruPersona";
+import { DocumentError, handleMedicalDocumentRequest } from "./medicalDocuments";
 import {
   agentToolNames,
   finalizeAgentToolDecision,
@@ -2118,6 +2119,10 @@ async function routeRequest(request: Request, env: Env, ctx: ExecutionContext) {
   if (request.method === "GET" && path === "/api/route") return route(request, url, env);
   if (request.method === "POST" && path === "/api/translate") return translate(request, env);
   if (request.method === "POST" && path === "/api/transcribe") return transcribe(request, env, url);
+  if (path === "/api/documents" || path.startsWith("/api/documents/")) {
+    const userId = await requireUser(request, env);
+    return handleMedicalDocumentRequest(request, env, userId, (messages, maxTokens, timeoutMs) => runTextModel(env, messages, maxTokens, 0, false, env.AI_MODEL, timeoutMs, false));
+  }
   if (request.method === "POST" && path === "/api/chat") return chat(request, env);
   if (request.method === "GET" && path === "/api/chat/history") return chatHistory(request, env);
   if (request.method === "POST" && path === "/api/chat/memory") return rememberChat(request, env);
@@ -2150,7 +2155,7 @@ export default {
     try {
       response = await routeRequest(request, env, ctx);
     } catch (error) {
-      if (error instanceof ApiException) response = json({ error: error.code, message: error.message }, error.status);
+      if (error instanceof ApiException || error instanceof DocumentError) response = json({ error: error.code, message: error.message }, error.status);
       else {
         console.error(JSON.stringify({ level: "error", event: "unhandled_error", requestId, message: error instanceof Error ? error.message : "unknown" }));
         response = json({ error: "internal_error", message: "Internal server error" }, 500);

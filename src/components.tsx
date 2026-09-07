@@ -2,12 +2,13 @@ import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode 
 import L from "leaflet";
 import {
   AlertCircle, ArrowLeft, BadgeCheck, Check, CircleUserRound, CreditCard, Globe2, Hospital as HospitalIcon, Languages, ListTree,
-  LockKeyhole, MapPin, MessageCircleMore, PhoneCall, ShieldCheck, Sparkles, UserRound,
+  Camera, LockKeyhole, MapPin, MessageCircleMore, PhoneCall, ShieldCheck, Sparkles, UserRound,
 } from "lucide-react";
 import { localeOptions, useI18n } from "./i18n";
 import { api } from "./api";
 import { companionFlowCopy } from "./companionFlow";
 import { hospitalAppointmentCopy } from "./hospitalAppointmentCopy";
+import { medicalDocumentCopy } from "./medicalDocumentCopy";
 import type { Hospital, SessionUser, View } from "./types";
 import { isVisitJourneyStepUnlocked, visitJourneyStepIndex, visitJourneySteps, type VisitJourneyStep } from "./visitJourney";
 
@@ -97,6 +98,7 @@ const sideNav = [
   bottomNav[3],
   { id: "companions-notice" as View, key: "companion" as const, Icon: UserRound, emergency: false },
   { id: "translation" as View, key: "translation" as const, Icon: Languages, emergency: false },
+  { id: "documents" as View, key: null, Icon: Camera, emergency: false },
   bottomNav[4],
   bottomNav[5],
 ];
@@ -114,7 +116,7 @@ interface AppShellProps {
 }
 
 export function AppShell({ view, title, user, onNavigate, onLanguage, onBack, canGoBack, children, hideHeader }: AppShellProps) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const card = user.card;
   const isSideActive = (id: View) => id === view
     || (id === "hospitals" && ["hospitals", "navigation"].includes(view))
@@ -122,6 +124,7 @@ export function AppShell({ view, title, user, onNavigate, onLanguage, onBack, ca
     || (id === "emergency-confirm" && view === "emergency-calling")
     || (id === "profile" && ["records", "companion-orders"].includes(view));
   const isBottomActive = (id: View) => id === view
+    || (id === "profile" && view === "documents")
     || (id === "agent" && ["hospitals", "navigation", "translation", "companions", "companions-notice", "companions-filter", "companion-detail", "companion-chat", "companion-waiting", "companion-payment", "companion-arrived", "companion-service", "companion-finished"].includes(view))
     || (id === "emergency-confirm" && view === "emergency-calling")
     || (id === "profile" && ["records", "companion-orders"].includes(view));
@@ -131,7 +134,7 @@ export function AppShell({ view, title, user, onNavigate, onLanguage, onBack, ca
       <div className="brand"><span className="brand-mark">N</span><span><strong>NaruCare</strong><small>{t("brandSub")}</small></span></div>
       <nav className="side-nav">
         {sideNav.map(({ id, key, Icon, emergency }) => <button key={id} className={`${isSideActive(id) ? "active" : ""} ${emergency ? "emergency-nav" : ""}`} onClick={() => onNavigate(id)}>
-          <Icon size={22} /><span>{t(key)}</span>{emergency && <i />}
+          <Icon size={22} /><span>{key ? t(key) : medicalDocumentCopy(locale).navTitle}</span>{emergency && <i />}
         </button>)}
       </nav>
       <button className="user-mini" onClick={() => onNavigate(card ? "profile" : "card")}>

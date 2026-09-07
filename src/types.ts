@@ -9,6 +9,7 @@ export type View =
   | "visit-tips"
   | "navigation"
   | "translation"
+  | "documents"
   | "companions-notice"
   | "companions-filter"
   | "companions"

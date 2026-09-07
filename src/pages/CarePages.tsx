@@ -7,6 +7,7 @@ import { companionFlowCopy } from "../companionFlow";
 import { conversationCopy } from "../conversationCopy";
 import { findCountry } from "../countries";
 import { hospitalAppointmentCopy } from "../hospitalAppointmentCopy";
+import { medicalDocumentCopy } from "../medicalDocumentCopy";
 import {
   appointmentAvailabilityFor,
   appointmentPolicyFor,
@@ -1382,7 +1383,7 @@ interface SpeechRecognitionErrorEventLike extends Event { error?: string; }
 interface SpeechRecognitionLike { lang: string; continuous: boolean; interimResults: boolean; start(): void; stop(): void; abort(): void; onresult: ((event: SpeechRecognitionResultEventLike) => void) | null; onend: (() => void) | null; onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null; }
 interface TranslationTurn extends TranslationRecordEntry { id: string }
 
-export function TranslationPage({ userLanguage, active = true, onRecorded, onComplete }: { userLanguage?: string; active?: boolean; onRecorded?: (entry: TranslationRecordEntry) => void; onComplete?: () => void }) {
+export function TranslationPage({ userLanguage, active = true, onRecorded, onComplete, onDocuments }: { userLanguage?: string; active?: boolean; onRecorded?: (entry: TranslationRecordEntry) => void; onComplete?: () => void; onDocuments?: () => void }) {
   const { locale, t } = useI18n();
   const [language, setLanguage] = useState(userLanguage || locale);
   const languageOption = localeOptions.find((item) => item.code === language) || localeOptions.find((item) => item.code === locale) || localeOptions[0];
@@ -1532,6 +1533,7 @@ export function TranslationPage({ userLanguage, active = true, onRecorded, onCom
   }, [active]);
 
   return <Panel className="translation-panel">
+    {onDocuments && <Button variant="secondary" onClick={onDocuments}><Languages size={17} />{medicalDocumentCopy(locale).title}</Button>}
     <label className="translation-language-picker">
       <NaruPose pose={15} className="translation-header-naru" />
       <Languages size={17} />

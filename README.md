@@ -849,6 +849,29 @@ NaruCare/
 
 # API Surface
 
+## Medical document upload and translation
+
+Open **Photo translation** in the sidebar (or **Medical documents** in the profile or conversation translation page). The page introduces the feature and offers camera capture, photo-library upload, and file upload. Mobile devices use their camera picker; desktop browsers can capture a photo with a webcam over HTTPS or localhost.
+
+- Supported inputs: JPEG, PNG, PDF, and UTF-8 TXT, up to 10 MiB and 20,000 extracted characters per document.
+- Photos use multilingual text recognition. PDFs use their text layer; for scanned PDFs without selectable text, upload photos of the pages.
+- Review and edit the recognized text, choose source/target languages, then translate. The result appears beside the original and can be downloaded as TXT; the original file can also be downloaded.
+- Original files are private R2 objects under `medical-documents/`, using the existing `RECORDINGS` binding. D1 stores account-owned document metadata and text. History supports reopening, retranslating, and deletion of the original and translation.
+- Document processing uses Workers AI. The offline demo supports local file/photo previews; it does not fabricate recognition or translation results.
+
+Before deploying the new Worker, apply migration `0008_medical_documents.sql`:
+
+```bash
+npm run db:local
+# For the live environment, with Cloudflare authentication configured:
+npm run db:remote
+npx wrangler deploy --config worker/wrangler.jsonc
+```
+
+The GitHub Pages workflow deploys the frontend when `main` is updated. The database migration and Worker deployment are separate steps and must also be completed for the live document feature to work.
+
+Document regression checks: `npm test` and `npm run visual:documents` (start the Vite server first). Browser checks use synthetic documents and mocked API responses, not real patient records.
+
 ```text
 POST   /api/auth/register
 POST   /api/auth/login
@@ -869,6 +892,13 @@ DELETE /api/chat/history
 
 POST   /api/translate
 POST   /api/transcribe
+
+POST   /api/documents
+GET    /api/documents
+GET    /api/documents/:id
+GET    /api/documents/:id/file
+POST   /api/documents/:id/translate
+DELETE /api/documents/:id
 
 POST   /api/companions
 POST   /api/orders
