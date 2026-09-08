@@ -4,6 +4,7 @@ export interface DocumentConversationContext {
   name: string;
   sourceText: string;
   sourceLanguage: string;
+  processingConsent?: boolean;
 }
 
 export interface DocumentConversationMessage {
@@ -17,6 +18,8 @@ export interface DocumentQuestionInput {
   history: DocumentConversationMessage[];
   sourceText: string;
   sourceLanguage: string;
+  documentName?: string;
+  processingConsent?: boolean;
 }
 
 export interface DocumentQuestionResponse { reply: string }

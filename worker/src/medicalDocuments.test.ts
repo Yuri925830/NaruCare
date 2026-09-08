@@ -51,13 +51,15 @@ function harness() {
     return `${messages[1].content}\n${marker}`;
   });
   const request = (path: string, userId = "alice", init?: RequestInit) => handleMedicalDocumentRequest(new Request(`https://example.test/api/documents${path}`, init), env, userId, generate);
-  async function upload(text = "복용량 10 mg, 하루 2회. No known allergies.", userId = "alice") {
+  async function upload(text = "복용량 10 mg, 하루 2회. No known allergies.", userId = "alice", saveToHistory = true) {
     const form = new FormData();
     form.set("file", new File([text], "검사 결과.txt", { type: "text/plain" }));
     form.set("sourceLanguage", "auto");
     form.set("targetLanguage", "en");
+    form.set("processingConsent", "true");
+    if (saveToHistory) form.set("saveToHistory", "true");
     const response = await request("", userId, { method: "POST", body: form });
-    return response.json() as Promise<{ id: string; sourceText: string; status: string }>;
+    return response.json() as Promise<{ id: string; sourceText: string; status: string; stored: boolean }>;
   }
   return { env, sqlite, objects, prepare, put, get, remove, aiRun, toMarkdown, generate, request, upload };
 }
@@ -97,21 +99,25 @@ describe("document extraction and translation", () => {
     expect(h.aiRun).not.toHaveBeenCalled();
   });
 
-  it.each(["provider_failure", "incomplete_result"])("falls back once on %s and validates the fallback OCR", async (failure) => {
+  it.each(["provider_failure", "incomplete_result"])("does not resend documents to another provider on %s", async (failure) => {
     const h = harness();
-    vi.spyOn(console, "warn").mockImplementation(() => {});
     const imageModel = vi.fn<DocumentImageModel>(async () => {
       if (failure === "provider_failure") throw new Error("provider failure");
       return "partial transcription";
     });
-    h.aiRun.mockImplementation(async (_model, input) => ({ choices: [{ finish_reason: "stop", message: { content: `Dose 12.5 mg\n${input.messages[0].content.match(/\[END_OCR_[\w-]+\]/)[0]}` } }] }));
-    try {
-      await expect(extractMedicalDocumentText(h.env, "camera.jpg", "image/jpeg", Uint8Array.of(0xff), imageModel)).resolves.toBe("Dose 12.5 mg");
-      expect(imageModel).toHaveBeenCalledOnce();
-      expect(h.aiRun).toHaveBeenCalledOnce();
-      h.aiRun.mockResolvedValue({ choices: [{ finish_reason: "length", message: { content: "partial" } }] });
-      await expect(extractMedicalDocumentText(h.env, "camera.jpg", "image/jpeg", Uint8Array.of(0xff), imageModel)).rejects.toMatchObject({ code: "document_extraction_incomplete" });
-    } finally { vi.restoreAllMocks(); }
+    await expect(extractMedicalDocumentText(h.env, "camera.jpg", "image/jpeg", Uint8Array.of(0xff), imageModel)).rejects.toMatchObject({ code: failure === "provider_failure" ? "document_extraction_failed" : "document_extraction_incomplete" });
+    expect(imageModel).toHaveBeenCalledOnce();
+    expect(h.aiRun).not.toHaveBeenCalled();
+    expect(h.toMarkdown).not.toHaveBeenCalled();
+  });
+
+  it("sends scanned PDFs to the consented provider without a second extraction", async () => {
+    const h = harness();
+    const imageModel = vi.fn<DocumentImageModel>(async (prompt) => `Dose 10 mg\n${prompt.match(/\[END_OCR_[\w-]+\]/)![0]}`);
+    await expect(extractMedicalDocumentText(h.env, "scan.pdf", "application/pdf", Uint8Array.of(0x25), imageModel)).resolves.toBe("Dose 10 mg");
+    expect(imageModel).toHaveBeenCalledWith(expect.any(String), "data:application/pdf;base64,JQ==", 60_000);
+    expect(h.toMarkdown).not.toHaveBeenCalled();
+    expect(h.aiRun).not.toHaveBeenCalled();
   });
 
   it("does not rerun OCR for complete empty or overlong transcriptions", async () => {
@@ -122,7 +128,7 @@ describe("document extraction and translation", () => {
     expect(h.aiRun).not.toHaveBeenCalled();
   });
 
-  it("keeps primary and fallback OCR within one 60-second deadline", async () => {
+  it("times out OCR without sending the document to a fallback provider", async () => {
     const h = harness();
     vi.useFakeTimers();
     vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -133,10 +139,8 @@ describe("document extraction and translation", () => {
       const rejection = expect(result).rejects.toMatchObject({ status: 504, code: "document_extraction_failed" });
       await vi.advanceTimersByTimeAsync(35_000);
       expect(imageModel).toHaveBeenCalledOnce();
-      expect(h.aiRun).toHaveBeenCalledOnce();
-      await vi.advanceTimersByTimeAsync(25_000);
       await rejection;
-      expect(h.aiRun).toHaveBeenCalledOnce();
+      expect(h.aiRun).not.toHaveBeenCalled();
     } finally { vi.useRealTimers(); vi.restoreAllMocks(); }
   });
 
@@ -212,10 +216,45 @@ describe("document extraction and translation", () => {
 });
 
 describe("private document lifecycle", () => {
+  it.each([undefined, "false", "yes", "1"])("requires explicit upload consent before extraction or storage: %s", async (consent) => {
+    const h = harness();
+    const form = new FormData();
+    form.set("file", new File([Uint8Array.of(0xff, 0xd8, 0xff)], "photo.jpg", { type: "image/jpeg" }));
+    form.set("targetLanguage", "en");
+    form.set("saveToHistory", "true");
+    if (consent !== undefined) form.set("processingConsent", consent);
+    await expect(h.request("", "alice", { method: "POST", body: form })).rejects.toMatchObject({ status: 400, code: "document_consent_required" });
+    expect(h.aiRun).not.toHaveBeenCalled();
+    expect(h.put).not.toHaveBeenCalled();
+    expect(h.prepare).not.toHaveBeenCalled();
+  });
+
+  it("keeps upload and translation stateless unless saving is explicitly selected", async () => {
+    const h = harness();
+    const uploaded = await h.upload("Dose 10 mg", "alice", false);
+    expect(uploaded).toMatchObject({ stored: false, id: expect.stringMatching(/^temporary-/) });
+    const input = { sourceText: uploaded.sourceText, sourceLanguage: "en", targetLanguage: "ko", processingConsent: true };
+    const translated = await h.request(`/${uploaded.id}/translate`, "alice", { method: "POST", body: JSON.stringify(input) });
+    expect(await translated.json()).toMatchObject({ stored: false, translatedText: "Dose 10 mg", status: "translated" });
+    expect(h.generate).toHaveBeenCalledOnce();
+    expect(h.put).not.toHaveBeenCalled();
+    expect(h.prepare).not.toHaveBeenCalled();
+    await expect(h.request(`/${uploaded.id}`)).rejects.toMatchObject({ status: 404 });
+    expect(h.objects.size).toBe(0);
+  });
+
+  it("rejects translation after consent is withdrawn", async () => {
+    const h = harness();
+    const uploaded = await h.upload("Dose 10 mg", "alice", false);
+    await expect(h.request(`/${uploaded.id}/translate`, "alice", { method: "POST", body: JSON.stringify({ sourceText: uploaded.sourceText, sourceLanguage: "en", targetLanguage: "ko", processingConsent: false }) })).rejects.toMatchObject({ code: "document_consent_required" });
+    expect(h.generate).not.toHaveBeenCalled();
+    expect(h.prepare).not.toHaveBeenCalled();
+  });
+
   it("reuses only the owner's unchanged completed translation and regenerates edits", async () => {
     const h = harness();
     const uploaded = await h.upload();
-    const input = { sourceText: "Dose 15 mg", sourceLanguage: "en", targetLanguage: "ko" };
+    const input = { sourceText: "Dose 15 mg", sourceLanguage: "en", targetLanguage: "ko", processingConsent: true };
     const translate = (body: typeof input, userId = "alice") => h.request(`/${uploaded.id}/translate`, userId, { method: "POST", body: JSON.stringify(body) });
     const first = await (await translate(input)).json();
     h.generate.mockClear();
@@ -248,7 +287,7 @@ describe("private document lifecycle", () => {
     expect(uploaded.status).toBe("uploaded");
     expect(h.objects.size).toBe(1);
     expect([...h.objects.keys()][0]).toBe(`medical-documents/alice/${uploaded.id}/original`);
-    const translated = await h.request(`/${uploaded.id}/translate`, "alice", { method: "POST", body: JSON.stringify({ sourceText: "Corrected dose: 15 mg", sourceLanguage: "en", targetLanguage: "ko" }) });
+    const translated = await h.request(`/${uploaded.id}/translate`, "alice", { method: "POST", body: JSON.stringify({ sourceText: "Corrected dose: 15 mg", sourceLanguage: "en", targetLanguage: "ko", processingConsent: true }) });
     expect(await translated.json()).toMatchObject({ status: "translated", sourceText: "Corrected dose: 15 mg", translatedText: "Corrected dose: 15 mg" });
     const list = await (await h.request("")).json<{ documents: Record<string, unknown>[] }>();
     expect(list.documents).toHaveLength(1);
@@ -278,7 +317,7 @@ describe("private document lifecycle", () => {
     const h = harness();
     const uploaded = await h.upload("Dose 10 mg.\n".repeat(400));
     h.generate.mockImplementationOnce(h.generate.getMockImplementation()!).mockRejectedValueOnce(new Error("outage"));
-    await expect(h.request(`/${uploaded.id}/translate`, "alice", { method: "POST", body: JSON.stringify({ sourceText: uploaded.sourceText, sourceLanguage: "ko", targetLanguage: "en" }) })).rejects.toMatchObject({ code: "document_translation_failed" });
+    await expect(h.request(`/${uploaded.id}/translate`, "alice", { method: "POST", body: JSON.stringify({ sourceText: uploaded.sourceText, sourceLanguage: "ko", targetLanguage: "en", processingConsent: true }) })).rejects.toMatchObject({ code: "document_translation_failed" });
     expect(await (await h.request(`/${uploaded.id}`)).json()).toMatchObject({ status: "uploaded", translatedText: "", sourceText: uploaded.sourceText });
   });
 

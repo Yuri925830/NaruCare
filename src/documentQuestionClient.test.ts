@@ -3,6 +3,7 @@ import { api, ApiError } from "./api";
 import type { DocumentQuestionInput } from "./documentConversation";
 
 const input: DocumentQuestionInput = {
+  processingConsent: true,
   message: "Is this a confirmed diagnosis?",
   locale: "en",
   sourceText: "폐렴 의심. 추가 검사 후 확인 필요.",
@@ -52,6 +53,10 @@ afterEach(() => {
 });
 
 describe("document questions API client", () => {
+  it("rejects a question after consent is withdrawn without a network request", async () => {
+    await expect(api.askDocument("report", { ...input, processingConsent: false })).rejects.toMatchObject({ code: "document_consent_required" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
   it("sends the reviewed text and separate conversation roles to the authenticated document endpoint", async () => {
     const response = { reply: "This records a suspicion, so the document alone does not confirm it." };
     fetchMock.mockResolvedValue(json(response));

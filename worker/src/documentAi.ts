@@ -24,10 +24,13 @@ async function readProviderResult(response: Response) {
   } finally { reader.releaseLock(); }
 }
 
-/** Reuse the app's configured provider; absence of a key leaves Workers AI as the OCR provider. */
-export function createDocumentImageModel(apiKey: string, model: string): DocumentImageModel | undefined {
-  if (!apiKey.trim()) return undefined;
+/** Images and scanned PDFs use the provider named in the user's processing consent. */
+export function createDocumentImageModel(apiKey: string, model: string): DocumentImageModel {
   return async (prompt, imageDataUrl, timeoutMs) => {
+    if (!apiKey.trim()) throw new DocumentError(503, "document_ai_unavailable", "OpenAI document reading is not configured");
+    const content = imageDataUrl.startsWith("data:application/pdf;")
+      ? { type: "input_file", filename: "document.pdf", file_data: imageDataUrl, detail: "high" }
+      : { type: "input_image", image_url: imageDataUrl, detail: "high" };
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
@@ -35,7 +38,7 @@ export function createDocumentImageModel(apiKey: string, model: string): Documen
         model,
         input: [
           { role: "developer", content: prompt },
-          { role: "user", content: [{ type: "input_image", image_url: imageDataUrl, detail: "high" }] },
+          { role: "user", content: [content] },
         ],
         max_output_tokens: 24_000,
         reasoning: { effort: "low" },

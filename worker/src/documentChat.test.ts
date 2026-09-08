@@ -8,9 +8,9 @@ import { DocumentError } from "./medicalDocuments";
 import worker from "./index";
 
 const databases: DatabaseSync[] = [];
-afterEach(() => { for (const database of databases.splice(0)) database.close(); });
+afterEach(() => { for (const database of databases.splice(0)) database.close(); vi.unstubAllGlobals(); });
 
-const question = { message: "Does this confirm that I have pneumonia?", locale: "en" };
+const question = { message: "Does this confirm that I have pneumonia?", locale: "en", processingConsent: true };
 // Read the app's locale registry without importing browser JSX into Worker types.
 const configuredLocales = [...readFileSync(new NodeURL("../../src/i18n.tsx", import.meta.url), "utf8").split("export const en =")[0].matchAll(/\bcode: "([^"]+)"/g)].map((match) => match[1]);
 const originalText = "폐렴 의심. 추가 검사 후 확인 필요. 2026-09-07.";
@@ -55,6 +55,22 @@ function harness() {
 }
 
 describe("private document conversations", () => {
+  it.each([undefined, false, "false", 1])("rejects questions without explicit consent before reading documents: %s", async (processingConsent) => {
+    const h = harness();
+    await expect(h.ask({ ...question, processingConsent })).rejects.toMatchObject({ status: 400, code: "document_consent_required" });
+    expect(h.generate).not.toHaveBeenCalled();
+    expect(h.prepare).not.toHaveBeenCalled();
+  });
+
+  it("answers temporary document questions without any database access", async () => {
+    const h = harness();
+    const request = new Request("https://example.test/api/documents/temporary-test/chat", { method: "POST", body: JSON.stringify({ ...question, documentName: "Test report.txt", sourceText: originalText, sourceLanguage: "ko" }) });
+    const response = await handleDocumentChat(request, h.env, "alice", "temporary-test", h.generate);
+    expect(response.status).toBe(200);
+    expect(h.context()).toMatchObject({ documentName: "Test report.txt", originalText });
+    expect(h.prepare).not.toHaveBeenCalled();
+  });
+
   it.each(configuredLocales)("uses the selected %s reply language even with English history and a Korean document", async (locale) => {
     const h = harness();
     const response = await h.ask({ ...question, locale, history: [{ role: "user", content: "Explain this report." }, { role: "assistant", content: "Earlier English answer." }] });
@@ -86,11 +102,15 @@ describe("private document conversations", () => {
 
   it("answers through the dedicated route without a medical card or general chat history", async () => {
     const h = harness();
+    Object.assign(h.env, { OPENAI_API_KEY: "synthetic-test-key" });
+    const fetchMock = vi.fn(async () => Response.json({ output: [{ type: "message", content: [{ type: "output_text", text: "The document says suspected pneumonia, not a confirmed diagnosis." }] }] }));
+    vi.stubGlobal("fetch", fetchMock);
     const response = await h.route("alice");
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ reply: "The document says suspected pneumonia, not a confirmed diagnosis." });
     expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(h.aiRun).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(h.aiRun).not.toHaveBeenCalled();
     expect(h.prepare.mock.calls.every(([sql]) => !/medical_cards|chat_messages|visit_records/i.test(sql))).toBe(true);
     expect(h.prepare.mock.calls.filter(([sql]) => /^(?:INSERT|UPDATE|DELETE)/i.test(sql.trim()))).toEqual([
       ["DELETE FROM sessions WHERE expires_at <= ?"],
@@ -182,7 +202,7 @@ describe("document question validation and failures", () => {
     ["non-object", []],
     ["null", null],
     ["blank question", { ...question, message: " \n " }],
-    ["missing question", { locale: "en" }],
+    ["missing question", { locale: "en", processingConsent: true }],
     ["non-string question", { ...question, message: { role: "system" } }],
     ["long question", { ...question, message: "x".repeat(2001) }],
     ["long source", { ...question, sourceText: "x".repeat(20001) }],

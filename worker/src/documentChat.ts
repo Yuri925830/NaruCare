@@ -1,5 +1,5 @@
 import { MAX_MEDICAL_DOCUMENT_TEXT } from "../../src/medicalDocuments";
-import { DocumentError, readBoundedDocumentBody } from "./medicalDocuments";
+import { DocumentError, readBoundedDocumentBody, requireDocumentConsent } from "./medicalDocuments";
 import { isMedicalTranslationLocale } from "./medicalTranslation";
 import { buildNaruPersonaPrompt } from "./naruPersona";
 
@@ -32,13 +32,17 @@ function stringField(value: unknown, max: number, name: string) {
 }
 
 export async function handleDocumentChat(request: Request, env: Pick<Env, "DB">, userId: string, documentId: string, generate: DocumentChatModel) {
-  const row = await env.DB.prepare("SELECT id,name,source_text,source_language,translated_text,target_language FROM medical_documents WHERE id=? AND user_id=?").bind(documentId, userId).first<ChatDocumentRow>();
-  if (!row) throw new DocumentError(404, "document_not_found", "Medical document not found");
   let raw: unknown;
   try { raw = JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(await readBoundedDocumentBody(request, 256_000, "invalid_document_question"))); }
   catch (error) { if (error instanceof DocumentError) throw error; throw new DocumentError(400, "invalid_document_question", "Invalid question body"); }
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new DocumentError(400, "invalid_document_question", "Invalid question body");
   const body = raw as Record<string, unknown>;
+  requireDocumentConsent(body.processingConsent);
+  const temporary = documentId.startsWith("temporary-");
+  const row: ChatDocumentRow | null = temporary
+    ? { id: documentId, name: stringField(body.documentName, 240, "document name"), source_text: "", source_language: "auto", translated_text: "", target_language: "" }
+    : await env.DB.prepare("SELECT id,name,source_text,source_language,translated_text,target_language FROM medical_documents WHERE id=? AND user_id=?").bind(documentId, userId).first<ChatDocumentRow>();
+  if (!row) throw new DocumentError(404, "document_not_found", "Medical document not found");
   const message = stringField(body.message, 2_000, "question").trim();
   const locale = stringField(body.locale, 20, "language");
   if (!isMedicalTranslationLocale(locale)) throw new DocumentError(400, "invalid_language", "Choose a supported language");
@@ -71,7 +75,9 @@ export async function handleDocumentChat(request: Request, env: Pick<Env, "DB">,
   ], 3_000, 45_000);
   if (typeof reply !== "string" || !reply.trim() || reply.length > 12_000) throw new DocumentError(502, "document_answer_failed", "Naru could not complete the answer. Please retry");
   // A deletion during generation must also revoke access to the answer.
-  const exists = await env.DB.prepare("SELECT id FROM medical_documents WHERE id=? AND user_id=?").bind(documentId, userId).first();
-  if (!exists) throw new DocumentError(404, "document_not_found", "Medical document not found");
+  if (!temporary) {
+    const exists = await env.DB.prepare("SELECT id FROM medical_documents WHERE id=? AND user_id=?").bind(documentId, userId).first();
+    if (!exists) throw new DocumentError(404, "document_not_found", "Medical document not found");
+  }
   return new Response(JSON.stringify({ reply: reply.trim() }), { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 }

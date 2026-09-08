@@ -87,6 +87,9 @@ async function scenario(mobile) {
   if (mobile) await page.getByLabel("Upload a photo", { exact: true }).setInputFiles({ name: "test-photo.png", mimeType: "image/png", buffer: png });
   else await page.locator('input[type="file"][accept*=".pdf"]').setInputFiles({ name: "test-record.txt", mimeType: "text/plain", buffer: Buffer.from(sourceText) });
   await page.locator(".medical-document-languages select").nth(1).selectOption("zh-CN");
+  assert.equal(await page.locator(".medical-document-upload-submit").isDisabled(), true);
+  await page.locator(".document-consent input").check();
+  await page.locator(".document-save-consent input").check();
   failUpload = true;
   await page.getByRole("button", { name: "Upload and extract text", exact: true }).click();
   await page.getByRole("alert").filter({ hasText: /could not be read/ }).waitFor();
@@ -205,6 +208,7 @@ async function recoverDemoAccount(register) {
   }
   await page.locator(".bottom-nav").getByRole("button", { name: "Photo translation", exact: true }).click();
   await page.getByLabel("Upload a photo", { exact: true }).setInputFiles({ name: "preserved-photo.png", mimeType: "image/png", buffer: png });
+  await page.locator(".document-consent input").check();
   const upload = page.getByRole("button", { name: "Upload and extract text", exact: true });
   assert.equal(await upload.isEnabled(), true, "Demo account must have an actionable upload button");
   await upload.click();

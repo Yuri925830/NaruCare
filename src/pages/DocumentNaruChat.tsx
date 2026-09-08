@@ -6,11 +6,13 @@ import { useI18n } from "../i18n";
 import { documentConversationHistory, DOCUMENT_QUESTION_MAX_LENGTH, type DocumentConversationContext, type DocumentConversationMessage } from "../documentConversation";
 import { documentConversationCopy } from "../documentConversationCopy";
 import "../documentConversation.css";
+import { DocumentConsent } from "./DocumentConsent";
 
 interface Props {
   context: DocumentConversationContext;
   onBackToDocument: () => void;
   onDetach: () => void;
+  onConsentChange: (checked: boolean) => void;
 }
 type ChatError = "expired" | "unavailable" | "tooMany" | "error" | "offline";
 
@@ -25,9 +27,10 @@ export function DocumentNaruChat(props: Props) {
   return <DocumentNaruChatSession key={JSON.stringify([context.id, context.sourceLanguage, context.sourceText])} {...props} />;
 }
 
-function DocumentNaruChatSession({ context, onBackToDocument, onDetach }: Props) {
+function DocumentNaruChatSession({ context, onBackToDocument, onDetach, onConsentChange }: Props) {
   const { locale, option } = useI18n();
   const copy = documentConversationCopy(locale);
+  const processingConsent = context.processingConsent === true;
   const [messages, setMessages] = useState<DocumentConversationMessage[]>([]);
   const [input, setInput] = useState("");
   const [pendingQuestion, setPendingQuestion] = useState("");
@@ -57,7 +60,7 @@ function DocumentNaruChatSession({ context, onBackToDocument, onDetach }: Props)
 
   async function ask(value: string) {
     const question = value.trim();
-    if (requestRef.current || !question || question.length > DOCUMENT_QUESTION_MAX_LENGTH) return;
+    if (requestRef.current || !processingConsent || !question || question.length > DOCUMENT_QUESTION_MAX_LENGTH) return;
     const controller = new AbortController();
     requestRef.current = controller;
     setBusy(true);
@@ -71,6 +74,8 @@ function DocumentNaruChatSession({ context, onBackToDocument, onDetach }: Props)
         history: documentConversationHistory(messages),
         sourceText: context.sourceText,
         sourceLanguage: context.sourceLanguage,
+        documentName: context.name,
+        processingConsent,
       }, controller.signal);
       if (requestRef.current !== controller || controller.signal.aborted) return;
       if (!result?.reply?.trim()) throw new Error("empty_reply");
@@ -101,6 +106,7 @@ function DocumentNaruChatSession({ context, onBackToDocument, onDetach }: Props)
       <div><small>{copy.attached}</small><strong title={context.name} dir="auto">{context.name}</strong></div>
       <button type="button" onClick={onBackToDocument}><ArrowLeft size={14} /><span>{copy.openDocument}</span></button>
     </div>
+    <DocumentConsent checked={processingConsent} onChange={onConsentChange} disabled={busy} compact />
     <div ref={scrollRef} className="document-naru-messages" role="log" aria-label={copy.conversation} aria-live="polite" aria-relevant="additions text">
       <div className={`document-naru-welcome${visibleMessages.length ? " compact" : ""}`}>
         <div className="document-naru-welcome-art"><NaruPose pose={11} /><span><Sparkles size={18} /></span></div>
@@ -111,10 +117,10 @@ function DocumentNaruChatSession({ context, onBackToDocument, onDetach }: Props)
         <p dir="auto">{message.role === "assistant" ? <ReplyText text={message.content} /> : message.content}</p>
       </article>)}
       {busy && <div className="document-naru-thinking" role="status"><LoaderCircle size={17} /><span>{elapsed >= 20 ? copy.stillThinking : copy.thinking}</span><small aria-hidden="true">{copy.elapsed.replace("{seconds}", String(elapsed))}</small></div>}
-      {error && <div className="document-naru-error" role="alert"><p>{copy[error]}</p><Button type="button" variant="ghost" onClick={() => void ask(pendingQuestion)}><RefreshCw size={15} />{copy.retry}</Button></div>}
+      {error && <div className="document-naru-error" role="alert"><p>{copy[error]}</p><Button type="button" variant="ghost" disabled={!processingConsent} onClick={() => void ask(pendingQuestion)}><RefreshCw size={15} />{copy.retry}</Button></div>}
     </div>
     <div className="document-naru-suggestions" aria-label={copy.subtitle}>
-      {copy.questionLabels.map((label, index) => <button key={index} type="button" disabled={busy} onClick={() => void ask(copy.questions[index])}>{label}</button>)}
+      {copy.questionLabels.map((label, index) => <button key={index} type="button" disabled={busy || !processingConsent} onClick={() => void ask(copy.questions[index])}>{label}</button>)}
     </div>
     <form className="document-naru-composer" onSubmit={(event) => { event.preventDefault(); void ask(input); }}>
       <textarea value={input} onChange={(event) => setInput(event.target.value)} maxLength={DOCUMENT_QUESTION_MAX_LENGTH} rows={2} dir="auto" aria-label={copy.placeholder} placeholder={copy.placeholder} disabled={busy} onKeyDown={(event) => {
@@ -123,7 +129,7 @@ function DocumentNaruChatSession({ context, onBackToDocument, onDetach }: Props)
           void ask(input);
         }
       }} />
-      <button type="submit" disabled={busy || !input.trim()} aria-label={copy.send}><ArrowUp size={21} /></button>
+      <button type="submit" disabled={busy || !processingConsent || !input.trim()} aria-label={copy.send}><ArrowUp size={21} /></button>
     </form>
     <p className="document-naru-clinical-note">{copy.clinicalNote}</p>
     <p className="document-naru-memory">{copy.memory}</p>

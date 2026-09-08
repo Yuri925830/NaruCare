@@ -10,6 +10,8 @@ import type { SessionUser } from "../types";
 import type { DocumentConversationContext } from "../documentConversation";
 import { documentConversationCopy } from "../documentConversationCopy";
 import { resolveDocumentLocale } from "../documentLocales";
+import { DocumentConsent } from "./DocumentConsent";
+import { documentPrivacyCopy } from "../documentPrivacy";
 
 type BusyStep = "uploading" | "translating" | "loading" | "deleting" | "downloading";
 type Failure = { error: unknown; retry?: () => void };
@@ -54,14 +56,18 @@ function saveBlob(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-export function MedicalDocumentsPage({ active = true, accountId, onAuthenticated, onAskNaru, onDocumentDeleted, requestedDocumentId, onDocumentOpened }: {
+export function MedicalDocumentsPage({ active = true, accountId, onAuthenticated, onAskNaru, onDocumentDeleted, requestedDocumentId, onDocumentOpened, conversationConsent, onConsentChange }: {
   active?: boolean; accountId: string; onAuthenticated: (user: SessionUser) => void;
   onAskNaru: (context: DocumentConversationContext) => void; onDocumentDeleted: (id: string) => void;
   requestedDocumentId: string | null; onDocumentOpened: () => void;
+  conversationConsent: DocumentConversationContext | null; onConsentChange: (id: string, checked: boolean) => void;
 }) {
   const { locale, option, t } = useI18n();
   const copy = medicalDocumentCopy(locale);
   const conversationCopy = documentConversationCopy(locale);
+  const privacy = documentPrivacyCopy(locale);
+  const [processingConsent, setProcessingConsent] = useState(false);
+  const [saveToHistory, setSaveToHistory] = useState(false);
   const demo = api.isDemo();
   const [sourceLanguage, setSourceLanguage] = useState("auto");
   const [targetLanguage, setTargetLanguage] = useState(() => resolveDocumentLocale(locale));
@@ -109,6 +115,12 @@ export function MedicalDocumentsPage({ active = true, accountId, onAuthenticated
     mounted.current = true;
     return () => { mounted.current = false; };
   }, []);
+
+  useEffect(() => {
+    if (conversationConsent?.id === current?.id && conversationConsent) {
+      setProcessingConsent(conversationConsent.processingConsent === true);
+    }
+  }, [conversationConsent?.id, conversationConsent?.processingConsent, current?.id]);
 
   useEffect(() => {
     if (!connectionOpen) return;
@@ -207,6 +219,7 @@ export function MedicalDocumentsPage({ active = true, accountId, onAuthenticated
   const editable = !busy;
 
   function updateHistory(document: MedicalDocument) {
+    if (document.stored === false) return;
     historyGeneration.current++;
     setHistoryLoading(false);
     setHistoryError(null);
@@ -234,7 +247,10 @@ export function MedicalDocumentsPage({ active = true, accountId, onAuthenticated
       return;
     }
     setFailure(null);
+    if (current?.stored === false) onDocumentDeleted(current.id);
     setSelectedFile(file);
+    setProcessingConsent(false);
+    setSaveToHistory(false);
     setCurrent(null);
     setSourceText("");
     setDeleteId(null);
@@ -277,11 +293,11 @@ export function MedicalDocumentsPage({ active = true, accountId, onAuthenticated
   }
 
   function upload() {
-    if (!selectedFile) return;
+    if (!selectedFile || !processingConsent) return;
     if (api.isDemo()) { openConnection(true); return; }
     const file = selectedFile;
     void perform("uploading", async () => {
-      const result = await api.uploadDocument(file, sourceLanguage, targetLanguage);
+      const result = await api.uploadDocument(file, sourceLanguage, targetLanguage, { processingConsent, saveToHistory });
       if (!mounted.current) return;
       setCurrent(result);
       setSourceText(result.sourceText);
@@ -347,13 +363,13 @@ export function MedicalDocumentsPage({ active = true, accountId, onAuthenticated
   }
 
   function translate() {
-    if (!current || demo || !sourceText.trim() || sourceText.length > MAX_MEDICAL_DOCUMENT_TEXT) return;
+    if (!current || !processingConsent || demo || !sourceText.trim() || sourceText.length > MAX_MEDICAL_DOCUMENT_TEXT) return;
     const document = current;
-    const input = { sourceText, sourceLanguage, targetLanguage };
+    const input = { sourceText, sourceLanguage, targetLanguage, processingConsent };
     void perform("translating", async () => {
       const result = await api.translateDocument(document.id, input);
       if (!mounted.current) return;
-      setCurrent(result);
+      setCurrent(document.stored === false ? { ...document, ...result, name: document.name, mimeType: document.mimeType, size: document.size, createdAt: document.createdAt } : result);
       setSourceText(result.sourceText);
       setSourceLanguage(result.sourceLanguage);
       if (locale === interfaceLocale.current) setTargetLanguage(result.targetLanguage);
@@ -365,7 +381,10 @@ export function MedicalDocumentsPage({ active = true, accountId, onAuthenticated
     void perform("loading", async () => {
       const result = await api.document(id);
       if (!mounted.current) return;
+      if (current?.stored === false && current.id !== id) onDocumentDeleted(current.id);
       setCurrent(result);
+      setProcessingConsent(false);
+      onConsentChange(id, false);
       setSelectedFile(null);
       setSourceText(result.sourceText);
       setSourceLanguage(result.sourceLanguage);
@@ -390,6 +409,7 @@ export function MedicalDocumentsPage({ active = true, accountId, onAuthenticated
 
   function downloadOriginal() {
     if (!current) return;
+    if (current.stored === false && selectedFile) { saveBlob(selectedFile, current.name); return; }
     const document = current;
     void perform("downloading", async () => {
       const blob = await api.documentFile(document.id);
@@ -433,23 +453,25 @@ export function MedicalDocumentsPage({ active = true, accountId, onAuthenticated
         {!current && <button type="button" className="medical-document-icon-button" aria-label={copy.removeFile} disabled={Boolean(busy)} onClick={() => { setSelectedFile(null); setFailure(null); }}><X size={19} /></button>}
       </div>}
       {!current && selectedFile && (selectedFile.type === "application/pdf" || /\.pdf$/i.test(selectedFile.name)) && <p className="medical-document-review-help">{copy.pdfHelp}</p>}
-      {selectedFile && !current && <Button className="medical-document-upload-submit" disabled={Boolean(busy)} onClick={upload}>{busy === "uploading" ? <LoaderCircle className="medical-document-spinner" size={19} /> : <Upload size={19} />}{busy === "uploading" ? copy.uploading : copy.upload}</Button>}
-      <p className="medical-document-privacy">{copy.uploadPrivacy}</p>
+      {(selectedFile || current) && <DocumentConsent checked={processingConsent} onChange={(checked) => { setProcessingConsent(checked); if (current) onConsentChange(current.id, checked); setFailure(null); }} disabled={Boolean(busy)} />}
+      {selectedFile && !current && <label className="document-save-consent"><input type="checkbox" checked={saveToHistory} onChange={(event) => setSaveToHistory(event.target.checked)} disabled={Boolean(busy)} /><span>{privacy.save}</span></label>}
+      {selectedFile && !current && <Button className="medical-document-upload-submit" disabled={Boolean(busy) || !processingConsent} onClick={upload}>{busy === "uploading" ? <LoaderCircle className="medical-document-spinner" size={19} /> : <Upload size={19} />}{busy === "uploading" ? copy.uploading : copy.upload}</Button>}
     </Panel>
 
     {busy && <div className="medical-document-progress" role="status" aria-live="polite"><LoaderCircle className="medical-document-spinner" size={19} />{copy[busy]}</div>}
-    {failure && <div className="medical-document-error" role="alert"><AlertCircle size={21} /><div><strong>{copy.errorTitle}</strong><p>{errorMessage(failure.error, copy)}</p></div>{failure.retry && <Button variant="ghost" disabled={Boolean(busy)} onClick={failure.retry}>{copy.retry}</Button>}</div>}
+    {failure && <div className="medical-document-error" role="alert"><AlertCircle size={21} /><div><strong>{copy.errorTitle}</strong><p>{failure.error instanceof ApiError && failure.error.code === "document_consent_required" ? privacy.required : errorMessage(failure.error, copy)}</p></div>{failure.retry && <Button variant="ghost" disabled={Boolean(busy) || !processingConsent} onClick={failure.retry}>{copy.retry}</Button>}</div>}
 
     {current && <Panel className="medical-document-review">
       <div className="medical-document-section-heading"><div><h2 ref={reviewHeading} tabIndex={-1}>{copy.reviewTitle}</h2><p>{current.name}</p></div><Button variant="ghost" disabled={Boolean(busy)} onClick={downloadOriginal}><Download size={17} />{copy.originalDownload}</Button></div>
-      <div className="medical-document-ask"><NaruPose pose={2} className="medical-document-ask-naru" /><div><strong>{conversationCopy.title}</strong><p>{conversationCopy.askNaruHelp}</p></div><Button disabled={demo || !sourceText.trim() || busy === "loading" || busy === "deleting"} onClick={() => onAskNaru({ id: current.id, name: current.name, sourceText, sourceLanguage })}><MessageCircleMore size={18} />{conversationCopy.askNaru}<ArrowRight size={17} /></Button></div>
+      {current.stored === false && <div className="document-temporary-notice"><p>{privacy.temporary}</p><Button variant="ghost" disabled={Boolean(busy)} onClick={() => { onDocumentDeleted(current.id); setCurrent(null); setSelectedFile(null); setSourceText(""); setProcessingConsent(false); setFailure(null); }}><X size={17} />{privacy.clear}</Button></div>}
+      <div className="medical-document-ask"><NaruPose pose={2} className="medical-document-ask-naru" /><div><strong>{conversationCopy.title}</strong><p>{conversationCopy.askNaruHelp}</p></div><Button disabled={demo || !processingConsent || !sourceText.trim() || Boolean(busy)} onClick={() => { if (processingConsent) onAskNaru({ id: current.id, name: current.name, sourceText, sourceLanguage, processingConsent }); }}><MessageCircleMore size={18} />{conversationCopy.askNaru}<ArrowRight size={17} /></Button></div>
       <p className="medical-document-review-help">{copy.reviewHelp}</p>
       {current.mimeType === "application/pdf" && <p className="medical-document-review-help">{copy.pdfHelp}</p>}
       <div className="medical-document-text-columns">
         <div className="medical-document-source"><label htmlFor="medical-document-source-text"><FileText size={17} />{copy.sourceText}<span>{languageLabel(sourceLanguage)}</span></label><textarea id="medical-document-source-text" value={sourceText} onChange={(event) => { setSourceText(event.target.value); setFailure(null); }} disabled={Boolean(busy)} maxLength={MAX_MEDICAL_DOCUMENT_TEXT} placeholder={copy.emptyText} aria-describedby="medical-document-text-count" dir="auto" /><small id="medical-document-text-count">{copy.characterCount.replace("{count}", sourceText.length.toLocaleString(locale))}</small></div>
         <div className="medical-document-result"><div className="medical-document-result-label"><Languages size={18} />{copy.translation}<span>{languageLabel(translationCurrent ? current.targetLanguage : targetLanguage)}</span></div>{translationCurrent ? <div className="medical-document-translated-text" dir="auto">{current.translatedText}</div> : <div className="medical-document-translation-empty"><Languages size={34} /><p>{current.translatedText ? copy.translationChanged : copy.translationEmpty}</p></div>}</div>
       </div>
-      <div className="medical-document-review-actions"><Button disabled={Boolean(busy) || demo || !sourceText.trim() || sourceText.length > MAX_MEDICAL_DOCUMENT_TEXT} onClick={translate}>{busy === "translating" ? <LoaderCircle className="medical-document-spinner" size={19} /> : <Languages size={19} />}{busy === "translating" ? copy.translating : copy.translate}</Button>{translationCurrent && <><span className="medical-document-complete" role="status"><Check size={16} />{copy.translationReady}</span><Button variant="ghost" disabled={Boolean(busy)} onClick={downloadTranslation}><Download size={17} />{copy.translationDownload}</Button></>}</div>
+      <div className="medical-document-review-actions"><Button disabled={Boolean(busy) || !processingConsent || demo || !sourceText.trim() || sourceText.length > MAX_MEDICAL_DOCUMENT_TEXT} onClick={translate}>{busy === "translating" ? <LoaderCircle className="medical-document-spinner" size={19} /> : <Languages size={19} />}{busy === "translating" ? copy.translating : copy.translate}</Button>{translationCurrent && <><span className="medical-document-complete" role="status"><Check size={16} />{copy.translationReady}</span><Button variant="ghost" disabled={Boolean(busy)} onClick={downloadTranslation}><Download size={17} />{copy.translationDownload}</Button></>}</div>
       <p className="medical-document-clinical-note">{copy.clinicalNote}</p>
     </Panel>}
 

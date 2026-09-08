@@ -20,6 +20,10 @@ export class DocumentError extends Error {
   constructor(public status: number, public code: string, message: string) { super(message); }
 }
 
+export function requireDocumentConsent(value: unknown) {
+  if (value !== true && value !== "true") throw new DocumentError(400, "document_consent_required", "Consent to send this document to OpenAI is required");
+}
+
 interface DocumentRow {
   id: string;
   name: string;
@@ -40,7 +44,7 @@ function documentJson(value: unknown, status = 200) {
 }
 
 function summary(row: DocumentRow): MedicalDocumentSummary {
-  return { id: row.id, name: row.name, mimeType: row.mime_type, size: row.byte_size, sourceLanguage: row.source_language, targetLanguage: row.target_language, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at };
+  return { id: row.id, name: row.name, mimeType: row.mime_type, size: row.byte_size, sourceLanguage: row.source_language, targetLanguage: row.target_language, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at, stored: true };
 }
 
 function document(row: DocumentRow): MedicalDocument {
@@ -128,6 +132,14 @@ async function withDocumentTimeout<T>(operation: Promise<T>, timeoutMs: number, 
 export async function extractMedicalDocumentText(env: Pick<DocumentEnv, "AI">, name: string, mimeType: string, bytes: Uint8Array<ArrayBuffer>, imageModel?: DocumentImageModel) {
   if (mimeType === "text/plain") return sourceText(utf8Text(bytes));
   try {
+    if (imageModel) {
+      const marker = `[END_OCR_${crypto.randomUUID()}]`;
+      const prompt = buildDocumentOcrPrompt(marker);
+      const dataUrl = `data:${mimeType};base64,${Buffer.from(bytes).toString("base64")}`;
+      const timeoutMs = mimeType === "application/pdf" ? 60_000 : 35_000;
+      const result = await withDocumentTimeout(imageModel(prompt, dataUrl, timeoutMs), timeoutMs, "document_extraction_failed");
+      return sourceText(completeOutput(result, marker, "document_extraction_incomplete"));
+    }
     if (mimeType === "application/pdf") {
       // Disable embedded-image descriptions: those are not faithful medical OCR.
       const result = await withDocumentTimeout(env.AI.toMarkdown({ name, blob: new Blob([bytes], { type: mimeType }) }, { conversionOptions: { pdf: { metadata: false, images: { convert: false } } } }), 60_000, "document_extraction_failed");
@@ -137,20 +149,7 @@ export async function extractMedicalDocumentText(env: Pick<DocumentEnv, "AI">, n
     const marker = `[END_OCR_${crypto.randomUUID()}]`;
     const prompt = buildDocumentOcrPrompt(marker);
     const imageDataUrl = `data:${mimeType};base64,${Buffer.from(bytes).toString("base64")}`;
-    const deadline = Date.now() + 60_000;
-    if (imageModel) {
-      let transcription: string | undefined;
-      try {
-        const result = await withDocumentTimeout(imageModel(prompt, imageDataUrl, 35_000), 35_000, "document_extraction_failed");
-        transcription = completeOutput(result, marker, "document_extraction_incomplete");
-      } catch {
-        // Only provider/completeness failures fall back. Never log medical text or image data.
-        console.warn(JSON.stringify({ event: "document_ocr_provider_fallback", provider: "cloudflare" }));
-      }
-      if (transcription !== undefined) return sourceText(transcription);
-    }
-    const timeoutMs = deadline - Date.now();
-    if (timeoutMs <= 0) throw new DocumentError(504, "document_extraction_failed", "Text recognition timed out. Please retry");
+    const timeoutMs = 60_000;
     const result = await withDocumentTimeout(env.AI.run("@cf/google/gemma-4-26b-a4b-it", {
       messages: [
         { role: "system", content: prompt },
@@ -212,7 +211,7 @@ export async function translateMedicalDocumentText(text: string, source: string,
       try { output = await withDocumentTimeout(generate([{ role: "system", content: prompt }, { role: "user", content: chunk }], 6000, timeoutMs), timeoutMs, "document_translation_failed"); }
       catch (error) {
         if (error instanceof DocumentError) throw error;
-        throw new DocumentError(502, "document_translation_failed", "Document translation is unavailable. Your original document is saved; please retry");
+        throw new DocumentError(502, "document_translation_failed", "Document translation is unavailable. Please retry");
       }
       const translated = completeOutput(output, marker, "document_translation_incomplete");
       if (!translated.trim() || JSON.stringify(numericTokens(chunk)) !== JSON.stringify(numericTokens(translated))) throw new DocumentError(502, "document_translation_incomplete", "The translation did not preserve the document's numeric details. Please retry");
@@ -237,6 +236,8 @@ async function uploadMedicalDocument(request: Request, env: DocumentEnv, userId:
   let form: FormData;
   try { form = await new Response(body, { headers: { "content-type": contentType } }).formData(); }
   catch { throw new DocumentError(400, "invalid_document", "The uploaded document could not be read"); }
+  requireDocumentConsent(form.get("processingConsent"));
+  const saveToHistory = form.get("saveToHistory") === "true";
   const files = form.getAll("file");
   if (files.length !== 1 || typeof files[0] === "string") throw new DocumentError(400, "invalid_document", "Upload one document at a time");
   const file = files[0];
@@ -248,6 +249,9 @@ async function uploadMedicalDocument(request: Request, env: DocumentEnv, userId:
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   const name = file.name.split(/[\\/]/).pop()!.replace(/[\r\n]/g, " ").slice(0, 240) || "document";
+  if (!saveToHistory) {
+    return documentJson({ id: `temporary-${id}`, name, mimeType, size: bytes.byteLength, sourceLanguage: source, targetLanguage: target, sourceText: text, translatedText: "", status: "uploaded", createdAt: now, updatedAt: now, stored: false } satisfies MedicalDocument, 201);
+  }
   const objectKey = `medical-documents/${userId}/${id}/original`;
   await env.RECORDINGS.put(objectKey, bytes, { httpMetadata: { contentType: mimeType } });
   try {
@@ -256,7 +260,7 @@ async function uploadMedicalDocument(request: Request, env: DocumentEnv, userId:
     await env.RECORDINGS.delete(objectKey);
     throw error;
   }
-  return documentJson({ id, name, mimeType, size: bytes.byteLength, sourceLanguage: source, targetLanguage: target, sourceText: text, translatedText: "", status: "uploaded", createdAt: now, updatedAt: now } satisfies MedicalDocument, 201);
+  return documentJson({ id, name, mimeType, size: bytes.byteLength, sourceLanguage: source, targetLanguage: target, sourceText: text, translatedText: "", status: "uploaded", createdAt: now, updatedAt: now, stored: true } satisfies MedicalDocument, 201);
 }
 
 /** Called only after the main router's requireUser check. All document lookups remain user-scoped. */
@@ -271,7 +275,11 @@ export async function handleMedicalDocumentRequest(request: Request, env: Docume
   }
   const match = path.match(/^\/api\/documents\/([a-zA-Z0-9-]+)(?:\/(translate|file))?$/);
   if (!match) throw new DocumentError(404, "not_found", "Endpoint not found");
-  const row = await findOwnedDocument(env, userId, match[1]);
+  const temporary = match[1].startsWith("temporary-");
+  if (temporary && !(match[2] === "translate" && request.method === "POST")) throw new DocumentError(404, "document_not_found", "Temporary documents exist only in the current browser session");
+  const row: DocumentRow = temporary
+    ? { id: match[1], name: "", mime_type: "text/plain", byte_size: 0, source_language: "auto", target_language: "en", status: "uploaded", created_at: new Date().toISOString(), updated_at: new Date().toISOString(), object_key: "", source_text: "", translated_text: "" }
+    : await findOwnedDocument(env, userId, match[1]);
   if (!match[2] && request.method === "GET") return documentJson(document(row));
   if (match[2] === "file" && request.method === "GET") {
     const file = await env.RECORDINGS.get(row.object_key);
@@ -293,9 +301,14 @@ export async function handleMedicalDocumentRequest(request: Request, env: Docume
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Invalid JSON");
       input = parsed as Record<string, unknown>;
     } catch { throw new DocumentError(400, "invalid_json", "Expected a JSON object"); }
+    requireDocumentConsent(input.processingConsent);
     const text = sourceText(input.sourceText);
     const source = language(input.sourceLanguage, true);
     const target = language(input.targetLanguage, false);
+    if (temporary) {
+      const translatedText = await translateMedicalDocumentText(text, source, target, generate);
+      return documentJson({ ...document(row), sourceText: text, sourceLanguage: source, targetLanguage: target, translatedText, status: "translated", stored: false });
+    }
     // Reuse only this owner's saved, complete translation for exactly the same source and languages.
     // Never put medical text in the shared phrase cache.
     if (row.status === "translated" && row.translated_text.trim() && text === row.source_text && source === row.source_language && target === row.target_language) {

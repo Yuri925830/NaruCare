@@ -161,7 +161,7 @@ function corsHeaders(request: Request, env: Env) {
     "vary": "Origin",
     "x-content-type-options": "nosniff",
     "referrer-policy": "no-referrer",
-    "permissions-policy": "camera=(), geolocation=(self), microphone=(self)",
+    "permissions-policy": "camera=(self), geolocation=(self), microphone=(self)",
   });
   if (allowedOrigin) headers.set("access-control-allow-origin", allowedOrigin);
   return headers;
@@ -2127,9 +2127,10 @@ async function routeRequest(request: Request, env: Env, ctx: ExecutionContext) {
   if (path === "/api/documents" || path.startsWith("/api/documents/")) {
     const userId = await requireUser(request, env);
     const apiKey = envSecret(env, "OPENAI_API_KEY");
-    const generate: DocumentChatModel = (messages, maxTokens, timeoutMs) => apiKey
-      ? runOpenAiTextModel(env, apiKey, messages, maxTokens, false, "low", timeoutMs)
-      : runTextModel(env, messages, maxTokens, 0, false, env.AI_MODEL, timeoutMs, false);
+    const generate: DocumentChatModel = (messages, maxTokens, timeoutMs) => {
+      if (!apiKey) throw new DocumentError(503, "document_ai_unavailable", "OpenAI document reading is not configured");
+      return runOpenAiTextModel(env, apiKey, messages, maxTokens, false, "low", timeoutMs);
+    };
     const documentChat = path.match(/^\/api\/documents\/([^/]+)\/chat$/);
     if (request.method === "POST" && documentChat) return handleDocumentChat(request, env, userId, decodeURIComponent(documentChat[1]), generate);
     return handleMedicalDocumentRequest(request, env, userId, generate, createDocumentImageModel(apiKey, openAiModel(env)));

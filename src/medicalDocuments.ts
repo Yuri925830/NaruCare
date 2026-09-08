@@ -13,6 +13,7 @@ export interface MedicalDocumentSummary {
   status: "uploaded" | "translated";
   createdAt: string;
   updatedAt: string;
+  stored?: boolean;
 }
 
 export interface MedicalDocument extends MedicalDocumentSummary {
@@ -24,6 +25,7 @@ export interface MedicalDocumentTranslationInput {
   sourceText: string;
   sourceLanguage: string;
   targetLanguage: string;
+  processingConsent?: boolean;
 }
 
 export function medicalDocumentFileError(file: Pick<File, "name" | "type" | "size">): "document_too_large" | "invalid_document" | "unsupported_document_type" | null {

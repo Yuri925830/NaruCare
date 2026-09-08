@@ -9,8 +9,19 @@ const responseBody = (text = "Dose 12.5 mg\n[END_OCR_test]", status = "completed
 });
 
 describe("configured document image provider", () => {
-  it("does not configure the provider without an API key", () => {
-    expect(createDocumentImageModel("  ", "configured-model")).toBeUndefined();
+  it("reports a missing key without sending to another provider", async () => {
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    await expect(createDocumentImageModel("  ", "configured-model")("OCR", "data:image/png;base64,AAAA", 35_000)).rejects.toMatchObject({ code: "document_ai_unavailable" });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("sends scanned PDFs as high-detail file inputs without response storage", async () => {
+    const fetch = vi.fn(async () => Response.json(responseBody()));
+    vi.stubGlobal("fetch", fetch);
+    await createDocumentImageModel("test-key", "configured-model")("OCR", "data:application/pdf;base64,AAAA", 60_000);
+    const init = (fetch.mock.calls[0] as unknown as [string, RequestInit])[1];
+    expect(JSON.parse(init.body as string)).toMatchObject({ store: false, input: [{ role: "developer" }, { content: [{ type: "input_file", file_data: "data:application/pdf;base64,AAAA", detail: "high" }] }] });
   });
 
   it("uses the configured model, high-detail image input and low reasoning without storing the image", async () => {

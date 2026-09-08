@@ -47,11 +47,17 @@ afterEach(() => {
 });
 
 describe("medical document uploads", () => {
+  it("never transmits a file or text without explicit consent", async () => {
+    await expect(api.uploadDocument(pdf(), "ko", "en")).rejects.toMatchObject({ code: "document_consent_required" });
+    await expect(api.uploadDocument(pdf(), "ko", "en", { processingConsent: false })).rejects.toMatchObject({ code: "document_consent_required" });
+    await expect(api.translateDocument(document.id, { sourceText: "private text", sourceLanguage: "en", targetLanguage: "ko" })).rejects.toMatchObject({ code: "document_consent_required" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
   it("uploads the original bytes and languages as authenticated multipart data with an automatic boundary", async () => {
     fetchMock.mockResolvedValue(jsonResponse(document));
     const original = pdf();
 
-    await expect(api.uploadDocument(original, "ko", "zh-CN")).resolves.toEqual(document);
+    await expect(api.uploadDocument(original, "ko", "zh-CN", { processingConsent: true })).resolves.toEqual(document);
 
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toMatch(/\/api\/documents$/);
@@ -67,6 +73,8 @@ describe("medical document uploads", () => {
     expect(await uploaded.arrayBuffer()).toEqual(await original.arrayBuffer());
     expect(form.get("sourceLanguage")).toBe("ko");
     expect(form.get("targetLanguage")).toBe("zh-CN");
+    expect(form.get("processingConsent")).toBe("true");
+    expect(form.get("saveToHistory")).toBe("false");
 
     const browserRequest = new Request("https://narucare.test/api/documents", init);
     expect(browserRequest.headers.get("content-type")).toMatch(/^multipart\/form-data; boundary=.+/);
@@ -82,7 +90,7 @@ describe("medical document uploads", () => {
     ["photo.jpg", "application/octet-stream"],
   ])("accepts a supported file selected as %s (%s)", async (name, type) => {
     fetchMock.mockResolvedValue(jsonResponse(document));
-    await expect(api.uploadDocument(new File(["medical document"], name, { type }), "auto", "en"))
+    await expect(api.uploadDocument(new File(["medical document"], name, { type }), "auto", "en", { processingConsent: true }))
       .resolves.toEqual(document);
     expect(fetchMock).toHaveBeenCalledOnce();
   });
@@ -96,7 +104,7 @@ describe("medical document uploads", () => {
     ["JPEG extension with PNG MIME", new File(["photo"], "photo.jpg", { type: "image/png" }), "unsupported_document_type"],
     ["executable renamed as text", new File(["executable"], "report.txt", { type: "application/x-msdownload" }), "unsupported_document_type"],
   ])("rejects %s before contacting the server", async (_label, file, code) => {
-    await expect(api.uploadDocument(file, "auto", "ko")).rejects.toMatchObject({ status: 400, code });
+    await expect(api.uploadDocument(file, "auto", "ko", { processingConsent: true })).rejects.toMatchObject({ status: 400, code });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -106,7 +114,7 @@ describe("medical document uploads", () => {
 
   it("preserves actionable server upload errors", async () => {
     fetchMock.mockResolvedValue(jsonResponse({ error: "document_storage_unavailable", message: "Document storage is unavailable" }, 503));
-    await expect(api.uploadDocument(pdf(), "ko", "en")).rejects.toMatchObject({
+    await expect(api.uploadDocument(pdf(), "ko", "en", { processingConsent: true })).rejects.toMatchObject({
       status: 503,
       code: "document_storage_unavailable",
       message: "Document storage is unavailable",
@@ -137,7 +145,7 @@ describe("private medical document API", () => {
   });
 
   it("sends reviewed source text and languages when translating an existing document", async () => {
-    const input = { sourceText: "약 1정, 하루 2회", sourceLanguage: "ko", targetLanguage: "zh-CN" };
+    const input = { sourceText: "약 1정, 하루 2회", sourceLanguage: "ko", targetLanguage: "zh-CN", processingConsent: true };
     const translated = { ...document, ...input, translatedText: "每次1片，每天2次", status: "translated" };
     fetchMock.mockResolvedValue(jsonResponse(translated));
 
@@ -164,14 +172,14 @@ describe("private medical document API", () => {
 
   it("propagates provider translation failures without substituting demo text", async () => {
     fetchMock.mockResolvedValue(jsonResponse({ error: "translation_unavailable", message: "Translation service unavailable" }, 502));
-    await expect(api.translateDocument(document.id, { sourceText: "无", sourceLanguage: "zh-CN", targetLanguage: "ko" }))
+    await expect(api.translateDocument(document.id, { sourceText: "无", sourceLanguage: "zh-CN", targetLanguage: "ko", processingConsent: true }))
       .rejects.toMatchObject({ status: 502, code: "translation_unavailable", message: "Translation service unavailable" });
   });
 
   it.each([
     ["list", () => api.documents()],
     ["read", () => api.document(document.id)],
-    ["upload", () => api.uploadDocument(pdf(), "ko", "en")],
+    ["upload", () => api.uploadDocument(pdf(), "ko", "en", { processingConsent: true })],
     ["translate", () => api.translateDocument(document.id, { sourceText: "无", sourceLanguage: "zh-CN", targetLanguage: "ko" })],
     ["download", () => api.documentFile(document.id)],
     ["delete", () => api.deleteDocument(document.id)],
@@ -184,8 +192,8 @@ describe("private medical document API", () => {
 
   it.each([
     ["list", () => api.documents()],
-    ["upload", () => api.uploadDocument(pdf(), "ko", "en")],
-    ["translate", () => api.translateDocument(document.id, { sourceText: "None", sourceLanguage: "en", targetLanguage: "ko" })],
+    ["upload", () => api.uploadDocument(pdf(), "ko", "en", { processingConsent: true })],
+    ["translate", () => api.translateDocument(document.id, { sourceText: "None", sourceLanguage: "en", targetLanguage: "ko", processingConsent: true })],
   ])("propagates %s network errors without creating a local document or demo session", async (_label, operation) => {
     const failure = new TypeError("Failed to fetch");
     fetchMock.mockRejectedValue(failure);

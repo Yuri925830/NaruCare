@@ -680,9 +680,9 @@ function AppInner() {
 
   const renderView = (target: View): ReactNode => {
     switch (target) {
-      case "documents": return <MedicalDocumentsPage accountId={user.id} onAuthenticated={documentAccountConnected} active={view === "documents"} onAskNaru={(context) => { setDocumentConversation(context); goTo("agent"); }} onDocumentDeleted={(id) => { setDocumentConversation((current) => current?.id === id ? null : current); }} requestedDocumentId={documentToOpen} onDocumentOpened={() => setDocumentToOpen(null)} />;
+      case "documents": return <MedicalDocumentsPage accountId={user.id} onAuthenticated={documentAccountConnected} active={view === "documents"} onAskNaru={(context) => { setDocumentConversation(context); goTo("agent"); }} onDocumentDeleted={(id) => { setDocumentConversation((current) => current?.id === id ? null : current); }} requestedDocumentId={documentToOpen} onDocumentOpened={() => setDocumentToOpen(null)} conversationConsent={documentConversation} onConsentChange={(id, checked) => setDocumentConversation((current) => current?.id === id ? { ...current, processingConsent: checked } : current)} />;
       case "card": return <MedicalCardPage card={user.card} location={location} onSaved={(card) => { const wasNew = !user.card; setUser({ ...user, card }); if (wasNew) goBack(); }} />;
-      case "agent": return documentConversation ? <DocumentNaruChat context={documentConversation} onBackToDocument={() => { setDocumentToOpen(documentConversation.id); goTo("documents"); }} onDetach={() => setDocumentConversation(null)} /> : <AgentPage
+      case "agent": return documentConversation ? <DocumentNaruChat context={documentConversation} onBackToDocument={() => { setDocumentToOpen(documentConversation.id); goTo("documents"); }} onDetach={() => setDocumentConversation(null)} onConsentChange={(checked) => setDocumentConversation((current) => current ? { ...current, processingConsent: checked } : current)} /> : <AgentPage
         key={`visit-${visitSessionVersion}`}
         card={user.card}
         location={location}

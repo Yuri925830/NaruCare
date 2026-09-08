@@ -58,6 +58,8 @@ async function scenario(width, locale) {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await page.locator(mobile ? ".bottom-nav" : ".side-nav").locator('button').filter({ has: page.locator("svg.lucide-camera") }).click();
   await page.locator('input[type="file"][accept*=".pdf"]').setInputFiles({ name: "synthetic-report.txt", mimeType: "text/plain", buffer: Buffer.from(sourceText) });
+  await page.locator(".document-consent input").check();
+  await page.locator(".document-save-consent input").check();
   await page.locator(".medical-document-upload-submit").click();
   await page.locator("#medical-document-source-text").waitFor();
   await page.locator(".medical-document-ask .button").click();
@@ -66,6 +68,13 @@ async function scenario(width, locale) {
   assert.equal(await page.locator(".gate-modal:visible").count(), 0, "Document questions must not require a medical card");
   assert.equal(translations, 0, "Users can ask before waiting for a translation");
   assert.equal(await chat.locator(".document-naru-attachment strong").textContent(), saved.name);
+  await chat.locator(".document-consent input").uncheck();
+  assert.equal(await chat.locator(".document-naru-suggestions button").first().isDisabled(), true);
+  await chat.locator(".document-naru-attachment button").click();
+  assert.equal(await page.locator(".medical-documents .document-consent input").isChecked(), false);
+  assert.equal(await page.locator(".medical-document-ask .button").isDisabled(), true);
+  await page.locator(".medical-documents .document-consent input").check();
+  await page.locator(".medical-document-ask .button").click();
   assert.ok(await chat.locator(".naru-pose img").count() >= 2, "Use the official Naru character");
   await page.screenshot({ path: fileURLToPath(new URL(`welcome-${locale}-${width}.png`, output)), fullPage: true });
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "Document chat overflows horizontally");
@@ -149,6 +158,7 @@ async function scenario(width, locale) {
   // Attaching the remaining document starts empty, and close returns to ordinary Naru.
   await nav.locator("button").filter({ has: page.locator("svg.lucide-camera") }).click();
   await page.locator(".medical-document-history-list li").filter({ hasText: otherDocument.name }).locator(".medical-document-history-actions .button").click();
+  await page.locator(".medical-documents .document-consent input").check();
   await page.locator(".medical-document-ask .button").click();
   await chat.waitFor({ state: "visible" });
   assert.equal(await chat.locator(".document-naru-message").count(), 0);

@@ -107,22 +107,27 @@ export const api = {
   },
   async askDocument(id: string, input: DocumentQuestionInput, signal?: AbortSignal): Promise<DocumentQuestionResponse> {
     requireDocumentSession();
+    if (input.processingConsent !== true) throw new ApiError("Document processing consent is required", 400, "document_consent_required");
     return request<DocumentQuestionResponse>(`/api/documents/${encodeURIComponent(id)}/chat`, {
       method: "POST", body: JSON.stringify(input), signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(55_000)]) : undefined,
     }, 55_000);
   },
-  async uploadDocument(file: File, sourceLanguage: string, targetLanguage: string): Promise<MedicalDocument> {
+  async uploadDocument(file: File, sourceLanguage: string, targetLanguage: string, options: { processingConsent?: boolean; saveToHistory?: boolean } = {}): Promise<MedicalDocument> {
     requireDocumentSession();
+    if (options.processingConsent !== true) throw new ApiError("Document processing consent is required", 400, "document_consent_required");
     const error = medicalDocumentFileError(file);
     if (error) throw new ApiError("Invalid medical document", 400, error);
     const body = new FormData();
     body.set("file", file);
     body.set("sourceLanguage", sourceLanguage);
     body.set("targetLanguage", targetLanguage);
+    body.set("processingConsent", "true");
+    body.set("saveToHistory", String(options.saveToHistory === true));
     return request<MedicalDocument>("/api/documents", { method: "POST", body }, 180_000);
   },
   async translateDocument(id: string, input: MedicalDocumentTranslationInput): Promise<MedicalDocument> {
     requireDocumentSession();
+    if (input.processingConsent !== true) throw new ApiError("Document processing consent is required", 400, "document_consent_required");
     return request<MedicalDocument>(`/api/documents/${encodeURIComponent(id)}/translate`, { method: "POST", body: JSON.stringify(input) }, 300_000);
   },
   async documentFile(id: string): Promise<Blob> {

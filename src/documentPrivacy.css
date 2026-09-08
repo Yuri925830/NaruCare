@@ -1,0 +1,17 @@
+.document-consent { padding: 16px 0; border-block: 1px solid #cbd8d4; margin-block: 16px; text-align: start; font-size: 13px; line-height: 1.6; letter-spacing: 0; }
+.document-consent p { margin: 0 0 10px; color: #4c605b; }
+.document-consent label, .document-save-consent { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; min-width: 0; font-size: 13px; line-height: 1.6; }
+.document-consent input, .document-save-consent input { flex: 0 0 18px; width: 18px; height: 18px; margin: 3px 0 0; accent-color: #367861; }
+.document-consent span, .document-save-consent span { min-width: 0; overflow-wrap: anywhere; }
+.document-consent small { display: block; margin-top: 10px; color: #66716e; font-size: 12px; overflow-wrap: anywhere; }
+.document-consent a { color: #286957; }
+.document-consent details { margin-top: 8px; }
+.document-consent summary { cursor: pointer; color: #286957; font-size: 12px; }
+.document-consent details p { margin-top: 8px; }
+.document-save-consent { margin-block: 12px; }
+.document-temporary-notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 12px; color: #3d6657; border-block: 1px solid #cbd8d4; margin-block: 16px; }
+.document-temporary-notice p { margin: 0; font-size: 13px; line-height: 1.6; }
+.document-temporary-notice .button { flex-shrink: 0; }
+.document-naru-chat > .document-consent { flex: 0 0 auto; margin: 0; padding: 10px 16px; font-size: 12px; }
+.document-naru-chat > .document-consent p, .document-naru-chat > .document-consent small { font-size: 11px; }
+@media (max-width: 640px) { .document-temporary-notice { align-items: flex-start; flex-direction: column; } }

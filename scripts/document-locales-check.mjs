@@ -76,6 +76,8 @@ async function scenario(option) {
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${code}: upload overflow`);
   if (screenshots.has(code)) await page.screenshot({ path: fileURLToPath(new URL(`upload-${code}.png`, output)), fullPage: true });
   await documents.locator('input[type="file"][accept*=".pdf"]').setInputFiles({ name: "synthetic-locale.txt", mimeType: "text/plain", buffer: Buffer.from("Synthetic interface test. No patient data.") });
+  await documents.locator(".document-consent input").check();
+  await documents.locator(".document-save-consent input").check();
   await documents.locator(".medical-document-upload-submit").click();
   const uploadError = documents.locator(".medical-document-error");
   await uploadError.waitFor();
